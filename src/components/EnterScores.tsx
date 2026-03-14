@@ -101,13 +101,13 @@ const EnterScores = ({ testName, onBack }: EnterScoresProps) => {
                 </div>
               </div>
               
-              <div className="relative mb-4">
+              <div className="flex items-center gap-2 mb-4">
                 <input 
                   type="text" 
                   defaultValue={student.score}
-                  className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all bg-muted/5 font-bold text-lg"
+                  className="w-full px-4 py-3 rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all bg-card font-bold text-lg text-foreground text-center"
                 />
-                <span className="absolute right-[-25px] top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground">/50</span>
+                <span className="text-sm font-bold text-muted-foreground whitespace-nowrap">/ 50</span>
               </div>
 
               <div className="flex items-center justify-between mt-6 pt-1">

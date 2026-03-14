@@ -10,10 +10,10 @@ const weeklyData = [
   { day: "Fri", date: "Feb 14", present: 30, absent: 2, rate: "93.8%" },
 ];
 
-const concerns = [
-  { initials: "RK", name: "Rahul Kumar", issue: "5 absences this month", color: "bg-edu-red" },
-  { initials: "SP", name: "Sneha Patel", issue: "3 absences this month", color: "bg-edu-orange" },
-  { initials: "AM", name: "Amit Mishra", issue: "Frequently late", color: "bg-muted-foreground" },
+const concernsData = [
+  { initials: "RK", name: "Rahul Kumar", issue: "5 absences this month", bgColor: "bg-[#fef2f2]", avatarColor: "bg-[#ef4444]", issueColor: "text-[#ef4444]" },
+  { initials: "SP", name: "Sneha Patel", issue: "3 absences this month", bgColor: "bg-[#fef9c3]", avatarColor: "bg-[#f59e0b]", issueColor: "text-[#f59e0b]" },
+  { initials: "AM", name: "Amit Mishra", issue: "Frequently late", bgColor: "bg-[#fef9c3]", avatarColor: "bg-[#f59e0b]", issueColor: "text-[#f59e0b]" },
 ];
 
 const Attendance = () => {
@@ -94,20 +94,24 @@ const Attendance = () => {
       </div>
 
       {/* Concerns */}
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-semibold text-foreground">Attendance Concerns</h2>
-        <button className="text-sm text-primary font-medium">View All</button>
-      </div>
-      <div className="grid grid-cols-3 gap-4">
-        {concerns.map((c, i) => (
-          <div key={i} className="flex items-center gap-3 p-4 rounded-xl bg-edu-light-yellow">
-            <div className={`avatar-circle ${c.color}`}>{c.initials}</div>
-            <div>
-              <p className="font-medium text-foreground text-sm">{c.name}</p>
-              <p className="text-xs text-edu-orange">{c.issue}</p>
+      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-bold text-foreground">Attendance Concerns</h2>
+          <button className="text-sm text-[#1e3a8a] font-bold hover:underline">View All</button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {concernsData.map((c, i) => (
+            <div key={i} className={`flex items-center gap-4 p-5 rounded-xl border border-transparent ${c.bgColor}`}>
+              <div className={`w-11 h-11 rounded-full ${c.avatarColor} text-white flex items-center justify-center text-sm font-bold shadow-sm shrink-0`}>
+                {c.initials}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-bold text-foreground mb-1">{c.name}</h3>
+                <p className={`text-[11px] font-bold ${c.issueColor} truncate`}>{c.issue}</p>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );

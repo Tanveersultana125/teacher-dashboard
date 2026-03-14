@@ -90,20 +90,18 @@ const ConceptMastery = () => {
       </div>
 
       {/* Weak Concepts */}
-      <div className="bg-card border rounded-2xl p-6 shadow-sm">
-        <h2 className="text-lg font-bold text-foreground mb-4">Weak Concepts Requiring Attention</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {weakConcepts.map((w, i) => (
-            <div key={i} className="flex items-center justify-between p-4 rounded-xl border-l-4 border-l-edu-red bg-edu-light-red/10 group hover:shadow-md transition-all">
-              <div>
-                <span className="font-bold text-foreground text-sm block mb-1">{w.concept}</span>
-                <span className="text-[11px] font-bold text-edu-red uppercase">Class Avg: {w.avg}</span>
-              </div>
-              <button className="p-2 rounded-lg bg-edu-light-red/20 text-edu-red opacity-0 group-hover:opacity-100 transition-opacity">
-                <AlertCircle className="w-4 h-4" />
-              </button>
-            </div>
-          ))}
+      <div className="bg-[#fef2f2] border border-[#ef4444] rounded-xl p-5 shadow-sm mt-8">
+        <h2 className="text-[15px] font-bold text-[#1e293b] mb-4">Weak Concepts Requiring Attention</h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="bg-white px-4 py-2 rounded-full text-[13px] font-bold text-[#ef4444] shadow-sm">
+            Quadratic Equations (Class Avg: 68%)
+          </span>
+          <span className="bg-white px-4 py-2 rounded-full text-[13px] font-bold text-[#ef4444] shadow-sm">
+            Trigonometry (Class Avg: 54%)
+          </span>
+          <span className="bg-white px-4 py-2 rounded-full text-[13px] font-bold text-[#f59e0b] shadow-sm">
+            Linear Equations (Class Avg: 74%)
+          </span>
         </div>
       </div>
     </div>
