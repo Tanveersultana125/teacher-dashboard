@@ -44,7 +44,16 @@ const TeacherSidebar = () => {
         </div>
         <div className="flex flex-col leading-none">
           <span className="text-sm font-bold text-primary">EDUINTELLECT</span>
-          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Teacher</span>
+          {teacherData?.schoolName && (
+            <span className="text-[10px] font-bold text-foreground mt-1 truncate max-w-[120px]">
+              {teacherData.schoolName}
+            </span>
+          )}
+          {teacherData?.branch && (
+            <span className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider mt-0.5 truncate max-w-[120px]">
+              {teacherData.branch}
+            </span>
+          )}
         </div>
       </div>
 
