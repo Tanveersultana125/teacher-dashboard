@@ -1,4 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
+import { useAuth } from "../lib/AuthContext";
 import {
   LayoutDashboard,
   BookOpen,
@@ -12,6 +13,7 @@ import {
   MessageSquare,
   BarChart3,
   Settings,
+  LogOut
 } from "lucide-react";
 
 const navItems = [
@@ -31,15 +33,19 @@ const navItems = [
 
 const TeacherSidebar = () => {
   const location = useLocation();
+  const { teacherData, user, logout } = useAuth();
 
   return (
-    <aside className="w-64 min-h-screen bg-card border-r flex flex-col">
+    <aside className="w-64 min-h-screen bg-card border-r flex flex-col shrink-0">
       {/* Logo */}
       <div className="p-6 flex items-center gap-3">
         <div className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center">
           <BookOpen className="w-5 h-5 text-primary-foreground" />
         </div>
-        <span className="text-lg font-bold text-primary">EDUINTELLECT</span>
+        <div className="flex flex-col leading-none">
+          <span className="text-sm font-bold text-primary">EDUINTELLECT</span>
+          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Teacher</span>
+        </div>
       </div>
 
       {/* Navigation */}
@@ -64,14 +70,23 @@ const TeacherSidebar = () => {
       </nav>
 
       {/* Teacher Profile */}
-      <div className="p-4 border-t flex items-center gap-3">
-        <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-semibold">
-          PS
+      <div className="mt-auto p-4 border-t space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-semibold">
+            {teacherData?.name?.[0] || user?.displayName?.[0] || "T"}
+          </div>
+          <div className="overflow-hidden">
+            <p className="text-sm font-medium text-foreground truncate">{teacherData?.name || user?.displayName || "Teacher"}</p>
+            <p className="text-xs text-muted-foreground truncate">{teacherData?.subject || "Department"}</p>
+          </div>
         </div>
-        <div>
-          <p className="text-sm font-medium text-foreground">Priya Sharma</p>
-          <p className="text-xs text-muted-foreground">Mathematics</p>
-        </div>
+        <button 
+          onClick={logout}
+          className="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium text-rose-500 hover:bg-rose-50 transition-colors"
+        >
+          <LogOut className="w-4 h-4" />
+          Logout
+        </button>
       </div>
     </aside>
   );
