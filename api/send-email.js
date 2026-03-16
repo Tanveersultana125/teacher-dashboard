@@ -1,11 +1,5 @@
-import { Resend } from 'resend';
-
-// Support both standard and VITE prefixed env vars
-const apiKey = process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY;
-const resend = new Resend(apiKey);
-
 export default async function handler(req, res) {
-  // Add CORS headers for flexibility
+  // Add CORS headers
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -23,29 +17,39 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const { to, subject, html } = req.body;
+  const apiKey = process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY;
+
   if (!apiKey) {
-    console.error("CRITICAL: Resend API Key is missing in Environment Variables");
-    return res.status(500).json({ error: 'Email service configuration missing (API Key)' });
+    console.error("Missing Resend API Key in Teacher Dashboard");
+    return res.status(500).json({ error: 'Email service configuration missing' });
   }
 
-  const { to, subject, html } = req.body;
-
   try {
-    const { data, error } = await resend.emails.send({
-      from: 'EduIntellect <onboarding@resend.dev>',
-      to,
-      subject,
-      html,
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        from: 'EduIntellect <onboarding@resend.dev>',
+        to,
+        subject,
+        html,
+      }),
     });
 
-    if (error) {
-      console.error("Resend API Specific Error:", error);
-      return res.status(400).json({ error: error.message });
-    }
+    const data = await response.json();
 
-    res.status(200).json(data);
-  } catch (err) {
-    console.error("Serverless Function Runtime Error:", err);
-    res.status(500).json({ error: err.message });
+    if (response.ok) {
+      return res.status(200).json(data);
+    } else {
+      console.error('Resend API Error:', data);
+      return res.status(response.status).json({ error: data.message || 'Resend API Error' });
+    }
+  } catch (error) {
+    console.error('Fetch Error:', error);
+    return res.status(500).json({ error: error.message });
   }
 }
