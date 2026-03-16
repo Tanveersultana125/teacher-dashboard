@@ -2,13 +2,7 @@ import React, { useState } from 'react';
 import { ChevronLeft, MessageSquare, Phone, TrendingUp, CheckCircle2, AlertCircle, Clock, BookOpen } from 'lucide-react';
 
 interface StudentProfileProps {
-  student: {
-    initials: string;
-    name: string;
-    cls: string;
-    roll: number;
-    color: string;
-  };
+  student: any;
   onBack: () => void;
 }
 
@@ -46,21 +40,21 @@ const StudentProfile = ({ student, onBack }: StudentProfileProps) => {
           onClick={onBack}
           className="p-2 border rounded-lg hover:bg-muted transition-colors shadow-sm"
         >
-          <ChevronLeft className="w-5 h-5" />
+          <ChevronLeft className="w-5 h-5 text-[#1e3a8a]" />
         </button>
         <div className="flex items-center gap-4 flex-1">
-          <div className={`${student.color} w-16 h-16 rounded-xl flex items-center justify-center text-white text-2xl font-bold shadow-sm`}>
+          <div className={`${student.color} w-16 h-16 rounded-xl flex items-center justify-center text-white text-2xl font-bold shadow-sm ring-4 ring-white`}>
             {student.initials}
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">{student.name}</h1>
-            <p className="text-muted-foreground text-sm font-medium">
-              Class {student.cls} • Roll: {student.roll} • {student.name.toLowerCase().replace(' ', '.')}@school.edu
+            <h1 className="text-2xl font-bold text-foreground leading-none">{student.name}</h1>
+            <p className="text-muted-foreground text-xs font-bold uppercase tracking-tight mt-1">
+              {student.grade} - {student.section || 'N/A'} • {student.email}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button className="px-6 py-2.5 rounded-lg border bg-white text-sm font-bold text-foreground hover:bg-muted transition-colors shadow-sm">
+          <button className="px-6 py-2.5 rounded-lg border bg-white text-sm font-bold text-[#1e3a8a] hover:bg-muted transition-colors shadow-sm">
             Message
           </button>
           <button className="px-6 py-2.5 rounded-lg bg-[#1e3a8a] text-white text-sm font-bold hover:opacity-90 transition-opacity shadow-sm">
@@ -90,18 +84,18 @@ const StudentProfile = ({ student, onBack }: StudentProfileProps) => {
         {/* Left Column */}
         <div className="space-y-8">
           <div className="bg-card border rounded-2xl p-6 shadow-sm">
-            <h3 className="font-bold text-foreground mb-6">Personal Information</h3>
+            <h3 className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest mb-6">Personal Information</h3>
             <div className="space-y-4">
               {[
                 { label: 'Full Name', value: student.name },
-                { label: 'Roll Number', value: student.roll.toString() },
-                { label: 'Class', value: student.cls },
-                { label: 'Date of Birth', value: 'May 15, 2011' },
-                { label: 'Parent Contact', value: '+91 98765 43210' },
+                { label: 'Email', value: student.email },
+                { label: 'Grade', value: student.grade },
+                { label: 'Section', value: student.section || 'N/A' },
+                { label: 'Contact', value: student.phone || 'Not available' },
               ].map((info, i) => (
-                <div key={i} className="flex justify-between items-center text-sm font-medium">
-                  <span className="text-muted-foreground">{info.label}</span>
-                  <span className="text-foreground font-bold">{info.value}</span>
+                <div key={i} className="flex justify-between items-center text-sm font-bold">
+                  <span className="text-muted-foreground uppercase text-[10px] tracking-tighter">{info.label}</span>
+                  <span className="text-foreground font-black italic">{info.value}</span>
                 </div>
               ))}
             </div>
