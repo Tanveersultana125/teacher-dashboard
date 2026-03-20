@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Download, Search, Check } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, Check, FileSpreadsheet, BrainCircuit, Loader2, Sparkles, TrendingDown } from 'lucide-react';
+import { AIController } from '../ai/controller/ai-controller';
 
 interface EnterScoresProps {
   testName: string;
@@ -10,94 +11,120 @@ const studentsData = [
   { id: 1, name: "Aditya Rao", roll: "801", initials: "AR", color: "bg-blue-500", score: "42", grade: "A", percentage: "84%" },
   { id: 2, name: "Bhavya Singh", roll: "802", initials: "BS", color: "bg-green-500", score: "38", grade: "B", percentage: "76%" },
   { id: 3, name: "Divya Verma", roll: "803", initials: "DV", color: "bg-orange-500", score: "28", grade: "C", percentage: "56%" },
-  { id: 4, name: "Karthik Menon", roll: "804", initials: "KM", color: "bg-red-500", score: "18", grade: "D", percentage: "36%" },
-  { id: 5, name: "Neha Sharma", roll: "805", initials: "NS", color: "bg-purple-500", score: "47", grade: "A", percentage: "94%" },
-  { id: 6, name: "Pranav K", roll: "806", initials: "PK", color: "bg-pink-500", score: "35", grade: "B", percentage: "70%" },
-  { id: 7, name: "Riya Jain", roll: "807", initials: "RJ", color: "bg-teal-500", score: "41", grade: "A", percentage: "82%" },
-  { id: 8, name: "Sanjay K", roll: "808", initials: "SK", color: "bg-orange-600", score: "33", grade: "B", percentage: "66%" },
+  { id: 4, name: "Karthik Menon", roll: "804", initials: "KM", color: "bg-red-500", score: "18", grade: "D", percentage: "36%" }
 ];
 
 const EnterScores = ({ testName, onBack }: EnterScoresProps) => {
   const [students, setStudents] = useState(studentsData);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [aiData, setAiData] = useState<any>(null);
 
-  const gradeStats = [
-    { label: "A Grade (80%+)", value: "8", color: "text-edu-green" },
-    { label: "B Grade (60-79%)", value: "14", color: "text-primary" },
-    { label: "C Grade (40-59%)", value: "7", color: "text-edu-yellow" },
-    { label: "D Grade (<40%)", value: "3", color: "text-edu-red" },
-    { label: "Absent", value: "0", color: "text-muted-foreground" },
-  ];
+  const handleExcelUpload = () => {
+     alert("Excel/CSV simulated upload successful! Scores populated.");
+  };
+
+  const handleResultAnalysis = async () => {
+     if (students.length === 0) return alert("No scores available to analyze.");
+     setIsAnalyzing(true);
+     try {
+        const payload = {
+           test_name: testName,
+           total_marks: 50,
+           scores: students.map(s => ({ name: s.name, score: s.score }))
+        };
+        const result = await AIController.getResultAnalysis(payload);
+        if(result.status === "success" && result.data) {
+           setAiData(result.data);
+        } else {
+           alert(result.message || "Failed to analyze results.");
+        }
+     } catch (e) {
+        console.error(e);
+     } finally {
+        setIsAnalyzing(false);
+     }
+  };
 
   return (
-    <div className="animate-in fade-in duration-500">
-      <div className="flex items-start justify-between mb-8">
+    <div className="animate-in fade-in duration-500 pb-10">
+      <div className="flex flex-col sm:flex-row items-start justify-between mb-8 gap-4">
         <div>
-          <button 
-            onClick={onBack}
-            className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 mb-2 transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            Back to Tests
+          <button onClick={onBack} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-[#1e3a8a] flex items-center gap-1 mb-3 transition-colors">
+            <ChevronLeft className="w-4 h-4" /> Back to Tests Vault
           </button>
-          <h1 className="text-2xl font-bold text-foreground">Enter Test Scores</h1>
-          <p className="text-muted-foreground text-sm font-medium mt-1">
-            {testName} • Class 8-A • 50 marks
+          <h1 className="text-3xl font-black text-foreground max-w-2xl leading-tight">{testName}</h1>
+          <p className="text-muted-foreground text-sm font-bold mt-1 uppercase tracking-widest">
+             Class 8A • 50 marks • Result Analysis Mode
           </p>
         </div>
         
         <div className="flex items-center gap-4">
-          <div className="bg-white border rounded-lg px-4 py-2 flex items-center gap-3 shadow-sm">
-            <span className="text-sm font-medium text-muted-foreground">Class Average:</span>
-            <span className="text-sm font-bold text-primary">37.5/50 (75%)</span>
-          </div>
-
-          <button 
-            onClick={onBack}
-            className="bg-edu-green text-white px-6 py-2.5 rounded-lg text-sm font-bold hover:opacity-90 shadow-sm transition-all flex items-center gap-2"
-          >
-            <Check className="w-4 h-4" />
-            Save Scores
+          <button onClick={handleResultAnalysis} disabled={isAnalyzing} className="bg-gradient-to-br from-indigo-500 to-indigo-700 text-white px-8 py-3.5 rounded-2xl text-sm font-black hover:opacity-90 shadow-lg shadow-indigo-500/30 transition-all flex items-center gap-2">
+            {isAnalyzing ? <Loader2 className="w-5 h-5 animate-spin"/> : <Sparkles className="w-5 h-5"/>} Deep Analytics AI
+          </button>
+          <button onClick={onBack} className="bg-emerald-500 text-white px-8 py-3.5 rounded-2xl text-sm font-black hover:opacity-90 shadow-md shadow-emerald-500/20 transition-all flex items-center gap-2">
+            <Check className="w-5 h-5" /> Save Roster
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-5 gap-4 mb-8">
-        {gradeStats.map((stat, i) => (
-          <div key={i} className="bg-white border rounded-xl p-4 text-center shadow-sm hover:border-primary/20 transition-all">
-            <p className={`text-2xl font-bold mb-1 ${stat.color}`}>{stat.value}</p>
-            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{stat.label}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="content-card border rounded-xl bg-card p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-lg font-bold text-foreground">Student Scores</h2>
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input 
-                type="text" 
-                placeholder="Search student..." 
-                className="pl-9 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-64 bg-muted/20"
-              />
+      {aiData && (
+         <div className="mb-8 grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in slide-in-from-top-4 duration-700">
+            {/* FEATURE 13: Upload Result Analysis (Class Insights) */}
+            <div className="bg-indigo-50/50 border border-indigo-100 rounded-[2rem] p-8 shadow-sm">
+               <h3 className="text-sm font-black text-[#1e3a8a] uppercase tracking-widest flex items-center gap-2 mb-4">
+                  <BrainCircuit className="w-5 h-5"/> Class Intelligence Insights
+               </h3>
+               <p className="text-sm font-bold text-slate-700 leading-relaxed bg-white/70 p-6 rounded-2xl shadow-sm border border-indigo-50 italic">
+                  "{aiData.class_insights}"
+               </p>
             </div>
-            <button className="flex items-center gap-2 px-6 py-2 border rounded-lg text-sm font-bold text-muted-foreground hover:bg-muted bg-white transition-colors shadow-sm uppercase tracking-wide">
-              Import
+
+            {/* FEATURE 14: Question Item Analysis */}
+            <div className="bg-rose-50/50 border border-rose-100 rounded-[2rem] p-8 shadow-sm">
+               <h3 className="text-sm font-black text-rose-800 uppercase tracking-widest flex items-center gap-2 mb-4">
+                  <TrendingDown className="w-5 h-5"/> Failure Pattern Tracking (Item Analysis)
+               </h3>
+               <div className="space-y-4">
+                  {aiData.question_item_analysis?.map((item: any, i:number) => (
+                     <div key={i} className="bg-white p-5 rounded-2xl border border-rose-100 shadow-sm relative overflow-hidden group">
+                        <div className="absolute top-0 left-0 w-1.5 h-full bg-rose-400"></div>
+                        <div className="flex justify-between items-center mb-2 ms-2">
+                           <h4 className="font-black text-rose-900">{item.question_topic}</h4>
+                           <span className="bg-rose-100 text-rose-700 text-[10px] font-black px-2.5 py-1 rounded uppercase">{item.failure_rate} Error Rate</span>
+                        </div>
+                        <p className="text-xs font-bold text-slate-500 leading-snug ms-2">{item.reason}</p>
+                     </div>
+                  ))}
+               </div>
+            </div>
+         </div>
+      )}
+
+      <div className="content-card border rounded-[2rem] bg-card p-8 shadow-sm">
+        <div className="flex flex-col sm:flex-row items-center justify-between mb-8 gap-4">
+          <h2 className="text-xl font-black text-slate-800 uppercase tracking-widest">Excel Scoring Roster</h2>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input type="text" placeholder="Search student..." className="pl-11 pr-4 py-3 border-2 border-slate-100 rounded-2xl text-sm focus:outline-none focus:ring-0 focus:border-[#1e3a8a] bg-slate-50 font-bold transition-colors w-64"/>
+            </div>
+            <button onClick={handleExcelUpload} className="flex items-center gap-2 px-6 py-3 border-2 border-green-200 bg-green-50 text-green-700 rounded-2xl text-[11px] font-black shadow-sm uppercase tracking-widest hover:bg-green-100 transition-colors">
+              <FileSpreadsheet className="w-4 h-4" /> Upload Excel CSV
             </button>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {students.map((student) => (
-            <div key={student.id} className="border rounded-xl p-5 hover:border-primary/30 transition-all bg-white shadow-sm relative overflow-hidden">
-              <div className="flex items-center gap-3 mb-5">
-                <div className={`w-10 h-10 rounded-full ${student.color} flex items-center justify-center text-white font-bold text-sm shadow-sm`}>
+            <div key={student.id} className="border-2 border-slate-100 rounded-[2rem] p-6 hover:border-[#1e3a8a]/30 transition-all bg-white shadow-sm relative overflow-hidden group">
+              <div className="flex items-center gap-4 mb-5">
+                <div className={`w-12 h-12 rounded-full ${student.color} flex items-center justify-center text-white font-black shadow-sm group-hover:scale-110 transition-transform`}>
                   {student.initials}
                 </div>
-                <div>
-                  <h3 className="font-bold text-foreground leading-none mb-1">{student.name}</h3>
-                  <p className="text-[11px] text-muted-foreground font-bold">{student.roll}</p>
+                <div className="flex flex-col">
+                  <h3 className="text-sm font-black text-slate-800 leading-none mb-1">{student.name}</h3>
+                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">ID: SR-{student.roll}</p>
                 </div>
               </div>
               
@@ -105,53 +132,29 @@ const EnterScores = ({ testName, onBack }: EnterScoresProps) => {
                 <input 
                   type="text" 
                   defaultValue={student.score}
-                  className="w-full px-4 py-3 rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]/20 transition-all bg-card font-bold text-lg text-foreground text-center"
+                  className="w-full px-4 py-3.5 rounded-xl border-2 border-slate-100 focus:outline-none focus:border-[#1e3a8a] transition-all bg-slate-50 font-black text-xl text-[#1e3a8a] text-center"
                 />
-                <span className="text-sm font-bold text-muted-foreground whitespace-nowrap">/ 50</span>
+                <span className="text-[11px] font-black text-slate-300 uppercase whitespace-nowrap tracking-widest">/ 50 PTS</span>
               </div>
 
               <div className="flex items-center justify-between mt-6 pt-1">
-                <div className={`w-7 h-7 rounded-sm flex items-center justify-center text-xs font-bold ring-1 ring-inset ${
-                  student.grade === 'A' ? 'bg-edu-light-green text-edu-green ring-edu-green/20' : 
-                  student.grade === 'B' ? 'bg-edu-light-blue text-primary ring-primary/20' :
-                  student.grade === 'C' ? 'bg-edu-light-yellow text-edu-orange ring-edu-yellow/20' : 
-                  'bg-edu-light-red text-edu-red ring-edu-red/20'
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black shadow-sm ${
+                  student.grade === 'A' ? 'bg-emerald-100 text-emerald-600 border border-emerald-200' : 
+                  student.grade === 'B' ? 'bg-blue-100 text-blue-600 border border-blue-200' :
+                  student.grade === 'C' ? 'bg-amber-100 text-amber-600 border border-amber-200' : 
+                  'bg-rose-100 text-rose-600 border border-rose-200'
                 }`}>
                   {student.grade}
                 </div>
-                <span className={`text-sm font-bold ${
-                   student.grade === 'A' ? 'text-edu-green' : 
-                   student.grade === 'B' ? 'text-primary' :
-                   student.grade === 'C' ? 'text-edu-yellow' : 
-                   'text-edu-red'
-                }`}>{student.percentage}</span>
+                <span className={`text-sm font-black ${
+                   student.grade === 'A' ? 'text-emerald-500' : 
+                   student.grade === 'B' ? 'text-blue-500' :
+                   student.grade === 'C' ? 'text-amber-500' : 
+                   'text-rose-500'
+                }`}>{student.percentage} SCORE</span>
               </div>
             </div>
           ))}
-        </div>
-
-        <div className="flex items-center justify-between pt-6 border-t font-medium">
-          <p className="text-sm text-muted-foreground">Showing 8 of 32 students</p>
-          <div className="flex items-center gap-2">
-            <button className="p-2 border rounded-lg hover:bg-muted transition-colors disabled:opacity-50">
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <div className="flex items-center gap-1">
-              {[1, 2, 3, 4].map(page => (
-                <button 
-                  key={page}
-                  className={`w-9 h-9 rounded-lg text-sm font-bold flex items-center justify-center transition-all ${
-                    page === 1 ? 'bg-primary text-white shadow-sm' : 'hover:bg-muted text-muted-foreground border'
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
-            </div>
-            <button className="p-2 border rounded-lg hover:bg-muted transition-colors">
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
         </div>
       </div>
     </div>

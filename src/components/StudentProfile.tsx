@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ChevronLeft, MessageSquare, Phone, TrendingUp, CheckCircle2, AlertCircle, Clock, BookOpen } from 'lucide-react';
+import { ChevronLeft, BrainCircuit, Loader2, Sparkles, TrendingUp, CheckCircle2, Clock, Map, Target } from 'lucide-react';
+import { AIController } from '../ai/controller/ai-controller';
 
 interface StudentProfileProps {
   student: any;
@@ -8,196 +9,176 @@ interface StudentProfileProps {
 
 const StudentProfile = ({ student, onBack }: StudentProfileProps) => {
   const [activeTab, setActiveTab] = useState('Overview');
-
   const tabs = ['Overview', 'Academic', 'Attendance', 'Assignments', 'Concepts'];
+  
+  const [isSynthesizing, setIsSynthesizing] = useState(false);
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
 
   const academicData = [
     { label: 'Unit Test 1', value: 78, color: 'bg-[#1e3a8a]' },
     { label: 'Unit Test 2', value: 82, color: 'bg-[#1e3a8a]' },
-    { label: 'Mid Term', value: 88, color: 'bg-edu-green' },
-    { label: 'Unit Test 3', value: 85, color: 'bg-[#1e3a8a]' },
-    { label: 'Unit Test 4', value: 90, color: 'bg-edu-green' },
-    { label: 'Recent Test', value: 84, color: 'bg-[#1e3a8a]' },
+    { label: 'Mid Term', value: 88, color: 'bg-emerald-500' },
   ];
 
-  const recentActivity = [
-    { type: 'Submitted assignment', title: 'Algebraic Expressions', time: '2 days ago', iconBg: 'bg-green-100', iconColor: 'text-green-600' },
-    { type: 'Scored 84% in test', title: 'Unit Test: Algebra', time: '1 week ago', iconBg: 'bg-blue-100', iconColor: 'text-blue-600' },
-    { type: 'Missed assignment', title: 'Geometry Worksheet', time: '2 weeks ago', iconBg: 'bg-yellow-100', iconColor: 'text-yellow-600' },
-  ];
-
-  const conceptMastery = [
-    { label: 'Algebra', value: 92, color: 'text-edu-green' },
-    { label: 'Geometry', value: 85, color: 'text-edu-green' },
-    { label: 'Statistics', value: 76, color: 'text-edu-yellow' },
-    { label: 'Trigonometry', value: 68, color: 'text-edu-orange' },
-  ];
+  const handleDeepAnalytics = async () => {
+     setIsSynthesizing(true);
+     try {
+       const payload = {
+          student_name: student.name,
+          attendance: student.attendance || '95%',
+          average_score: student.avgScore || '88%',
+          recent_tests: academicData.map(a => a.value)
+       };
+       const result = await AIController.getStudentAnalytics(payload);
+       if (result.status === "success" && result.data) {
+          setAnalyticsData(result.data);
+       } else {
+          alert("Failed to synthesize deep analytics.");
+       }
+     } catch (e) {
+       console.error(e);
+     } finally {
+       setIsSynthesizing(false);
+     }
+  };
 
   return (
     <div className="animate-in fade-in duration-500">
-      <div className="flex items-center gap-4 mb-6">
-        <button 
-          onClick={onBack}
-          className="p-2 border rounded-lg hover:bg-muted transition-colors shadow-sm"
-        >
-          <ChevronLeft className="w-5 h-5 text-[#1e3a8a]" />
+      <div className="flex flex-col sm:flex-row items-center gap-4 mb-8 border-b-2 border-slate-50 pb-8">
+        <button onClick={onBack} className="p-4 rounded-2xl border-2 border-slate-100 hover:bg-slate-50 transition-colors shadow-sm self-start sm:self-auto group">
+          <ChevronLeft className="w-5 h-5 text-slate-400 group-hover:text-[#1e3a8a]" />
         </button>
-        <div className="flex items-center gap-4 flex-1">
-          <div className={`${student.color} w-16 h-16 rounded-xl flex items-center justify-center text-white text-2xl font-bold shadow-sm ring-4 ring-white`}>
+        <div className="flex items-center gap-6 flex-1">
+          <div className={`${student.color} w-20 h-20 rounded-[2rem] flex items-center justify-center text-white text-3xl font-black shadow-lg`}>
             {student.initials}
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground leading-none">{student.name}</h1>
-            <p className="text-muted-foreground text-xs font-bold uppercase tracking-tight mt-1">
-              {student.grade} - {student.section || 'N/A'} • {student.email}
+            <h1 className="text-4xl font-black text-slate-800 leading-tight tracking-tight mb-2">{student.name}</h1>
+            <p className="text-slate-400 text-xs font-black uppercase tracking-widest border border-slate-200 bg-slate-50 px-3 py-1.5 rounded-lg w-max shadow-sm">
+              Grade {student.grade} • SR-{student.roll || '001'} • {student.email}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <button className="px-6 py-2.5 rounded-lg border bg-white text-sm font-bold text-[#1e3a8a] hover:bg-muted transition-colors shadow-sm">
-            Message
-          </button>
-          <button className="px-6 py-2.5 rounded-lg bg-[#1e3a8a] text-white text-sm font-bold hover:opacity-90 transition-opacity shadow-sm">
-            Contact Parent
+        <div className="flex items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0">
+          <button className="px-6 py-4 rounded-2xl border-2 border-slate-100 bg-white text-xs uppercase tracking-widest font-black text-slate-500 hover:bg-slate-50 transition-colors shadow-sm w-full sm:w-auto flex justify-center">
+            Message Connect
           </button>
         </div>
       </div>
 
-      <div className="flex border-b mb-8">
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-8 py-3 text-sm font-bold transition-all relative ${
-              activeTab === tab ? 'text-[#1e3a8a]' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {tab}
-            {activeTab === tab && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#1e3a8a] rounded-full" />
-            )}
-          </button>
-        ))}
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+        <div className="lg:col-span-2 space-y-8">
+           {/* FEATURE 20 & 21: AI Deep Analytics Container */}
+           <div className="bg-indigo-600 rounded-[2.5rem] p-1 shadow-xl shadow-indigo-600/20 overflow-hidden relative">
+              <div className="bg-indigo-700/50 absolute top-0 right-0 w-96 h-96 rounded-full blur-3xl opacity-50 -translate-y-1/2 translate-x-1/2"></div>
+              <div className="bg-indigo-600 p-8 rounded-[2.4rem] relative z-10 flex flex-col md:flex-row items-center gap-8 justify-between">
+                 <div className="flex-1 text-white">
+                    <h3 className="text-xs font-black text-indigo-200 uppercase tracking-widest mb-2 flex items-center gap-2">
+                       <Sparkles className="w-4 h-4"/> AI Predictive Brain
+                    </h3>
+                    <h2 className="text-2xl font-black leading-tight mb-4 text-white drop-shadow-sm">Synthesize Deep Learning Style & Track Predicted Test Outcomes.</h2>
+                    <p className="text-xs font-bold text-indigo-300 leading-relaxed max-w-sm">Tap into the AI core to predict progress trends based dynamically on past tests and current mastery levels.</p>
+                 </div>
+                 <button onClick={handleDeepAnalytics} disabled={isSynthesizing} className="bg-white text-indigo-600 h-16 px-8 rounded-2xl text-xs font-black shadow-lg uppercase tracking-widest hover:scale-105 transition-transform flex items-center justify-center gap-2 min-w-[240px]">
+                    {isSynthesizing ? <Loader2 className="w-5 h-5 animate-spin"/> : <BrainCircuit className="w-5 h-5"/>}
+                    {isSynthesizing ? 'Establishing Neural Link...' : 'Run Deep Profile Scan'}
+                 </button>
+              </div>
+           </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column */}
-        <div className="space-y-8">
-          <div className="bg-card border rounded-2xl p-6 shadow-sm">
-            <h3 className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest mb-6">Personal Information</h3>
-            <div className="space-y-4">
-              {[
-                { label: 'Full Name', value: student.name },
-                { label: 'Email', value: student.email },
-                { label: 'Grade', value: student.grade },
-                { label: 'Section', value: student.section || 'N/A' },
-                { label: 'Contact', value: student.phone || 'Not available' },
-              ].map((info, i) => (
-                <div key={i} className="flex justify-between items-center text-sm font-bold">
-                  <span className="text-muted-foreground uppercase text-[10px] tracking-tighter">{info.label}</span>
-                  <span className="text-foreground font-black italic">{info.value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+           {analyticsData && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-top-4 duration-700">
+                 {/* FEATURE 20: Learning Style Detection */}
+                 <div className="bg-white border border-amber-100 rounded-[2rem] p-8 shadow-sm">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center mb-6">
+                       <Map className="w-6 h-6 text-amber-500" />
+                    </div>
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Detected Architecture</h3>
+                    <h2 className="text-xl font-black text-amber-600 mb-4">{analyticsData.learning_style} Scholar</h2>
+                    <p className="text-xs font-bold text-slate-600 leading-relaxed bg-amber-50/50 p-4 rounded-xl border border-amber-50">{analyticsData.learning_style_reason}</p>
+                 </div>
 
-          <div className="bg-card border rounded-2xl p-6 shadow-sm">
-            <h3 className="font-bold text-foreground mb-6">Quick Stats</h3>
-            <div className="grid grid-cols-2 gap-4">
-              {[
-                { label: 'Attendance', value: '98%', color: 'text-edu-green' },
-                { label: 'Avg. Score', value: '85.5%', color: 'text-[#1e3a8a]' },
-                { label: 'Submission', value: '95%', color: 'text-edu-green' },
-                { label: 'Tests Taken', value: '12', color: 'text-[#1e3a8a]' },
-              ].map((stat, i) => (
-                <div key={i} className="bg-muted/10 rounded-xl p-4 text-center border border-muted/20">
-                  <p className={`text-2xl font-bold mb-1 ${stat.color}`}>{stat.value}</p>
-                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{stat.label}</p>
+                 {/* FEATURE 21: Progress Prediction */}
+                 <div className="bg-white border border-emerald-100 rounded-[2rem] p-8 shadow-sm">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center mb-6">
+                       <Target className="w-6 h-6 text-emerald-500" />
+                    </div>
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Expected Trajectory</h3>
+                    <h2 className="text-xl font-black text-emerald-600 mb-4">{analyticsData.progress_prediction}</h2>
+                    <p className="text-xs font-bold text-slate-600 leading-relaxed bg-emerald-50/50 p-4 rounded-xl border border-emerald-50">{analyticsData.prediction_reason}</p>
+                 </div>
+              </div>
+           )}
+
+           <div className="bg-white border-2 border-slate-100 rounded-[2rem] p-8 shadow-sm">
+             <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-6">Quick Overview Matrix</h3>
+             <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 relative overflow-hidden">
+                   <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-400"></div>
+                   <p className="text-3xl font-black text-slate-800 mb-1 leading-none text-center">{student.attendance || '95%'}</p>
+                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center mt-2">Attendance Rating</p>
                 </div>
-              ))}
-            </div>
-          </div>
+                <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 relative overflow-hidden">
+                   <div className="absolute top-0 left-0 w-1.5 h-full bg-[#1e3a8a]"></div>
+                   <p className="text-3xl font-black text-slate-800 mb-1 leading-none text-center">{student.avgScore || '88%'}</p>
+                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center mt-2">Scholarly Average</p>
+                </div>
+             </div>
+           </div>
         </div>
 
-        {/* Middle Column */}
-        <div className="bg-card border rounded-2xl p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-bold text-foreground">Academic Performance</h3>
-            <span className="text-[10px] uppercase font-bold text-muted-foreground">Last 6 months</span>
-          </div>
-          <p className="text-xs text-muted-foreground mb-8">Performance trend across recent assessments</p>
-          
-          <div className="space-y-6">
-            {academicData.map((data, i) => (
-              <div key={i}>
-                <div className="flex justify-between items-center text-xs font-bold mb-2">
-                  <span className="text-muted-foreground">{data.label}</span>
-                  <span className="text-foreground">{data.value}%</span>
+        {/* Right Sidebar stats */}
+        <div className="space-y-6">
+           <div className="bg-white border-2 border-slate-100 rounded-[2rem] p-8 shadow-sm">
+             <div className="flex items-center justify-between mb-6">
+               <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-400">Academic Trajectory</h3>
+               <span className="text-[8px] uppercase font-black tracking-widest bg-blue-50 text-blue-600 px-2 py-1 rounded">Live Data</span>
+             </div>
+             
+             <div className="space-y-6 mb-8">
+               {academicData.map((data, i) => (
+                 <div key={i}>
+                   <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest mb-2">
+                     <span className="text-slate-500">{data.label}</span>
+                     <span className="text-slate-800">{data.value}%</span>
+                   </div>
+                   <div className="h-2.5 bg-slate-50 rounded-full overflow-hidden border border-slate-100 shadow-inner">
+                     <div className={`h-full ${data.color} shadow-sm rounded-full`} style={{ width: `${data.value}%` }} />
+                   </div>
+                 </div>
+               ))}
+             </div>
+
+             <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex items-center justify-between">
+                <div>
+                   <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600 mb-0.5">Status Trend</p>
+                   <p className="text-sm font-black text-emerald-800">Positive Growth</p>
                 </div>
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full ${data.color} transition-all duration-1000`} 
-                    style={{ width: `${data.value}%` }}
-                  />
+                <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600">
+                   <TrendingUp className="w-5 h-5"/>
                 </div>
+             </div>
+           </div>
+
+           <div className="bg-white border-2 border-slate-100 rounded-[2rem] p-8 shadow-sm">
+              <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-6">Recent Touchpoints</h3>
+              <div className="space-y-5">
+                 <div className="flex gap-4 items-start">
+                    <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex justify-center items-center shrink-0 border border-blue-100"><CheckCircle2 className="w-4 h-4"/></div>
+                    <div>
+                       <p className="text-xs font-black text-slate-700">Submitted Algebra Exam</p>
+                       <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">2 Days Ago</p>
+                    </div>
+                 </div>
+                 <div className="flex gap-4 items-start">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex justify-center items-center shrink-0 border border-emerald-100"><TrendingUp className="w-4 h-4"/></div>
+                    <div>
+                       <p className="text-xs font-black text-slate-700">Scored Rank 2 (Out of 34)</p>
+                       <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">1 Week Ago</p>
+                    </div>
+                 </div>
               </div>
-            ))}
-          </div>
-
-          <div className="mt-12 pt-8 border-t flex items-center justify-between">
-            <span className="text-sm font-medium text-muted-foreground">Overall Trend</span>
-            <div className="flex items-center gap-1.5 text-edu-green font-bold">
-              <TrendingUp className="w-4 h-4" />
-              <span>+6.2%</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column */}
-        <div className="space-y-8">
-          <div className="bg-card border rounded-2xl p-6 shadow-sm">
-            <h3 className="font-bold text-foreground mb-6">Recent Activity</h3>
-            <div className="space-y-6">
-              {recentActivity.map((activity, i) => (
-                <div key={i} className="flex gap-4">
-                  <div className={`w-10 h-10 rounded-xl ${activity.iconBg} flex items-center justify-center shrink-0`}>
-                    {i === 0 ? <CheckCircle2 className={`w-5 h-5 ${activity.iconColor}`} /> : 
-                     i === 1 ? <TrendingUp className={`w-5 h-5 ${activity.iconColor}`} /> : 
-                     <Clock className={`w-5 h-5 ${activity.iconColor}`} />}
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-foreground leading-tight">{activity.type}</h4>
-                    <p className="text-xs text-muted-foreground mt-0.5">{activity.title} • {activity.time}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-card border rounded-2xl p-6 shadow-sm">
-            <h3 className="font-bold text-foreground mb-4">Concept Mastery</h3>
-            <div className="space-y-3">
-              {conceptMastery.map((concept, i) => (
-                <div key={i} className="flex justify-between items-center text-sm font-bold">
-                  <span className="text-muted-foreground">{concept.label}</span>
-                  <span className={concept.color}>{concept.value}%</span>
-                </div>
-              ))}
-            </div>
-            <button className="w-full mt-6 py-2.5 rounded-xl border font-bold text-primary hover:bg-muted transition-colors text-xs uppercase tracking-wide">
-              View Full Analysis
-            </button>
-          </div>
-
-          <div className="bg-edu-light-green/40 border border-edu-green/20 rounded-2xl p-6">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-8 h-8 rounded-full bg-edu-green flex items-center justify-center">
-                <CheckCircle2 className="w-4 h-4 text-white" />
-              </div>
-              <h3 className="font-bold text-foreground">No Risk Alerts</h3>
-            </div>
-            <p className="text-sm font-medium text-muted-foreground">Student is performing well across all metrics.</p>
-          </div>
+           </div>
         </div>
       </div>
     </div>
