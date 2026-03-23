@@ -4,12 +4,13 @@ import { collection, query, onSnapshot, getDocs, where } from "firebase/firestor
 import { useAuth } from "../lib/AuthContext";
 import { 
   Loader2, Search, FileSpreadsheet, Award, 
-  BarChart3, Info, ChevronDown, GraduationCap 
+  BarChart3, Info, GraduationCap 
 } from "lucide-react";
 import {
   Select, SelectContent, SelectItem,
   SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
 
 interface StudentGrade {
   id: string;
@@ -78,62 +79,73 @@ const Gradebook = () => {
     return () => unsub();
   }, [teacherData?.id, selectedClassName]);
 
-  // 2. Fetch Students and Grades for the selected class
+  // 2. Fetch Enrollments and Grades for the selected class
   useEffect(() => {
     if (!teacherData?.id || !selectedClassName) return;
     setLoading(true);
 
     const q = query(
-      collection(db, "students"), 
+      collection(db, "enrollments"), 
       where("teacherId", "==", teacherData.id),
-      where("grade", "==", selectedClassName)
+      where("className", "==", selectedClassName)
     );
 
     const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const gradesSnap = await getDocs(collection(db, "grades"));
-      const allGrades = gradesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      try {
+        const gradesSnap = await getDocs(collection(db, "grades"));
+        const allGrades = gradesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      const data: StudentGrade[] = snapshot.docs.map(doc => {
-        const s = doc.data();
-        const g: any = allGrades.find((grade: any) => grade.studentId === doc.id) || {};
-        
-        const row = {
-          id: doc.id,
-          name: s.name,
-          initials: s.name?.substring(0,2).toUpperCase() || "ST",
-          hw1: g.hw1 || 0,
-          hw2: g.hw2 || 0,
-          hw3: g.hw3 || 0,
-          q1: g.q1 || 0,
-          q2: g.q2 || 0,
-          ut1: g.ut1 || 0,
-          ut2: g.ut2 || 0,
-          mid: g.mid || 0,
-          proj: g.proj || 0,
-          total: 0,
-          grade: ""
-        };
+        const data: StudentGrade[] = snapshot.docs.map(doc => {
+          const e = doc.data();
+          // Find grade by studentId OR studentEmail
+          const g: any = allGrades.find((grade: any) => 
+            (grade.studentId && grade.studentId === e.studentId) || 
+            (grade.studentEmail && grade.studentEmail === e.studentEmail) ||
+            (grade.studentId === doc.id) // Fallback for legacy
+          ) || {};
+          
+          const row = {
+            id: e.studentId || doc.id,
+            name: e.studentName,
+            initials: e.studentName?.substring(0,2).toUpperCase() || "ST",
+            hw1: g.hw1 || 0,
+            hw2: g.hw2 || 0,
+            hw3: g.hw3 || 0,
+            q1: g.q1 || 0,
+            q2: g.q2 || 0,
+            ut1: g.ut1 || 0,
+            ut2: g.ut2 || 0,
+            mid: g.mid || 0,
+            proj: g.proj || 0,
+            total: 0,
+            grade: ""
+          };
 
-        row.total = row.hw1 + row.hw2 + row.hw3 + row.q1 + row.q2 + row.ut1 + row.ut2 + row.mid + row.proj;
-        row.grade = getGrade(row.total);
-        return row;
-      });
-
-      setStudents(data);
-
-      if (data.length > 0) {
-        const avgs: any = {};
-        const keys = ["hw1", "hw2", "hw3", "q1", "q2", "ut1", "ut2", "mid", "proj", "total"];
-        keys.forEach(k => {
-          const sum = data.reduce((acc, curr: any) => acc + (curr[k as keyof StudentGrade] as number), 0);
-          avgs[k] = (sum / data.length).toFixed(1);
+          row.total = row.hw1 + row.hw2 + row.hw3 + row.q1 + row.q2 + row.ut1 + row.ut2 + row.mid + row.proj;
+          row.grade = getGrade(row.total);
+          return row;
         });
-        avgs.grade = getGrade(parseFloat(avgs.total));
-        setClassAvgs(avgs);
-      } else {
-        setClassAvgs({});
+
+        setStudents(data);
+
+        if (data.length > 0) {
+          const avgs: any = {};
+          const keys = ["hw1", "hw2", "hw3", "q1", "q2", "ut1", "ut2", "mid", "proj", "total"];
+          keys.forEach(k => {
+            const sum = data.reduce((acc, curr: any) => acc + (curr[k as keyof StudentGrade] as number), 0);
+            avgs[k] = (sum / data.length).toFixed(1);
+          });
+          avgs.grade = getGrade(parseFloat(avgs.total));
+          setClassAvgs(avgs);
+        } else {
+          setClassAvgs({});
+        }
+      } catch (e) {
+        console.error("Gradebook fetch error:", e);
+        toast.error("Failed to load grades.");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();

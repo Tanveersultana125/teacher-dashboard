@@ -19,9 +19,9 @@ const Dashboard = () => {
         // Real check: Does this teacher have any classes or students?
         if (!teacherData?.id) return;
         const classesSnap = await getDocs(query(collection(db, "classes"), where("teacherId", "==", teacherData.id), limit(1)));
-        const studentsSnap = await getDocs(query(collection(db, "students"), where("teacherId", "==", teacherData.id), limit(1)));
+        const enrollmentsSnap = await getDocs(query(collection(db, "enrollments"), where("teacherId", "==", teacherData.id), limit(1)));
         
-        const hasData = !classesSnap.empty && !studentsSnap.empty;
+        const hasData = !classesSnap.empty && !enrollmentsSnap.empty;
         setDataExists(hasData);
 
         if (!hasData) {
@@ -35,7 +35,7 @@ const Dashboard = () => {
         const context = {
           teacher_name: teacherData?.name || user?.displayName,
           class_count: classesSnap.size,
-          student_count: studentsSnap.size,
+          student_count: enrollmentsSnap.size,
           last_updated: new Date().toISOString()
         };
 
