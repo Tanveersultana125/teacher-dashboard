@@ -4,7 +4,7 @@ import { useAuth } from "../lib/AuthContext";
 import { db } from "../lib/firebase";
 import { 
   collection, query, where, onSnapshot, addDoc, 
-  serverTimestamp, deleteDoc, doc, getDocs 
+  serverTimestamp, deleteDoc, doc, getDocs, updateDoc 
 } from "firebase/firestore";
 import { 
   BookOpen, Users, Clock, ArrowRight, GraduationCap, 
@@ -33,6 +33,7 @@ const MyClasses = () => {
   
   const [newClass, setNewClass] = useState({ name: "", grade: "", section: "" });
   const [newStudent, setNewStudent] = useState({ name: "", email: "" });
+  const [existSearch, setExistSearch] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   // 1. Fetch Teacher's Classes
@@ -99,6 +100,21 @@ const MyClasses = () => {
     }
   };
 
+  const handleAssignExisting = async (studentId: string) => {
+    setIsSaving(true);
+    try {
+      const studentRef = doc(db, "students", studentId);
+      await updateDoc(studentRef, {
+        grade: selectedClass.name
+      });
+      toast.success("Student assigned to class");
+    } catch (e) {
+      toast.error("Failed to move student");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const deleteClass = async (id: string) => {
     if (!confirm("Are you sure? This won't delete students, but will remove the class group.")) return;
     try {
@@ -115,6 +131,12 @@ const MyClasses = () => {
       <p className="font-bold text-slate-400">Loading your academic roster...</p>
     </div>
   );
+
+  const currentClassStudents = students.filter(s => s.grade === selectedClass?.name);
+  const otherStudents = students.filter(s => s.grade !== selectedClass?.name && 
+    (s.name.toLowerCase().includes(existSearch.toLowerCase()) || 
+     s.email.toLowerCase().includes(existSearch.toLowerCase()))
+  ).slice(0, 3); // Just show top 3 search results for simplicity
 
   return (
     <div className="animate-in fade-in duration-500 pb-10">
@@ -224,7 +246,7 @@ const MyClasses = () => {
 
       {/* ── MANAGE STUDENTS DIALOG ── */}
       <Dialog open={isManageStudentsOpen} onOpenChange={setIsManageStudentsOpen}>
-        <DialogContent className="sm:max-w-[620px] rounded-[3rem] max-h-[85vh] flex flex-col">
+        <DialogContent className="sm:max-w-[620px] rounded-[3rem] max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="text-2xl font-black text-slate-900 flex items-center gap-3">
               <Users className="w-6 h-6 text-blue-600" /> {selectedClass?.name} Roster
@@ -233,6 +255,43 @@ const MyClasses = () => {
           </DialogHeader>
           
           <div className="flex-1 overflow-y-auto py-6 space-y-8 pr-2">
+            
+            {/* ── ASSIGN EXISTING STUDENTS ── */}
+            <div className="space-y-4">
+               <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                  <Search className="w-3 h-3"/> Assign Existing Scholar
+               </h4>
+               <div className="relative">
+                  <Input 
+                    placeholder="Search by name from your records..." 
+                    className="h-12 rounded-xl bg-slate-50 border-slate-100 pl-10" 
+                    value={existSearch} 
+                    onChange={e => setExistSearch(e.target.value)} 
+                  />
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" />
+               </div>
+               
+               {existSearch && otherStudents.length > 0 && (
+                  <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-lg animate-in slide-in-from-top-2">
+                     {otherStudents.map(s => (
+                        <div key={s.id} className="p-4 flex items-center justify-between border-b last:border-0 hover:bg-slate-50 transition-colors">
+                           <div>
+                              <p className="font-bold text-sm text-slate-800">{s.name}</p>
+                              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{s.grade || 'No Class'}</p>
+                           </div>
+                           <button 
+                             onClick={() => handleAssignExisting(s.id)}
+                             disabled={isSaving}
+                             className="px-4 py-2 bg-blue-50 text-[#1e3a8a] text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-[#1e3a8a] hover:text-white transition-all"
+                           >
+                              Assign Now
+                           </button>
+                        </div>
+                     ))}
+                  </div>
+               )}
+            </div>
+
             {/* Quick Add Form */}
             <div className="p-6 bg-slate-50 border border-slate-100 rounded-[2rem] space-y-4">
                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Enroll New Student</h4>
@@ -248,10 +307,10 @@ const MyClasses = () => {
             {/* List */}
             <div className="space-y-4">
               <div className="flex justify-between items-center mb-4">
-                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Members ({students.filter(s => s.grade === selectedClass?.name).length})</h4>
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Members ({currentClassStudents.length})</h4>
               </div>
               <div className="space-y-3">
-                {students.filter(s => s.grade === selectedClass?.name).map((stu) => (
+                {currentClassStudents.map((stu) => (
                   <div key={stu.id} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:border-blue-100 transition-all">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-[#1e3a8a] text-xs font-black">
@@ -265,12 +324,17 @@ const MyClasses = () => {
                     <span className="text-[9px] font-black text-blue-500 bg-blue-50 px-2 py-1 rounded uppercase">Active</span>
                   </div>
                 ))}
+                {currentClassStudents.length === 0 && (
+                  <div className="py-10 text-center">
+                    <p className="text-xs font-bold text-slate-300 uppercase tracking-[0.2em]">Roster is currently empty</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
           
           <DialogFooter className="pt-4 border-t border-slate-100">
-            <button onClick={() => setIsManageStudentsOpen(false)} className="w-full py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600">Done Managing</button>
+            <button onClick={() => setIsManageStudentsOpen(false)} className="w-full py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">Done Managing</button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
