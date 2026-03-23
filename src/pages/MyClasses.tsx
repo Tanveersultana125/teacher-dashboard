@@ -2,237 +2,278 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/AuthContext";
 import { db } from "../lib/firebase";
-import { collection, query, limit, getDocs } from "firebase/firestore";
+import { 
+  collection, query, where, onSnapshot, addDoc, 
+  serverTimestamp, deleteDoc, doc, getDocs 
+} from "firebase/firestore";
+import { 
+  BookOpen, Users, Clock, ArrowRight, GraduationCap, 
+  Loader2, Activity, BrainCircuit, Sparkles, Plus, 
+  Trash2, UserPlus, X, Check, Search
+} from "lucide-react";
+import { 
+  Dialog, DialogContent, DialogHeader, 
+  DialogTitle, DialogDescription, DialogFooter 
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 import { AIController } from "../ai/controller/ai-controller";
-import { BookOpen, Users, Clock, ArrowRight, GraduationCap, Loader2, HeartPulse, Activity, BrainCircuit, Sparkles } from "lucide-react";
 
 const MyClasses = () => {
   const navigate = useNavigate();
-  const { teacherData, user } = useAuth();
+  const { teacherData } = useAuth();
   
-  const assignedClass = teacherData?.classes;
-
+  const [classes, setClasses] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dataExists, setDataExists] = useState(false);
-  const [aiData, setAiData] = useState<any>(null);
-  const [placeholderMessage, setPlaceholderMessage] = useState<string | null>(null);
+  const [isAddClassOpen, setIsAddClassOpen] = useState(false);
+  const [isManageStudentsOpen, setIsManageStudentsOpen] = useState(false);
+  const [selectedClass, setSelectedClass] = useState<any>(null);
+  
+  const [newClass, setNewClass] = useState({ name: "", grade: "", section: "" });
+  const [newStudent, setNewStudent] = useState({ name: "", email: "" });
+  const [isSaving, setIsSaving] = useState(false);
 
+  // 1. Fetch Teacher's Classes
   useEffect(() => {
-    const fetchClassInsights = async () => {
-      try {
-        if (!assignedClass) {
-           setPlaceholderMessage("No class assigned to you yet. Please wait for the Principal.");
-           setLoading(false);
-           return;
-        }
+    if (!teacherData?.id) return;
+    const q = query(collection(db, "classes"), where("teacherId", "==", teacherData.id));
+    const unsub = onSnapshot(q, (snap) => {
+      setClasses(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLoading(false);
+    });
+    return () => unsub();
+  }, [teacherData?.id]);
 
-        // Real Developer Logic: Query REAL students assigned to this specific class
-        const studentsSnap = await getDocs(query(collection(db, "students")));
-        let classStudents = studentsSnap.docs.map(d => d.data());
-        
-        // Filter students belonging to this teacher's class
-        classStudents = classStudents.filter(s => 
-           assignedClass.toLowerCase().includes(String(s.grade).toLowerCase()) || 
-           String(s.class).toLowerCase() === assignedClass.toLowerCase()
-        );
+  // 2. Fetch All Students for this Teacher (to count and filter)
+  useEffect(() => {
+    if (!teacherData?.id) return;
+    const q = query(collection(db, "students"), where("teacherId", "==", teacherData.id));
+    const unsub = onSnapshot(q, (snap) => {
+      setStudents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return () => unsub();
+  }, [teacherData?.id]);
 
-        const exists = classStudents.length > 0;
-        setDataExists(exists);
+  const handleAddClass = async () => {
+    if (!newClass.name || !newClass.grade) return toast.error("Class Name and Grade are required");
+    setIsSaving(true);
+    try {
+      await addDoc(collection(db, "classes"), {
+        ...newClass,
+        teacherId: teacherData.id,
+        schoolId: teacherData.schoolId || "",
+        createdAt: serverTimestamp()
+      });
+      toast.success("Class added successfully!");
+      setIsAddClassOpen(false);
+      setNewClass({ name: "", grade: "", section: "" });
+    } catch (e) {
+      toast.error("Failed to add class");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
-        if (!exists) {
-           setPlaceholderMessage("After you add students to your class roster, these AI metrics will start working automatically.");
-           setLoading(false);
-           return;
-        }
+  const handleAddStudent = async () => {
+    if (!newStudent.name || !newStudent.email) return toast.error("Name and Email are required");
+    setIsSaving(true);
+    try {
+      await addDoc(collection(db, "students"), {
+        name: newStudent.name,
+        email: newStudent.email.toLowerCase(),
+        grade: selectedClass.name, // Link student to this class name
+        teacherId: teacherData.id,
+        teacherName: teacherData.name,
+        schoolId: teacherData.schoolId || "",
+        status: "Invited",
+        createdAt: serverTimestamp()
+      });
+      toast.success(`${newStudent.name} added to ${selectedClass.name}`);
+      setNewStudent({ name: "", email: "" });
+    } catch (e) {
+      toast.error("Failed to add student");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
-        // Calculate actual health metrics from the dynamically fetched students array
-        const actualInput = {
-           class_name: assignedClass,
-           total_students: classStudents.length,
-           timestamp: new Date().toISOString()
-        };
+  const deleteClass = async (id: string) => {
+    if (!confirm("Are you sure? This won't delete students, but will remove the class group.")) return;
+    try {
+      await deleteDoc(doc(db, "classes", id));
+      toast.success("Class removed");
+    } catch (e) {
+      toast.error("Error deleting class");
+    }
+  };
 
-        const result = await AIController.getClassInsights(actualInput);
-        
-        if (result.status === "no_data") {
-           setPlaceholderMessage("After you add students to your class roster, these AI metrics will start working automatically.");
-        } else if (result.status === "success" && result.data) {
-           setAiData(result.data);
-           setPlaceholderMessage(null);
-        } else {
-           setPlaceholderMessage(result.message || "Error analyzing insights.");
-        }
-      } catch (err) {
-        console.error("MyClasses fetch error: ", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchClassInsights();
-  }, [assignedClass]);
+  if (loading) return (
+    <div className="h-[60vh] flex flex-col items-center justify-center">
+      <Loader2 className="w-10 h-10 text-[#1e3a8a] animate-spin mb-4" />
+      <p className="font-bold text-slate-400">Loading your academic roster...</p>
+    </div>
+  );
 
   return (
     <div className="animate-in fade-in duration-500 pb-10">
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex flex-col sm:flex-row items-center justify-between mb-10 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">My Classes</h1>
-          <p className="text-sm font-medium text-muted-foreground mt-1">Manage all your assigned grades and students.</p>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Class Management</h1>
+          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">Design your curriculum and manage student groups</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="bg-[#1e3a8a]/5 border border-[#1e3a8a]/10 rounded-2xl px-5 py-2.5 flex flex-col items-end">
-             <span className="text-[10px] font-bold text-[#1e3a8a] uppercase tracking-widest">Active Status</span>
-             <span className="text-sm font-black text-[#1e3a8a] leading-none uppercase">Teaching Online</span>
-          </div>
-        </div>
+        <button 
+          onClick={() => setIsAddClassOpen(true)}
+          className="bg-[#1e3a8a] text-white px-8 py-4 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-xl shadow-blue-900/20 hover:scale-105 transition-all flex items-center gap-3"
+        >
+          <Plus className="w-5 h-5" /> Start New Class
+        </button>
       </div>
 
-      {!assignedClass ? (
-        <div className="flex flex-col items-center justify-center py-24 bg-white rounded-[40px] border border-dashed border-slate-200 shadow-inner px-6 text-center">
-          <div className="w-24 h-24 bg-slate-50 rounded-3xl flex items-center justify-center mb-6">
-            <BookOpen className="w-12 h-12 text-slate-200" />
-          </div>
-          <h2 className="text-2xl font-black text-slate-900 mb-2">No Classes Assigned Yet</h2>
-          <p className="text-sm font-bold text-slate-400 max-w-sm uppercase tracking-tight leading-relaxed">
-            Please wait for the Principal to assign your grade/class from the Management Portal.
-          </p>
+      {classes.length === 0 ? (
+        <div className="bg-white border-2 border-dashed border-slate-100 rounded-[3rem] p-24 text-center">
+          <BookOpen className="w-20 h-20 text-slate-100 mx-auto mb-8" />
+          <h2 className="text-2xl font-black text-slate-800 mb-2">No Classes Found</h2>
+          <p className="text-slate-400 font-bold mb-8 italic">Your digital classroom is ready. Start by adding your first grade or section.</p>
+          <button onClick={() => setIsAddClassOpen(true)} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest">Create Class Now</button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
-          {/* Main Class Card */}
-          <div className="lg:col-span-5 bg-white border border-slate-100 rounded-[32px] p-8 shadow-sm hover:shadow-xl transition-all duration-500 group relative overflow-hidden h-fit">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-br from-[#1e3a8a]/5 to-transparent rounded-bl-[120px] -mr-12 -mt-12 transition-transform group-hover:scale-110 duration-700 pointer-events-none" />
-            
-            <div className="flex justify-between items-start mb-8 relative z-10">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#1e3a8a] to-[#3b82f6] flex items-center justify-center text-white shadow-lg shadow-blue-500/20 transform group-hover:rotate-6 transition-transform">
-                <GraduationCap className="w-8 h-8" />
-              </div>
-              <div className="flex flex-col items-end">
-                <span className="bg-green-50 text-green-600 text-[9px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest border border-green-100 shadow-sm">
-                  Live & Assigned
-                </span>
-                <span className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-tighter">Academic Year 2025-26</span>
-              </div>
-            </div>
-
-            <div className="relative z-10">
-              <h3 className="text-3xl font-black text-slate-900 mb-1 tracking-tight">{assignedClass}</h3>
-              <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-8 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#1e3a8a] animate-pulse" />
-                {teacherData?.subject || 'Primary Educator'}
-              </p>
-              
-              <div className="grid grid-cols-2 gap-4 mb-8">
-                <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 group-hover:bg-white transition-colors">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Users className="w-3.5 h-3.5 text-[#1e3a8a]" />
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Students</span>
-                  </div>
-                  <p className="text-lg font-black text-slate-900">Active Roster</p>
-                </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {classes.map((cls) => {
+            const classStudents = students.filter(s => s.grade === cls.name);
+            return (
+              <div key={cls.id} className="bg-white border border-slate-100 rounded-[2.5rem] p-8 shadow-sm hover:shadow-2xl transition-all group relative overflow-hidden">
+                <div className="absolute -right-10 -top-10 w-40 h-40 bg-blue-50/50 rounded-full blur-3xl group-hover:bg-blue-100 transition-colors"></div>
                 
-                <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 group-hover:bg-white transition-colors">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Clock className="w-3.5 h-3.5 text-[#1e3a8a]" />
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Schedule</span>
+                <div className="flex justify-between items-start mb-6 relative z-10">
+                  <div className="w-14 h-14 rounded-2xl bg-[#1e3a8a] flex items-center justify-center text-white shadow-lg">
+                    <GraduationCap className="w-7 h-7" />
                   </div>
-                  <p className="text-lg font-black text-slate-900">Today's Class</p>
+                  <button onClick={() => deleteClass(cls.id)} className="p-2 text-slate-200 hover:text-rose-500 transition-colors">
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="mb-8 relative z-10">
+                  <h3 className="text-2xl font-black text-slate-900 mb-1">{cls.name}</h3>
+                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest">{cls.grade} • {cls.section || 'General'}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-8 relative z-10">
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1"><Users className="w-3 h-3"/> Students</p>
+                    <p className="text-xl font-black text-slate-900">{classStudents.length}</p>
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1"><Activity className="w-3 h-3"/> Health</p>
+                    <p className="text-xl font-black text-emerald-500">88%</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 relative z-10">
+                  <button 
+                    onClick={() => { setSelectedClass(cls); setIsManageStudentsOpen(true); }}
+                    className="flex-1 bg-slate-900 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
+                  >
+                    <UserPlus className="w-4 h-4" /> Roster
+                  </button>
+                  <button 
+                    onClick={() => navigate("/students")}
+                    className="w-14 bg-blue-50 text-[#1e3a8a] border border-blue-100 rounded-2xl flex items-center justify-center hover:bg-blue-100 transition-all"
+                  >
+                    <ArrowRight className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
-
-              <button
-                onClick={() => navigate("/students")}
-                className="w-full bg-[#1e3a8a] text-white py-4 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] hover:bg-[#1e4fc0] transition-all shadow-md flex items-center justify-center gap-3 group/btn h-14"
-              >
-                Go to Class Dashboard
-                <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-2" />
-              </button>
-            </div>
-          </div>
-
-          {/* AI Insights Panel */}
-          <div className="lg:col-span-7 flex flex-col gap-6">
-            {loading ? (
-               <div className="flex-1 flex flex-col items-center justify-center bg-card border border-dashed border-border rounded-[32px] p-8">
-                  <Loader2 className="w-10 h-10 text-[#1e3a8a] animate-spin mb-4" />
-                  <p className="text-sm font-bold text-slate-500">Generating class insights...</p>
-               </div>
-            ) : !dataExists || placeholderMessage ? (
-               <div className="flex-1 flex flex-col items-center justify-center py-16 bg-card border border-dashed border-border rounded-[32px] shadow-sm px-6 text-center">
-                  <Sparkles className="w-12 h-12 text-[#1e3a8a] mb-4 animate-pulse" />
-                  <p className="text-sm font-bold text-slate-500 max-w-sm leading-relaxed mb-6">
-                    {placeholderMessage || "After you add students to your class roster, these AI metrics will start working automatically."}
-                  </p>
-                  <button onClick={() => navigate("/students")} className="px-5 py-2.5 bg-slate-100 text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-widest pointer-events-none">
-                    Waiting for Roster
-                  </button>
-               </div>
-            ) : (
-               <>
-                 {/* FEATURE 4: Class Health Score */}
-                 <div className="bg-card border border-border rounded-[32px] p-8 shadow-sm relative overflow-hidden group">
-                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-6 relative z-10">
-                      <div>
-                         <h3 className="text-lg font-black text-foreground flex items-center gap-2">
-                           <Activity className="w-5 h-5 text-emerald-500"/> Overall Class Health Matrix
-                         </h3>
-                         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1.5">AI Calculated • Aggregated Metrics</p>
-                      </div>
-                      <div className="flex items-center gap-4">
-                         <div className="text-right">
-                           <p className="text-4xl font-black text-emerald-500 tracking-tighter leading-none">{aiData?.class_health?.score || 0}</p>
-                           <p className="text-[10px] uppercase font-black text-slate-400 mt-1 tracking-widest">/ 100 PTS</p>
-                         </div>
-                      </div>
-                   </div>
-                   
-                   <div className="p-5 bg-slate-50/80 border border-slate-100 rounded-2xl relative z-10">
-                      <p className="text-sm font-bold text-slate-700 italic border-l-4 border-emerald-400 pl-4 py-1 leading-relaxed">
-                        "{aiData?.class_health?.breakdown}"
-                      </p>
-                   </div>
-                 </div>
-
-                 {/* FEATURE 5: Seating / Group Suggestions */}
-                 <div className="bg-card border border-border rounded-[32px] shadow-sm flex-1 flex flex-col overflow-hidden">
-                   <div className="p-8 border-b border-border bg-indigo-50/30">
-                      <h3 className="text-lg font-black text-indigo-900 flex items-center gap-2">
-                        <BrainCircuit className="w-5 h-5 text-indigo-500"/> Smart Group Synergy
-                      </h3>
-                      <p className="text-xs font-bold text-indigo-400 uppercase tracking-widest mt-1.5">AI-Powered Interaction Suggestions</p>
-                   </div>
-                   
-                   <div className="p-8 pb-4 flex-1">
-                      {aiData?.seating_suggestions?.length === 0 ? (
-                         <div className="text-center py-8">
-                            <p className="text-sm font-bold text-slate-400">No synergy configurations found yet.</p>
-                         </div>
-                      ) : (
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {aiData?.seating_suggestions?.map((group: any, i: number) => (
-                               <div key={i} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:border-indigo-300 transition-colors">
-                                  <h4 className="text-xs font-black text-indigo-700 uppercase tracking-wider mb-3 bg-indigo-50 inline-block px-3 py-1 rounded-md">
-                                    {group.group_name}
-                                  </h4>
-                                  <div className="flex flex-wrap gap-2 mb-4">
-                                     {group.students?.map((stu: string, j: number) => (
-                                        <span key={j} className="text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded border border-slate-200 shadow-sm">{stu}</span>
-                                     ))}
-                                  </div>
-                                  <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                                    {group.reason}
-                                  </p>
-                               </div>
-                            ))}
-                         </div>
-                      )}
-                   </div>
-                 </div>
-               </>
-            )}
-          </div>
+            );
+          })}
         </div>
       )}
+
+      {/* ── ADD CLASS DIALOG ── */}
+      <Dialog open={isAddClassOpen} onOpenChange={setIsAddClassOpen}>
+        <DialogContent className="sm:max-w-[480px] rounded-[2.5rem]">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black text-slate-900">Configure Class Group</DialogTitle>
+            <DialogDescription>Define a custom academic group for your curriculum.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-6">
+            <div className="space-y-2">
+              <Label className="uppercase text-[10px] font-black text-slate-400 tracking-widest ml-1">Class Label / Title</Label>
+              <Input placeholder="e.g. Physics Section B" className="h-14 rounded-2xl font-bold bg-slate-50 border-slate-100" value={newClass.name} onChange={e=>setNewClass({...newClass, name: e.target.value})} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="uppercase text-[10px] font-black text-slate-400 tracking-widest ml-1">Grade Level</Label>
+                <Input placeholder="e.g. 10th" className="h-14 rounded-2xl font-bold bg-slate-50 border-slate-100" value={newClass.grade} onChange={e=>setNewClass({...newClass, grade: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label className="uppercase text-[10px] font-black text-slate-400 tracking-widest ml-1">Section Code</Label>
+                <Input placeholder="e.g. C" className="h-14 rounded-2xl font-bold bg-slate-50 border-slate-100" value={newClass.section} onChange={e=>setNewClass({...newClass, section: e.target.value})} />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <button disabled={isSaving} onClick={handleAddClass} className="w-full h-14 bg-[#1e3a8a] text-white rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2">
+              {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />} Create Class Roster
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── MANAGE STUDENTS DIALOG ── */}
+      <Dialog open={isManageStudentsOpen} onOpenChange={setIsManageStudentsOpen}>
+        <DialogContent className="sm:max-w-[620px] rounded-[3rem] max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black text-slate-900 flex items-center gap-3">
+              <Users className="w-6 h-6 text-blue-600" /> {selectedClass?.name} Roster
+            </DialogTitle>
+            <DialogDescription>Manage students assigned to this specific group.</DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-y-auto py-6 space-y-8 pr-2">
+            {/* Quick Add Form */}
+            <div className="p-6 bg-slate-50 border border-slate-100 rounded-[2rem] space-y-4">
+               <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Enroll New Student</h4>
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Input placeholder="Student Full Name" className="h-12 rounded-xl bg-white border-white" value={newStudent.name} onChange={e=>setNewStudent({...newStudent, name: e.target.value})} />
+                  <Input placeholder="Parent Email" type="email" className="h-12 rounded-xl bg-white border-white" value={newStudent.email} onChange={e=>setNewStudent({...newStudent, email: e.target.value})} />
+               </div>
+               <button onClick={handleAddStudent} disabled={isSaving} className="w-full py-4 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-emerald-700 transition-colors">
+                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Enroll Student to {selectedClass?.name}
+               </button>
+            </div>
+
+            {/* List */}
+            <div className="space-y-4">
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Members ({students.filter(s => s.grade === selectedClass?.name).length})</h4>
+              </div>
+              <div className="space-y-3">
+                {students.filter(s => s.grade === selectedClass?.name).map((stu) => (
+                  <div key={stu.id} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:border-blue-100 transition-all">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-[#1e3a8a] text-xs font-black">
+                        {stu.name.substring(0,2).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-800 text-sm leading-none">{stu.name}</p>
+                        <p className="text-[11px] text-slate-400 mt-1">{stu.email}</p>
+                      </div>
+                    </div>
+                    <span className="text-[9px] font-black text-blue-500 bg-blue-50 px-2 py-1 rounded uppercase">Active</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter className="pt-4 border-t border-slate-100">
+            <button onClick={() => setIsManageStudentsOpen(false)} className="w-full py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600">Done Managing</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
