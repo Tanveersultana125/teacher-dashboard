@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { db } from '../lib/firebase';
-import { collection, query, limit, getDocs } from 'firebase/firestore';
+import { collection, query, limit, getDocs, where } from 'firebase/firestore';
 import { AIController } from '../ai/controller/ai-controller';
 import { Loader2, ShieldAlert, Sparkles, LayoutList, BellRing, TrendingUp, AlertCircle, Calendar } from 'lucide-react';
 
