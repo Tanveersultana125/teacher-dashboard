@@ -1,132 +1,233 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { useAuth } from "../lib/AuthContext";
+import { db } from "../lib/firebase";
+import { doc, updateDoc } from "firebase/firestore";
+import { toast } from "sonner";
+import { 
+  User, Bell, Settings, ShieldCheck, Mail, Phone, 
+  BookOpen, Globe, Layout, Clock, Save, X, Loader2, TrendingUp
+} from "lucide-react";
+
+interface NotificationSettings {
+  assignments: boolean;
+  grading: boolean;
+  attendance: boolean;
+  messages: boolean;
+  risks: boolean;
+}
 
 const SettingsPage = () => {
+  const { teacherData } = useAuth();
+  const [isSaving, setIsSaving] = useState(false);
+  
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    subject: ""
+  });
+
+  const [notifications, setNotifications] = useState<NotificationSettings>({
+    assignments: true,
+    grading: true,
+    attendance: true,
+    messages: true,
+    risks: true
+  });
+
+  const [preferences, setPreferences] = useState({
+    defaultView: "Grid",
+    gradeScale: "Percentage",
+    dateFormat: "DD/MM/YYYY"
+  });
+
+  useEffect(() => {
+    if (teacherData) {
+      setFormData({
+        name: teacherData.name || "",
+        email: teacherData.email || "",
+        phone: teacherData.phone || "",
+        subject: teacherData.subject || ""
+      });
+      if (teacherData.notifications) {
+        setNotifications(teacherData.notifications);
+      }
+      if (teacherData.preferences) {
+        setPreferences(teacherData.preferences);
+      }
+    }
+  }, [teacherData]);
+
+  const handleSave = async () => {
+    if (!teacherData?.id) return;
+    setIsSaving(true);
+    
+    try {
+      const docRef = doc(db, "teachers", teacherData.id);
+      const updatePayload = {
+        name: formData.name,
+        phone: formData.phone,
+        notifications: notifications,
+        preferences: preferences,
+        updatedAt: new Date().toISOString()
+      };
+
+      await updateDoc(docRef, updatePayload);
+      
+      // No need to manually update local state; AuthContext has an onSnapshot listener
+      // that will automatically detect this change and update the teacherData globally.
+      
+      toast.success("Identity Matrix Synchronized.");
+    } catch (error) {
+      console.error("Settings Update Error:", error);
+      toast.error("Cloud linkage failure.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const toggleNotification = (key: keyof NotificationSettings) => {
+    setNotifications(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-10">
-      <div className="flex items-start justify-between">
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-20 text-left font-sans">
+      
+      <div className="flex flex-col md:flex-row items-center justify-between gap-6 px-2">
         <div>
-          <h1 className="text-3xl font-bold text-[#1e293b]">Settings</h1>
-          <p className="text-[15px] font-medium text-muted-foreground mt-1">Manage your profile and preferences.</p>
+          <h1 className="text-5xl font-black text-slate-900 tracking-tighter leading-none mb-3">Settings</h1>
+          <p className="text-lg font-bold text-slate-400 italic">Configure your professional profile and global preferences.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <button className="px-5 py-2.5 bg-white border border-border rounded-xl text-sm font-bold text-foreground shadow-sm hover:bg-slate-50 transition-colors">
-            Cancel
+        <div className="flex items-center gap-4 w-full md:w-auto">
+          <button 
+            onClick={() => window.location.reload()}
+            className="flex-1 md:flex-none px-8 h-14 bg-white border border-slate-100 rounded-2xl text-sm font-black text-slate-700 hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
+          >
+            <X className="w-4 h-4"/> Reset
           </button>
-          <button className="px-5 py-2.5 bg-[#16a34a] text-white rounded-xl text-sm font-bold shadow-sm hover:bg-green-700 transition-colors">
-            Save Changes
+          <button 
+            onClick={handleSave}
+            disabled={isSaving}
+            className="flex-1 md:flex-none px-10 h-14 bg-[#1e3a8a] text-white rounded-2xl text-sm font-black shadow-2xl shadow-blue-900/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+          >
+            {isSaving ? <Loader2 className="w-5 h-5 animate-spin"/> : <Save className="w-5 h-5"/>}
+            {isSaving ? "Syncing..." : "Update Identity"}
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr] gap-6 mt-6">
-        {/* Profile Card */}
-        <div className="bg-white border border-border rounded-2xl p-6 shadow-sm flex flex-col h-full">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="w-12 h-12 rounded-[1rem] bg-blue-100/60 shadow-sm shrink-0" />
-            <h2 className="text-lg font-bold text-foreground">Profile</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+        
+        <div className="lg:col-span-4 bg-white border border-slate-100 rounded-[3.5rem] p-10 shadow-sm relative overflow-hidden group">
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-50/50 rounded-full blur-3xl group-hover:bg-blue-100/50 transition-all" />
+          
+          <div className="flex items-center gap-5 mb-11 relative z-10">
+            <div className="w-16 h-16 rounded-[2rem] bg-slate-50 flex items-center justify-center text-[#1e3a8a] shadow-inner group-hover:rotate-6 transition-transform">
+              <User size={32} />
+            </div>
+            <h2 className="text-2xl font-black text-slate-800 tracking-tight">Identity</h2>
           </div>
-          <div className="space-y-6">
-            <div>
-              <label className="text-sm font-bold text-foreground block mb-2">Full Name</label>
-              <input 
-                type="text" 
-                className="w-full px-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#16a34a]/20 transition-all font-medium text-[#1e293b] shadow-sm" 
-              />
-            </div>
-            <div>
-              <label className="text-sm font-bold text-foreground block mb-2">Email</label>
-              <input 
-                type="email" 
-                className="w-full px-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#16a34a]/20 transition-all font-medium text-[#1e293b] shadow-sm" 
-              />
-            </div>
-            <div>
-              <label className="text-sm font-bold text-foreground block mb-2">Phone</label>
-              <input 
-                type="tel" 
-                className="w-full px-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#16a34a]/20 transition-all font-medium text-[#1e293b] shadow-sm" 
-              />
-            </div>
-            <div>
-              <label className="text-sm font-bold text-foreground block mb-2">Subject</label>
-              <input 
-                type="text" 
-                className="w-full px-4 py-3 bg-slate-50/50 border border-border/60 rounded-xl focus:outline-none font-medium text-muted-foreground shadow-sm" 
-                disabled
-              />
-            </div>
+
+          <div className="space-y-8 relative z-10">
+            <InputField label="Name" icon={User} value={formData.name} onChange={v => setFormData({...formData, name: v})} />
+            <InputField label="Email" icon={Mail} value={formData.email} disabled desc="System Registered Email" />
+            <InputField label="Phone" icon={Phone} value={formData.phone} onChange={v => setFormData({...formData, phone: v})} />
+            <InputField label="Primary Subject" icon={BookOpen} value={formData.subject} disabled desc="Core Academic Domain" />
           </div>
         </div>
 
-        {/* Notifications Card */}
-        <div className="bg-white border border-border rounded-2xl p-6 shadow-sm flex flex-col h-full">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="w-12 h-12 rounded-[1rem] bg-amber-100/60 shadow-sm shrink-0" />
-            <h2 className="text-lg font-bold text-foreground">Notifications</h2>
+        <div className="lg:col-span-4 bg-white border border-slate-100 rounded-[3.5rem] p-10 shadow-sm relative overflow-hidden group">
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-amber-50/50 rounded-full blur-3xl group-hover:bg-amber-100/50 transition-all" />
+          
+          <div className="flex items-center gap-5 mb-11 relative z-10">
+            <div className="w-16 h-16 rounded-[2rem] bg-slate-50 flex items-center justify-center text-amber-600 shadow-inner group-hover:rotate-12 transition-transform">
+              <Bell size={32} />
+            </div>
+            <h2 className="text-2xl font-black text-slate-800 tracking-tight">Neural Alerts</h2>
           </div>
-          <div className="space-y-8 mt-2">
-            {[
-              { title: "Assignment Submissions", desc: "When students submit work", active: true },
-              { title: "Grade Deadlines", desc: "Reminders for pending grading", active: true },
-              { title: "Attendance Alerts", desc: "Low attendance warnings", active: true },
-              { title: "Parent Messages", desc: "New message notifications", active: true },
-              { title: "Risk Alerts", desc: "Student performance concerns", active: true },
-            ].map((n) => (
-              <div key={n.title} className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-[15px] font-bold text-foreground mb-0.5">{n.title}</h3>
-                  <p className="text-[13px] font-medium text-muted-foreground">{n.desc}</p>
-                </div>
-                {/* Custom Toggle Switch */}
-                <div className={`w-12 h-6 rounded-full relative cursor-pointer shadow-sm transition-colors ${n.active ? 'bg-[#16a34a]' : 'bg-slate-200'}`}>
-                  <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 shadow-md transition-transform ${n.active ? 'right-0.5 translate-x-[-2px]' : 'left-0.5'}`} />
-                </div>
+
+          <div className="space-y-8 relative z-10">
+            <ToggleSwitch label="Assignments" desc="Submission alerts" active={notifications.assignments} onClick={() => toggleNotification('assignments')} />
+            <ToggleSwitch label="Grading" desc="Deadline reminders" active={notifications.grading} onClick={() => toggleNotification('grading')} />
+            <ToggleSwitch label="Attendance" desc="Threshold warnings" active={notifications.attendance} onClick={() => toggleNotification('attendance')} />
+            <ToggleSwitch label="Messages" desc="New parent queries" active={notifications.messages} onClick={() => toggleNotification('messages')} />
+            <ToggleSwitch label="Risks" desc="Performance concerns" active={notifications.risks} onClick={() => toggleNotification('risks')} />
+          </div>
+        </div>
+
+        <div className="lg:col-span-4 bg-white border border-slate-100 rounded-[3.5rem] p-10 shadow-sm relative overflow-hidden group">
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-emerald-50/50 rounded-full blur-3xl group-hover:bg-emerald-100/50 transition-all" />
+          
+          <div className="flex items-center gap-5 mb-11 relative z-10">
+            <div className="w-16 h-16 rounded-[2rem] bg-slate-50 flex items-center justify-center text-emerald-600 shadow-inner group-hover:-rotate-6 transition-transform">
+              <Settings size={32} />
+            </div>
+            <h2 className="text-2xl font-black text-slate-800 tracking-tight">Preferences</h2>
+          </div>
+
+          <div className="space-y-8 relative z-10">
+            <SelectField label="Dashboard View" icon={Layout} value={preferences.defaultView} options={["Grid", "Compact"]} onChange={v => setPreferences({...preferences, defaultView: v})} />
+            <SelectField label="Grade Metric" icon={TrendingUp} value={preferences.gradeScale} options={["Percentage", "GPA"]} onChange={v => setPreferences({...preferences, gradeScale: v})} />
+            <SelectField label="Date Format" icon={Clock} value={preferences.dateFormat} options={["DD/MM/YYYY", "Relative"]} onChange={v => setPreferences({...preferences, dateFormat: v})} />
+            
+            <div className="pt-6 border-t border-slate-50 mt-10">
+              <div className="p-6 bg-slate-50 border border-slate-100 rounded-3xl flex items-start gap-4 shadow-inner">
+                 <ShieldCheck className="w-6 h-6 text-[#1e3a8a] shrink-0" />
+                 <div>
+                    <p className="text-[10px] font-black text-slate-800 uppercase tracking-widest mb-1">Central Security</p>
+                    <p className="text-[10px] font-bold text-slate-400 leading-relaxed uppercase tracking-tighter italic">Credentials managed by school primary hub.</p>
+                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Preferences & Security Column */}
-        <div className="flex flex-col gap-6 h-full">
-          {/* Preferences Card */}
-          <div className="bg-white border border-border rounded-2xl p-6 shadow-sm">
-            <div className="flex items-center gap-4 mb-8">
-               <div className="w-12 h-12 rounded-[1rem] bg-green-100/50 shadow-sm shrink-0" />
-               <h2 className="text-lg font-bold text-foreground">Preferences</h2>
-            </div>
-            <div className="space-y-6">
-              {[
-                "Default Class View",
-                "Grade Scale",
-                "Date Format"
-              ].map((label) => (
-                <div key={label}>
-                  <label className="text-sm font-bold text-foreground block mb-2">{label}</label>
-                  <div className="w-full h-[46px] bg-white border border-border rounded-xl shadow-sm flex items-center px-4" />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Security Card */}
-          <div className="bg-white border border-border rounded-2xl p-6 shadow-sm h-full">
-            <div className="flex items-center gap-4 mb-8">
-               <div className="w-12 h-12 rounded-[1rem] bg-red-100/50 shadow-sm shrink-0" />
-               <h2 className="text-lg font-bold text-foreground">Security</h2>
-            </div>
-            <div className="space-y-4">
-              <button className="w-full py-3 bg-white border border-border rounded-xl text-sm font-bold text-foreground hover:bg-slate-50 transition-colors shadow-sm">
-                Change Password
-              </button>
-              <button className="w-full py-3 bg-white border border-border rounded-xl text-sm font-bold text-foreground hover:bg-slate-50 transition-colors shadow-sm">
-                Enable 2FA
-              </button>
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );
 };
+
+const InputField = ({ label, icon: Icon, value, onChange, disabled, desc }: any) => (
+  <div className="text-left group/field">
+    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-3 pl-1 flex items-center gap-2">
+      <Icon className="w-3.5 h-3.5 group-hover/field:text-[#1e3a8a] transition-all" /> {label}
+    </label>
+    <input 
+      type="text" 
+      value={value}
+      onChange={e => onChange?.(e.target.value)}
+      disabled={disabled}
+      className={`w-full h-14 px-6 bg-slate-50 border border-slate-100 rounded-2xl text-[13px] font-black text-slate-700 outline-none transition-all shadow-inner ${disabled ? 'opacity-40 cursor-not-allowed italic' : 'focus:bg-white focus:border-[#1e3a8a] focus:ring-4 focus:ring-blue-50'}`} 
+    />
+    {desc && <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest mt-2 px-1">{desc}</p>}
+  </div>
+);
+
+const SelectField = ({ label, icon: Icon, value, options, onChange }: any) => (
+  <div className="text-left">
+    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-3 pl-1 flex items-center gap-2">
+      <Icon size={14} /> {label}
+    </label>
+    <select 
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      className="w-full h-14 px-6 bg-slate-50 border border-slate-100 rounded-2xl text-[13px] font-black text-slate-700 outline-none focus:bg-white focus:border-[#1e3a8a] transition-all shadow-inner appearance-none cursor-pointer"
+    >
+      {options.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
+    </select>
+  </div>
+);
+
+const ToggleSwitch = ({ label, desc, active, onClick }: any) => (
+  <div className="flex items-center justify-between group/toggle" onClick={onClick}>
+    <div className="cursor-pointer">
+      <h3 className="text-sm font-black text-slate-800 mb-0.5 group-hover/toggle:text-[#1e3a8a] transition-colors">{label}</h3>
+      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">{desc}</p>
+    </div>
+    <div className={`w-14 h-7 rounded-full relative cursor-pointer shadow-inner transition-all ${active ? 'bg-[#1e3a8a]' : 'bg-slate-200 hover:bg-slate-300'}`}>
+      <div className={`w-5 h-5 bg-white rounded-full absolute top-1 shadow-2xl transition-all ${active ? 'right-1 scale-110' : 'left-1'}`} />
+    </div>
+  </div>
+);
 
 export default SettingsPage;
