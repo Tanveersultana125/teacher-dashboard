@@ -94,7 +94,7 @@ const RisksAlerts = () => {
             const rate = (present / sAtt.length) * 100;
             if (rate < 80) {
               generated.push({
-                id: `att_${sId}`, studentId: sId, name,
+                id: `att_${sId}_${e.classId}`, studentId: sId, name,
                 initials: name.substring(0, 2).toUpperCase(),
                 avatarColor: getAvatarColor(name),
                 severity: rate < 60 ? "Critical" : "High Priority",
@@ -114,7 +114,7 @@ const RisksAlerts = () => {
             }, 0) / sTS.length;
             if (avgPct < 60) {
               generated.push({
-                id: `grd_${sId}`, studentId: sId, name,
+                id: `grd_${sId}_${e.classId}`, studentId: sId, name,
                 initials: name.substring(0, 2).toUpperCase(),
                 avatarColor: getAvatarColor(name),
                 severity: avgPct < 40 ? "Critical" : "High Priority",
@@ -132,7 +132,7 @@ const RisksAlerts = () => {
             const gbAvg = sGB.reduce((acc: number, g: any) => acc + (Number(g.mark) || 0), 0) / sGB.length;
             if (gbAvg < 40) {
               generated.push({
-                id: `gb_${sId}`, studentId: sId, name,
+                id: `gb_${sId}_${e.classId}`, studentId: sId, name,
                 initials: name.substring(0, 2).toUpperCase(),
                 avatarColor: getAvatarColor(name),
                 severity: "High Priority",
@@ -155,7 +155,7 @@ const RisksAlerts = () => {
             const lastSub = allSubs.filter((s: any) => s.studentId === sId).sort((a: any, b: any) => b.submittedAt - a.submittedAt)[0];
             const daysSince = lastSub ? Math.floor((now - (lastSub.submittedAt?.toMillis?.() || lastSub.submittedAt || now)) / 86400000) : null;
             generated.push({
-              id: `sub_${sId}`, studentId: sId, name,
+              id: `sub_${sId}_${e.classId}`, studentId: sId, name,
               initials: name.substring(0, 2).toUpperCase(),
               avatarColor: getAvatarColor(name),
               severity: missed.length >= 4 ? "Critical" : "High Priority",

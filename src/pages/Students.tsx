@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import StudentProfile from "@/components/StudentProfile";
 import { useAuth } from "../lib/AuthContext";
 import { db } from "../lib/firebase";
-import { collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
-import { Search, Loader2 } from "lucide-react";
+import { collection, query, where, onSnapshot, getDocs, addDoc } from "firebase/firestore";
+import { Search, Loader2, UserPlus, X } from "lucide-react";
 
 export default function Students() {
   const { teacherData } = useAuth();
@@ -14,6 +14,12 @@ export default function Students() {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
+  
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newStudentEmail, setNewStudentEmail] = useState("");
+  const [newStudentName, setNewStudentName] = useState("");
+  const [newStudentClassId, setNewStudentClassId] = useState("");
+  const [teacherClasses, setTeacherClasses] = useState<any[]>([]);
 
   // Real Database Fetching (Enrollments, Attendance, Test Scores)
   useEffect(() => {
@@ -101,7 +107,13 @@ export default function Students() {
         setLoading(false);
     });
 
-    return () => unsubEnroll();
+    // 4. Fetch Teacher Classes for Dropdown
+    const qCls = query(collection(db, "classes"), where("teacherId", "==", teacherData.id));
+    const unsubCls = onSnapshot(qCls, (snap) => {
+       setTeacherClasses(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
+    return () => { unsubEnroll(); unsubCls(); };
   }, [teacherData?.id]);
 
   const getAvatarColor = (initials: string) => {
@@ -149,12 +161,18 @@ export default function Students() {
            <h1 className="text-3xl font-black text-slate-800 tracking-tight leading-none">Students</h1>
            <p className="text-sm font-medium text-slate-500 mt-2">View and manage all your students across classes.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 mt-4 md:mt-0">
+           <button 
+             onClick={() => setShowAddModal(true)}
+             className="bg-[#1e3a8a] text-white px-5 py-2.5 rounded-xl text-[11px] font-black shadow-sm uppercase tracking-widest flex items-center gap-2 hover:bg-blue-900 transition-transform hover:-translate-y-0.5"
+           >
+              <UserPlus className="w-4 h-4" /> Add Target
+           </button>
            <div className="relative">
                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                <input type="text" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search student..." className="w-64 pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 ring-indigo-50" />
            </div>
-           <button className="bg-white border border-slate-200 text-slate-700 px-6 py-2 rounded-lg text-sm font-semibold shadow-sm hover:bg-slate-50">
+           <button className="bg-white border border-slate-200 text-slate-700 px-6 py-2.5 rounded-xl text-sm font-semibold shadow-sm hover:bg-slate-50">
               Filter
            </button>
         </div>
@@ -239,6 +257,75 @@ export default function Students() {
                  </div>
              )}
           </div>
+      )}
+
+      {/* ── ADD TARGET MODAL ── */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in">
+          <div className="bg-white rounded-[2rem] p-8 w-full max-w-lg shadow-2xl relative border border-slate-100">
+             <button onClick={() => setShowAddModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-800 transition-colors">
+               <X className="w-6 h-6"/>
+             </button>
+             <h2 className="text-3xl font-black text-slate-800 tracking-tighter italic mb-1">Enroll Target</h2>
+             <p className="text-[10px] font-black text-slate-400 mb-8 uppercase tracking-widest italic">Add Student via Direct Email Database Injection</p>
+             
+             <div className="space-y-5">
+                <div>
+                   <label className="block text-[10px] font-black text-[#1e3a8a] uppercase tracking-widest mb-1.5 ml-1">Student Alias / Name</label>
+                   <input type="text" value={newStudentName} onChange={e => setNewStudentName(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-3.5 text-sm focus:bg-white focus:border-indigo-500 focus:ring-0 transition-all font-black text-slate-800 outline-none placeholder:text-slate-300 placeholder:font-semibold tracking-tight" placeholder="e.g. Jamal Bhai" />
+                </div>
+                <div>
+                   <label className="block text-[10px] font-black text-[#1e3a8a] uppercase tracking-widest mb-1.5 ml-1">Target Email Address</label>
+                   <input type="email" value={newStudentEmail} onChange={e => setNewStudentEmail(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-3.5 text-sm focus:bg-white focus:border-indigo-500 focus:ring-0 transition-all font-black text-slate-800 outline-none placeholder:text-slate-300 placeholder:font-semibold tracking-tight" placeholder="student@example.com" />
+                </div>
+                <div>
+                   <label className="block text-[10px] font-black text-[#1e3a8a] uppercase tracking-widest mb-1.5 ml-1">Class Designation (Assigned Network)</label>
+                   <select 
+                     value={newStudentClassId} 
+                     onChange={e => setNewStudentClassId(e.target.value)} 
+                     className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-3.5 text-sm focus:bg-white focus:border-indigo-500 focus:ring-0 transition-all font-black text-slate-800 outline-none appearance-none"
+                   >
+                     <option value="" disabled>Select an active class from logic database...</option>
+                     {teacherClasses.map(cls => (
+                       <option key={cls.id} value={cls.id}>
+                         {cls.name} {cls.grade ? `(${cls.grade})` : ""}
+                       </option>
+                     ))}
+                   </select>
+                </div>
+                
+                <button 
+                  onClick={async () => {
+                     if(!newStudentEmail || !newStudentName || !newStudentClassId) return;
+                     const targetClass = teacherClasses.find(c => c.id === newStudentClassId);
+                     if(!targetClass) return;
+                     
+                     try {
+                        await addDoc(collection(db, "enrollments"), {
+                           teacherId: teacherData.id,
+                           teacherName: teacherData.name || teacherData.email || "Teacher",
+                           studentEmail: newStudentEmail.toLowerCase().trim(),
+                           studentName: newStudentName,
+                           className: targetClass.name,
+                           classId: targetClass.id,
+                           enrolledAt: new Date()
+                        });
+                        setShowAddModal(false);
+                        setNewStudentEmail("");
+                        setNewStudentName("");
+                        setNewStudentClassId("");
+                     } catch(err) {
+                        console.error("Failed to add target:", err);
+                        alert("Error capturing target.");
+                     }
+                  }}
+                  className="w-full bg-[#1e3a8a] text-white rounded-2xl py-4 font-black text-[11px] uppercase tracking-[0.2em] mt-8 shadow-md hover:shadow-xl hover:bg-indigo-600 transition-all cursor-pointer border-none"
+                >
+                   Finalize Enrollment Injection
+                </button>
+             </div>
+          </div>
+        </div>
       )}
     </div>
   );

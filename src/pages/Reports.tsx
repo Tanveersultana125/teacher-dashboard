@@ -165,7 +165,7 @@ const Reports = () => {
                                <div>
                                   <p className="text-sm font-black text-slate-800">{h.title} - {h.grade}</p>
                                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                     <CheckCircle2 className="w-3 h-3 text-emerald-500" /> {h.status} • {h.format?.toUpperCase()} FORMAT • {h.createdAt?.toDate?.().toLocaleDateString()}
+                                     <CheckCircle2 className="w-3 h-3 text-emerald-500" /> {h.status} • {h.format?.toUpperCase()} FORMAT • {h.createdAt?.toDate?.().toLocaleString('en-US', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                   </p>
                                </div>
                             </div>

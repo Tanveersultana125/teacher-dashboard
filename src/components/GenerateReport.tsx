@@ -24,7 +24,7 @@ import {
 import { toast } from "sonner";
 import { AIController } from "../ai/controller/ai-controller";
 import { db } from "../lib/firebase";
-import { collection, query, where, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc } from "firebase/firestore";
 import { useAuth } from "../lib/AuthContext";
 import * as XLSX from 'xlsx';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
@@ -160,6 +160,41 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
               standing: selectedStudent?.standing,
               ai_remark: aiResponse?.data?.report_content || `Demonstrating specialized aptitude in academic studies. Maintains an academic posture of ${selectedStudent?.score}%.`
            };
+        } else if (report.id === "attendance_summary") {
+           if (params.studentId) {
+              const selectedStudent = enrichedPerformance.find(s => roster.find(r => r.studentId === params.studentId)?.studentName === s.name) || enrichedPerformance[0];
+              resultData = {
+                 isIndividual: true,
+                 isAttendance: true,
+                 student_name: selectedStudent?.name,
+                 score: selectedStudent?.score,
+                 atnd: selectedStudent?.attendance,
+                 standing: selectedStudent?.attendance > 90 ? "Excellent" : (selectedStudent?.attendance > 75 ? "Regular" : "Irregular"),
+                 ai_remark: `Attendance analysis for ${selectedStudent?.name} shows a presence rate of ${selectedStudent?.attendance}%. Consistency in attendance is closely linked to academic mastery.`
+              };
+           } else {
+              const lowAtndStudents = enrichedPerformance.filter(s => s.attendance < 75);
+           resultData = {
+              isClassReport: true,
+              isAttendance: true,
+              className: selectedClass?.name || "Group",
+              subject: selectedClass?.subject || "General",
+              summary: {
+                 avg: `${classAvg}%`,
+                 attendance: `${classAtnd}%`,
+                 mastery: classAtnd > 90 ? "Excellent" : "Standard"
+              },
+              lowAttendance: lowAtndStudents.map(s => ({ name: s.name, rate: s.attendance })),
+              chartData: enrichedPerformance.map(s => ({ 
+                 name: s.name.split(' ')[0], 
+                 score: s.score,
+                 full_name: s.name,
+                 atnd: s.attendance
+              })),
+              aiRemarks: `The class ${selectedClass?.name || 'this group'} maintains an average attendance of ${classAtnd}%. ${lowAtndStudents.length} students are currently below the 75% threshold and may require administrative intervention.`,
+              fullList: enrichedPerformance
+           };
+           }
         }
 
        // CLOUD SYNC
@@ -174,16 +209,13 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
           grade: selectedClass?.grade || "N/A",
           className: selectedClass?.name,
           createdAt: serverTimestamp(),
-          status: report.id === "individual_progress" ? "Draft" : "Sent",
+          status: "Draft",
           format: params.format,
-          data: resultData,
-          sentToPrincipal: report.id === "class_perf" // Automatically flag for principal viewing
+          data: resultData
        });
 
        setCurrentReportId(docRef.id);
        setIsSent(false);
-
-       // Note: Principal sync is now manual via handleSendToPrincipal
        setReportResult(resultData);
        toast.success("Intelligence successfully Harvested! Review before transmission.");
     } catch (e: any) {
@@ -197,11 +229,15 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
     if (!currentReportId) return;
     setIsSending(true);
     try {
-      const { doc, updateDoc } = await import("firebase/firestore");
       await updateDoc(doc(db, "reports", currentReportId), {
         status: "Sent",
+        publishedToParent: true,
         sentAt: serverTimestamp()
       });
+      
+      // Always sync with Principal after parent sync (silent mode)
+      await handleSendToPrincipal(true);
+
       setIsSent(true);
       toast.success("Intelligence successfully mirrored to Parent Dashboard!");
     } catch (e: any) {
@@ -211,63 +247,80 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
     }
   };
 
-  const handleSendToPrincipal = async () => {
+  const handleSendToPrincipal = async (isSilent = false) => {
     if (!currentReportId || !reportResult) return;
-    setIsSending(true);
+    if (!isSilent) setIsSending(true);
     try {
-      const { doc, updateDoc } = await import("firebase/firestore");
-      
-      // Update the main report status
       await updateDoc(doc(db, "reports", currentReportId), {
-        status: "Reported",
+        status: isSilent ? "Sent & Reported" : "Reported",
         sentToPrincipal: true,
         sentAt: serverTimestamp()
       });
 
-      // Add to principal's dedicated stream
       await addDoc(collection(db, "principal_reports"), {
         teacherId: teacherData.id,
         teacherName: teacherData.name,
         schoolId: teacherData.schoolId || "Default_School",
-        reportType: "CLASS_PERF",
-        title: `${reportResult.className} - ${reportResult.subject} Performance Report`,
-        content: reportResult.aiRemarks,
-        metrics: {
-          avgScore: parseInt(reportResult.summary.avg),
+        reportType: reportResult.isIndividual ? "STUDENT_REPORT" : (reportResult.isAttendance ? "ATTENDANCE_REPORT" : "CLASS_PERF"),
+        title: reportResult.isIndividual 
+               ? `${reportResult.student_name} - ${reportResult.isAttendance ? 'Attendance' : 'Progress'} Report`
+               : `${reportResult.className} - ${reportResult.isAttendance ? 'Attendance Summary' : (reportResult.subject + ' Performance')}`,
+        content: reportResult.isIndividual ? reportResult.ai_remark : reportResult.aiRemarks,
+        metrics: reportResult.isIndividual ? {
+          score: reportResult.score || 0,
+          attendance: reportResult.atnd || 0
+        } : {
+          avgScore: reportResult.isAttendance ? 0 : parseInt(reportResult.summary.avg),
           attendance: parseInt(reportResult.summary.attendance)
         },
         createdAt: serverTimestamp(),
-        readStatus: false
+        readStatus: false,
+        grade: params.grade || "",
+        studentId: params.studentId || "all"
       });
 
-      setIsSent(true);
-      toast.success("Report successfully transmitted to Principal's desk!");
+      if (!isSilent) {
+        setIsSent(true);
+        toast.success("Report successfully transmitted to Principal's desk!");
+      }
     } catch (e: any) {
       console.error(e);
-      toast.error("Failed to sync with Principal Portal.");
+      if (!isSilent) toast.error("Failed to sync with Principal Portal.");
     } finally {
-      setIsSending(false);
+      if (!isSilent) setIsSending(false);
     }
   };
 
   const handleDownload = () => {
      if (params.format === 'excel') {
-        const dataToExport = reportResult.isClassReport 
-            ? reportResult.fullList.map((s:any) => ({ 'Student': s.name, 'Roll No': s.rollNo, 'Score (%)': s.score, 'Attendance (%)': s.attendance, 'Standing': s.standing })) 
-            : [{ 'Student': reportResult.student_name, 'Score': reportResult.score, 'Attendance': reportResult.atnd, 'AI Remark': reportResult.ai_remark }];
+        let dataToExport: any[] = [];
+        
+        if (reportResult.isClassReport) {
+           dataToExport = reportResult.fullList.map((s:any) => ({ 
+              'Student Name': s.name, 
+              'Roll Number': s.rollNo, 
+              'Academic Score (%)': s.score || 'N/A', 
+              'Attendance Rate (%)': s.attendance, 
+              'Academic Standing': s.standing 
+           }));
+        } else {
+           dataToExport = [{ 
+              'Student Name': reportResult.student_name, 
+              'Academic Score': reportResult.score || 'N/A', 
+              'Attendance (%)': reportResult.atnd, 
+              'AI Summary': reportResult.ai_remark 
+           }];
+        }
         
         const ws = XLSX.utils.json_to_sheet(dataToExport);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Class Intelligence");
-        XLSX.writeFile(wb, `${report.id}_${reportResult.className || 'Report'}.xlsx`);
-        toast.success("Excel Matrix Exported.");
+        XLSX.utils.book_append_sheet(wb, ws, "Institutional Intelligence");
+        XLSX.writeFile(wb, `${report.id}_${reportResult.className || reportResult.student_name || 'Report'}.xlsx`);
+        toast.success("Excel Spreadsheet successfully generated!");
      } else {
-        // Simple PDF Strategy: Print the current result view
         window.print();
-        toast.success("PDF Capture Triggered. (Institutional Print Mode active)");
+        toast.success("Print command successful.");
      }
-     onOpenChange(false);
-     setReportResult(null);
   };
 
   const COLORS = ['#1e3a8a', '#4f46e5', '#818cf8', '#c7d2fe', '#6366f1', '#4338ca'];
@@ -315,15 +368,21 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
                   </Select>
                 </div>
 
-                {report?.id === "individual_progress" && (
+                {(report?.id === "individual_progress" || report?.id === "attendance_summary" || report?.id === "at_risk") && (
                   <div className="space-y-2.5">
-                    <Label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Scholar Profile</Label>
+                    <div className="flex items-center justify-between mb-1">
+                      <Label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Scholar Profile</Label>
+                      {report?.id === "attendance_summary" && (
+                         <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest italic">Optional for Class Summary</span>
+                      )}
+                    </div>
                     <Select onValueChange={(val) => setParams({ ...params, studentId: val })}>
                       <SelectTrigger className="rounded-2xl h-14 border border-slate-100 bg-white font-bold text-slate-700 flex items-center gap-2">
                         <UserCircle className="w-5 h-5 text-slate-400" />
                         <SelectValue placeholder="Locate student log..." />
                       </SelectTrigger>
                       <SelectContent className="rounded-2xl border-slate-100 shadow-xl p-2">
+                        {report?.id === "attendance_summary" && <SelectItem value="all" className="rounded-xl font-bold py-3 text-indigo-600 italic">Generate for All Class</SelectItem>}
                         {roster.filter(s => s.classId === params.classId).map(s => (
                           <SelectItem key={s.id} value={s.studentId} className="rounded-xl font-bold py-3">{s.studentName}</SelectItem>
                         ))}
@@ -367,10 +426,9 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
              </div>
           ) : (
             <div className="space-y-8 animate-in slide-in-from-bottom-6 duration-700 mt-0 print:m-0 print:space-y-12">
-               {/* Institution Header for Print */}
                <div className="hidden print:block border-b-4 border-[#1e3a8a] pb-10 mb-10 text-left">
                   <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tighter">Academic Verification Report</h1>
-                  <p className="text-sm font-black text-slate-400 uppercase tracking-widest mt-2">EduIntellect Platform Output • {new Date().toLocaleDateString()}</p>
+                  <p className="text-sm font-black text-slate-400 uppercase tracking-widest mt-2">EduIntellect Platform Output • {new Date().toLocaleString('en-US', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                   <div className="grid grid-cols-2 gap-10 mt-10">
                     <div>
                         <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Faculty Member</p>
@@ -421,7 +479,6 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
                        </div>
                     </div>
 
-                    {/* NEW: Student Action Table in Class Report */}
                     <div className="bg-white border border-slate-100 rounded-[3rem] p-10 shadow-sm print:border-slate-200">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8 flex items-center gap-2 italic"><Activity className="w-4 h-4 text-emerald-500"/> Individual Performance Registry</p>
                         <div className="space-y-4">
@@ -446,71 +503,101 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
                         </div>
                     </div>
 
+                     {reportResult.isAttendance && reportResult.lowAttendance?.length > 0 && (
+                        <div className="bg-rose-50 border border-rose-100 rounded-[3rem] p-10 shadow-sm print:bg-white print:border-rose-200">
+                           <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest mb-6 flex items-center gap-2 italic">
+                              <AlertTriangle className="w-4 h-4"/> Absentees Analysis: Attention Required
+                           </p>
+                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              {reportResult.lowAttendance.map((s:any, i:number) => (
+                                 <div key={i} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-rose-100">
+                                    <span className="text-sm font-black text-slate-700">{s.name}</span>
+                                    <span className="text-sm font-black text-rose-600">{s.rate}%</span>
+                                 </div>
+                              ))}
+                           </div>
+                        </div>
+                     )}
+
                     <div className="bg-[#1e3a8a] border border-blue-900/10 p-10 rounded-[3rem] relative overflow-hidden group shadow-2xl print:bg-slate-50 print:text-slate-900 print:shadow-none print:border-slate-200">
                        <BrainCircuit className="absolute -right-10 -top-10 w-48 h-48 text-white/5 group-hover:rotate-12 transition-all opacity-20 print:hidden"/>
-                   <div className="flex items-center justify-between mb-6">
-                      <p className="text-[10px] font-black text-blue-200 uppercase tracking-[0.3em] flex items-center gap-3 print:text-slate-400"><Sparkles className="w-5 h-5 text-white animate-pulse print:text-black"/> Professional Subject Observation</p>
-                      <div className="px-4 py-1.5 bg-emerald-500 text-white rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-emerald-500/20 print:hidden">
-                        <CheckCircle2 className="w-3 h-3" /> Synchronized with Principal
-                      </div>
-                   </div>
-                   <p className="text-base font-bold text-white leading-relaxed italic relative z-10 antialiased print:text-slate-800">"{reportResult.aiRemarks}"</p>
+                       <div className="flex items-center justify-between mb-6">
+                          <p className="text-[10px] font-black text-blue-200 uppercase tracking-[0.3em] flex items-center gap-3 print:text-slate-400">
+                             <Sparkles className="w-5 h-5 text-white animate-pulse print:text-black"/> 
+                             {reportResult.isAttendance ? 'Attendance Observation' : 'Professional Subject Observation'}
+                          </p>
+                       </div>
+                       <p className="text-base font-bold text-white leading-relaxed italic relative z-10 antialiased print:text-slate-800">"{reportResult.aiRemarks}"</p>
                     </div>
                  </div>
                ) : (
                  <div className="space-y-8 text-left">
-                    <div className="bg-white border border-slate-100 p-10 rounded-[3rem] flex items-center gap-8 shadow-sm">
-                        <div className="w-20 h-20 bg-indigo-50 rounded-[2rem] flex items-center justify-center text-[#1e3a8a] shadow-inner font-black text-2xl">
+                    <div className="bg-white border border-slate-100 p-10 rounded-[3rem] flex items-center gap-8 shadow-sm print:border-slate-200">
+                        <div className={`w-20 h-20 ${reportResult.isAttendance ? 'bg-amber-50 text-amber-600' : 'bg-indigo-50 text-[#1e3a8a]'} rounded-[2rem] flex items-center justify-center shadow-inner font-black text-2xl`}>
                             {reportResult.student_name?.[0]}
                         </div>
                         <div>
                             <h3 className="text-3xl font-black text-slate-800 tracking-tight leading-none mb-3">{reportResult.student_name}</h3>
                             <div className="flex items-center gap-8 uppercase tracking-widest font-black text-[10px] text-slate-400">
-                               <div className="flex items-center gap-2"><TrendingUp size={12}/> Performance: <span className="text-slate-800">{reportResult.score}%</span></div>
+                               {!reportResult.isAttendance && <div className="flex items-center gap-2"><TrendingUp size={12}/> Performance: <span className="text-slate-800">{reportResult.score}%</span></div>}
                                <div className="flex items-center gap-2"><CheckCircle2 size={12}/> Presence: <span className="text-slate-800">{reportResult.atnd}%</span></div>
                                <div className="flex items-center gap-2 text-indigo-600"><Target size={12}/> Standing: <span className="italic">{reportResult.standing}</span></div>
                             </div>
                         </div>
                     </div>
-                    <div className="bg-emerald-50 border border-emerald-100 p-10 rounded-[3rem] text-left relative overflow-hidden">
-                        <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-4 flex items-center gap-2 italic"><Sparkles className="w-4 h-4"/> AI Student Analysis Summary</p>
-                        <p className="text-base font-bold text-emerald-800 leading-relaxed italic">"{reportResult.ai_remark}"</p>
+                    <div className={`${reportResult.isAttendance ? 'bg-amber-50 border-amber-100 text-amber-800' : 'bg-emerald-50 border-emerald-100 text-emerald-800'} border p-10 rounded-[3rem] text-left relative overflow-hidden print:bg-slate-50 print:border-slate-200`}>
+                        <p className={`text-[10px] font-black ${reportResult.isAttendance ? 'text-amber-600' : 'text-emerald-600'} uppercase tracking-widest mb-4 flex items-center gap-2 italic`}>
+                           <Sparkles className="w-4 h-4"/> {reportResult.isAttendance ? 'AI Attendance Analysis' : 'AI Student Analysis Summary'}
+                        </p>
+                        <p className="text-base font-bold leading-relaxed italic">"{reportResult.ai_remark}"</p>
                     </div>
                  </div>
                )}
 
                 <div className="flex flex-col gap-4 pt-10 print:hidden">
-                  {report.id === "individual_progress" && !isSent && (
+                  {reportResult.isIndividual && !isSent && (
                     <button 
                       onClick={handleSendToParent} 
                       disabled={isSending}
                       className="w-full h-20 bg-emerald-600 text-white rounded-[2.2rem] text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-3 shadow-2xl hover:bg-emerald-700 transition-all hover:translate-y-[-2px] active:scale-95 disabled:opacity-50"
                     >
                       {isSending ? (
-                        <><Loader2 className="w-6 h-6 animate-spin"/> Syncing with Parent Portal...</>
+                        <><Loader2 className="w-6 h-6 animate-spin"/> Syncing with Parent & Principal...</>
                       ) : (
-                        <><CheckCircle2 className="w-6 h-6"/> Confirm & Send to Parent Dashboard</>
+                        <><CheckCircle2 className="w-6 h-6"/> Confirm & Send to Parent & Principal</>
                       )}
                     </button>
                   )}
 
-                  {report.id === "class_perf" && !isSent && (
-                    <button 
-                      onClick={handleSendToPrincipal} 
-                      disabled={isSending}
-                      className="w-full h-20 bg-indigo-600 text-white rounded-[2.2rem] text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-3 shadow-2xl hover:bg-slate-900 transition-all hover:translate-y-[-2px] active:scale-95 disabled:opacity-50"
-                    >
-                      {isSending ? (
-                        <><Loader2 className="w-6 h-6 animate-spin"/> Transmitting to Principal...</>
-                      ) : (
-                        <><ShieldCheck className="w-6 h-6"/> Finalize & Send to Principal</>
-                      )}
-                    </button>
+                  {!reportResult.isIndividual && !isSent && (
+                    <div className="flex flex-col gap-4">
+                      <button 
+                        onClick={handleSendToParent} 
+                        disabled={isSending}
+                        className="w-full h-20 bg-emerald-600 text-white rounded-[2.2rem] text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-3 shadow-2xl hover:bg-emerald-700 transition-all hover:translate-y-[-2px] active:scale-95 disabled:opacity-50"
+                      >
+                        {isSending ? (
+                          <><Loader2 className="w-6 h-6 animate-spin"/> Syncing with All Parents & Principal...</>
+                        ) : (
+                          <><CheckCircle2 className="w-6 h-6"/> Confirm & Send to Parents & Principal</>
+                        )}
+                      </button>
+                      <button 
+                        onClick={() => handleSendToPrincipal(false)} 
+                        disabled={isSending}
+                        className="w-full h-16 bg-white border border-slate-100 text-slate-400 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-slate-50 transition-all active:scale-95 disabled:opacity-50"
+                      >
+                        {isSending ? (
+                          <><Loader2 className="w-4 h-4 animate-spin"/> Sending to Principal only...</>
+                        ) : (
+                          <><ShieldCheck className="w-4 h-4"/> Only Send to Principal</>
+                        )}
+                      </button>
+                    </div>
                   )}
-                  
                   {isSent && (
                     <div className="w-full h-20 bg-emerald-50 border-2 border-emerald-100 text-emerald-600 rounded-[2.2rem] flex items-center justify-center gap-3 font-black uppercase tracking-widest text-[11px]">
-                      <CheckCircle2 className="w-6 h-6" /> {report.id === "individual_progress" ? "Report Published to Parent" : "Report Transmitted to Principal"}
+                      <CheckCircle2 className="w-6 h-6" /> {reportResult.isIndividual ? "Report Published to Parent & Principal" : "Report Transmitted to Principal"}
                     </div>
                   )}
 
