@@ -39,17 +39,38 @@ const GradeAssignment = ({ assignment, onBack }: GradeAssignmentProps) => {
             const gradeMap = new Map();
             gradeSnap.docs.forEach(d => gradeMap.set(d.data().studentId, d.data()));
 
-            // 3. Get Student Submissions
-            const qSubs = query(collection(db, "submissions"), where("assignmentId", "==", assignment.id));
-            const subSnap = await getDocs(qSubs);
+            // 3. Get Student Submissions — DUAL LOOKUP
+            // Parent Dashboard saves: { homeworkId: assignment.id, assignmentId: teachingAssignmentId }
+            // Teacher Dashboard was only querying by assignmentId which is the teachingAssignment ID — MISMATCH!
             const subMap = new Map();
-            subSnap.docs.forEach(d => subMap.set(d.data().studentId, d.data()));
+            
+            // Query by homeworkId (the assignment's actual doc ID) — this is what parent saves
+            const qSubsByHomework = query(collection(db, "submissions"), where("homeworkId", "==", assignment.id));
+            const subSnapByHomework = await getDocs(qSubsByHomework);
+            subSnapByHomework.docs.forEach(d => {
+                const data = d.data();
+                // Key by studentId or studentEmail (whichever is available)
+                const key = data.studentId || data.studentEmail;
+                if (key) subMap.set(key, { ...data, _docId: d.id });
+            });
+            
+            // Also query by assignmentId as fallback (for older records)
+            const qSubsByAssign = query(collection(db, "submissions"), where("assignmentId", "==", assignment.id));
+            const subSnapByAssign = await getDocs(qSubsByAssign);
+            subSnapByAssign.docs.forEach(d => {
+                const data = d.data();
+                const key = data.studentId || data.studentEmail;
+                if (key && !subMap.has(key)) subMap.set(key, { ...data, _docId: d.id });
+            });
+
 
             const roster = rosterSnap.docs.map(d => {
                 const data = d.data() as any;
                 const sId = data.studentId || d.id;
+                const sEmail = data.studentEmail || "";
                 const existing = gradeMap.get(sId);
-                const sub = subMap.get(sId);
+                // Check by studentId OR by email (student may be keyed differently)
+                const sub = subMap.get(sId) || subMap.get(sEmail) || subMap.get(sEmail.toLowerCase());
                 
                 // Calculate latency status
                 let status = "Not Submitted";
