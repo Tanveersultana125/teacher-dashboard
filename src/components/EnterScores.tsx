@@ -76,7 +76,9 @@ export default function EnterScores({ test, onBack }: EnterScoresProps) {
   };
 
   const handleScoreChange = (id: string, val: string) => {
-     if (parseFloat(val) > maxScore) return; // Cap at max
+     if (val === "" || val === "-") { setStudents(prev => prev.map(s => s.id === id ? { ...s, score: val === "-" ? "" : val } : s)); return; }
+     const num = parseFloat(val);
+     if (isNaN(num) || num < 0 || num > maxScore) return;
      setStudents(prev => prev.map(s => s.id === id ? { ...s, score: val } : s));
   };
 
@@ -146,8 +148,7 @@ export default function EnterScores({ test, onBack }: EnterScoresProps) {
            });
            
            toast.success(`Excel Imported: ${updatedCount} scores mapped.`);
-        } catch (err) {
-           console.error(err);
+        } catch {
            toast.error("Failed to parse Excel file.");
         }
         if (fileInputRef.current) fileInputRef.current.value = '';
@@ -187,6 +188,7 @@ export default function EnterScores({ test, onBack }: EnterScoresProps) {
             testName: test.title,
             studentId: s.id,
             studentName: s.name,
+            studentEmail: s.email,
             classId: test.classId,
             teacherId: teacherData?.id,
             schoolId: teacherData?.schoolId || "",
@@ -210,8 +212,7 @@ export default function EnterScores({ test, onBack }: EnterScoresProps) {
 
       toast.success("Scores perfectly synced across all Dashboards!");
       onBack();
-    } catch (e) {
-      console.error(e);
+    } catch {
       toast.error("Failed to sync scores matrix.");
     } finally {
       setSaving(false);
@@ -323,9 +324,12 @@ export default function EnterScores({ test, onBack }: EnterScoresProps) {
                            </div>
                            
                            <div className="w-full relative mb-4">
-                              <input 
+                              <input
                                  type="number"
                                  value={student.score}
+                                 min={0}
+                                 max={maxScore}
+                                 step="0.5"
                                  onChange={(e) => handleScoreChange(student.id, e.target.value)}
                                  className="w-full block py-2 px-3 bg-white border border-slate-200 rounded-lg text-sm font-bold focus:outline-none focus:border-blue-500"
                               />

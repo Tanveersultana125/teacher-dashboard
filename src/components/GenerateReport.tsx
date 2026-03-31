@@ -19,7 +19,8 @@ import {
   FileText, Download, Loader2, Calendar, Sparkles, BrainCircuit, 
   CheckCircle2, AlertTriangle, RefreshCw, Layers, UserCircle, Search, 
   BarChart3, PieChart, TrendingUp, Presentation, Clock, Info, BookOpen, 
-  ShieldCheck, Activity, Target
+  ShieldCheck, Activity, Target, ArrowUpRight, GraduationCap, ShieldAlert,
+  Bot, Table2 as TableIcon
 } from "lucide-react";
 import { toast } from "sonner";
 import { AIController } from "../ai/controller/ai-controller";
@@ -27,7 +28,7 @@ import { db } from "../lib/firebase";
 import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc } from "firebase/firestore";
 import { useAuth } from "../lib/AuthContext";
 import * as XLSX from 'xlsx';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 interface GenerateReportProps {
   isOpen: boolean;
@@ -53,16 +54,36 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
   });
 
   useEffect(() => {
+    if (isOpen) {
+      setReportResult(null);
+      setIsSent(false);
+      setCurrentReportId(null);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
     if (!teacherData?.id || !isOpen) return;
     const fetchInstitutionalData = async () => {
-       const qCls = query(collection(db, "classes"), where("teacherId", "==", teacherData.id));
-       const clsSnap = await getDocs(qCls);
-       const fetchedClasses = clsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-       setClasses(fetchedClasses);
+       try {
+         const q1 = query(collection(db, "teaching_assignments"), where("teacherId", "==", teacherData.id));
+         const q2 = query(collection(db, "classes"), where("teacherId", "==", teacherData.id));
+         
+         const [asgnSnap, clsSnap] = await Promise.all([getDocs(q1), getDocs(q2)]);
+         const combined = [...asgnSnap.docs.map(d => ({id: d.id, ...d.data()})), ...clsSnap.docs.map(d => ({id: d.id, ...d.data()}))];
+         
+         const map = new Map();
+         combined.forEach((c:any) => {
+            const id = c.classId || c.id;
+            if(!map.has(id)) map.set(id, { id: c.id, classId: id, name: c.className || c.name, subject: c.subjectName || c.subject, grade: c.grade });
+         });
+         setClasses(Array.from(map.values()));
 
-       const qEnrol = query(collection(db, "enrollments"), where("teacherId", "==", teacherData.id));
-       const enrolSnap = await getDocs(qEnrol);
-       setRoster(enrolSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+         const qEnrol = query(collection(db, "enrollments"), where("teacherId", "==", teacherData.id));
+         const enrolSnap = await getDocs(qEnrol);
+         setRoster(enrolSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+       } catch (error) {
+         console.error("Critical Registry Load Failure:", error);
+       }
     };
     fetchInstitutionalData();
   }, [teacherData?.id, isOpen]);
@@ -75,403 +96,339 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
     setReportResult(null);
 
     try {
-       const selectedClass = classes.find(c => c.id === params.classId);
-       let filteredRoster = roster.filter(s => s.classId === params.classId);
+       const selectedClass = classes.find(c => c.classId === params.classId || c.id === params.classId);
+       const targetClassId = selectedClass?.classId || params.classId;
+       let filteredRoster = roster.filter(s => s.classId === targetClassId);
 
-       if (filteredRoster.length === 0) {
-          throw new Error("No students detected in this subdivision registry.");
-       }
+       if (filteredRoster.length === 0) throw new Error("No students detected in this subdivision registry.");
 
-       // 1. Fetch REAL Performance Data & Gradebook Status
-       const enrichedPerformance = await Promise.all(filteredRoster.map(async (student: any) => {
-          // Attendance
-          const atndQ = query(collection(db, "attendance"), where("studentId", "==", student.studentId));
-          const atndSnapTotal = await getDocs(atndQ);
-          const atndDocs = atndSnapTotal.docs.filter(d => d.data().classId === params.classId);
-          const presentCount = atndDocs.filter(d => d.data().status === 'present' || d.data().status === 'late').length;
-          const atndRate = atndDocs.length > 0 ? (presentCount / atndDocs.length) * 100 : 85 + Math.random() * 10;
+       // HIGH-FIDELITY BATCH FETCH
+       const [allAtt, allScores, allResults, allNotes] = await Promise.all([
+          getDocs(query(collection(db, "attendance"), where("classId", "==", targetClassId))),
+          getDocs(query(collection(db, "gradebook_scores"), where("classId", "==", targetClassId))),
+          getDocs(query(collection(db, "results"), where("classId", "==", targetClassId))),
+          getDocs(query(collection(db, "parent_notes"), where("teacherId", "==", teacherData.id)))
+       ]);
 
-          // Gradebook Sync
-          const gScoresQ = query(collection(db, "gradebook_scores"), where("studentId", "==", student.studentId));
-          const gScoresSnapTotal = await getDocs(gScoresQ);
-          const gScoresDocs = gScoresSnapTotal.docs.filter(d => d.data().classId === params.classId);
-          const totalEarned = gScoresDocs.reduce((acc, curr) => acc + (parseFloat(curr.data().mark) || 0), 0);
-          const avgScore = gScoresDocs.length > 0 ? (totalEarned / gScoresDocs.length) : 70 + Math.random() * 25;
+       const attDocs = allAtt.docs.map(d => d.data());
+       const gradeDocs = allScores.docs.map(d => d.data());
+       const resultDocs = allResults.docs.map(d => d.data());
+       const noteDocs = allNotes.docs.map(d => d.data());
+
+       const enrichedPerformance = filteredRoster.map((student: any) => {
+          const sId = student.studentId;
+          const sEmail = student.studentEmail?.toLowerCase();
+          const filterByStudent = (arr: any[]) => arr.filter(item => 
+             (sId && (item.studentId === sId || item.id?.includes(sId))) || (sEmail && item.studentEmail?.toLowerCase() === sEmail)
+          );
+
+          const sAtt = filterByStudent(attDocs);
+          const sGrades = [...filterByStudent(gradeDocs), ...filterByStudent(resultDocs)];
+          const sNotes = filterByStudent(noteDocs);
+
+          const present = sAtt.filter(a => a.status === 'present' || a.status === 'late').length;
+          const atndRate = sAtt.length > 0 ? (present / sAtt.length) * 100 : 92;
+
+          const getPct = (sc: any) => Number(sc.percentage || (sc.mark/sc.maxMarks*100) || (sc.score || 0));
+          const scores = sGrades.map(getPct).filter(v => v >= 0);
+          const avgScore = scores.length > 0 ? (scores.reduce((a,b)=>a+b,0) / scores.length) : 75;
+
+          const hasNegNote = sNotes.some((n:any) => {
+             const text = (n.content || "").toLowerCase();
+             return text.includes("issue") || text.includes("distraction") || text.includes("trouble") || text.includes("weak");
+          });
 
           return {
+             studentId: sId,
              name: student.studentName,
              rollNo: student.rollNo,
              email: student.studentEmail,
              score: Math.round(avgScore),
              attendance: Math.round(atndRate),
-             standing: avgScore > 90 ? "Excellence" : (avgScore > 75 ? "Consistent" : "Developing")
+             hasNegNote,
+             standing: avgScore > 85 ? "Excellence" : (avgScore > 65 ? "Stable" : "Critical")
           };
-       }));
+       });
 
        const classAvg = Math.round(enrichedPerformance.reduce((acc, s) => acc + s.score, 0) / enrichedPerformance.length);
        const classAtnd = Math.round(enrichedPerformance.reduce((acc, s) => acc + s.attendance, 0) / enrichedPerformance.length);
 
        let resultData: any = {};
-       const contextStr = enrichedPerformance.map(s => `${s.name}: ${s.score}% (出席: ${s.attendance}%)`).join(", ");
+       const contextStr = enrichedPerformance.map(s => `${s.name}: ${s.score}% (${s.attendance}% ATND)`).join(", ");
 
        if (report.id === "class_perf") {
           const aiResponse = await AIController.getDetailedSubjectReport({
              subject: selectedClass?.subject || "Curriculum",
-             grade: selectedClass?.name || "Group",
+             grade: selectedClass?.grade || "N/A",
              avg_score: classAvg,
-             struggles: ["Time management", "Deep analysis"],
-             mastery_level: classAvg > 85 ? "Distinction" : "standard",
+             struggles: enrichedPerformance.filter(s => s.score < 60).map(s => s.name),
+             mastery_level: classAvg > 80 ? "Proficient" : "Progressing",
              context: contextStr
           });
-
           resultData = {
               isClassReport: true,
               subject: selectedClass?.subject || "Subject",
               className: selectedClass?.name,
-              aiRemarks: aiResponse?.data?.report_content || "Overall class engagement remains high. Academic trends indicate a stable progress path with specialized focus on core conceptual analysis. Key focus for next cycle: Advanced problem solving and deep inquiry.",
-              chartData: enrichedPerformance.map(s => ({ 
-                name: s.name.split(' ')[0], 
-                score: s.score,
-                full_name: s.name,
-                atnd: s.attendance
-              })),
-              summary: {
-                 avg: `${classAvg}%`,
-                 attendance: `${classAtnd}%`,
-                 mastery: classAvg > 85 ? "High Profile" : "Active"
-              },
+              aiRemarks: aiResponse?.data?.report_content || `Class engagement remains stable at ${classAvg}%.`,
+              chartData: enrichedPerformance.map(s => ({ name: s.name.split(' ')[0], score: s.score, atnd: s.attendance })),
+              summary: { avg: `${classAvg}%`, attendance: `${classAtnd}%`, mastery: classAvg > 80 ? "Distinction" : "Standard" },
               fullList: enrichedPerformance
           };
        } else if (report.id === "individual_progress") {
-           const selectedStudent = enrichedPerformance.find(s => roster.find(r => r.studentId === params.studentId)?.studentName === s.name) || enrichedPerformance[0];
-           
-           const aiResponse = await AIController.getIndividualProgressReport({
-              student_name: selectedStudent?.name,
-              subject: selectedClass?.subject || "Curriculum",
-              score: selectedStudent?.score,
-              attendance: selectedStudent?.attendance,
-           });
+          const sel = enrichedPerformance.find(s => (s.studentId === params.studentId || s.email?.toLowerCase() === params.studentId?.toLowerCase())) || enrichedPerformance[0];
+          const aiResponse = await AIController.getIndividualProgressReport({ student_name: sel.name, subject: selectedClass?.subject || "General", score: sel.score, attendance: sel.attendance });
+          resultData = { 
+             isIndividual: true,
+             student_name: sel.name,
+             score: sel.score,
+             atnd: sel.attendance,
+             standing: sel.standing,
+             ai_remark: aiResponse?.data?.report_content || `Demonstrates dedicated scholarly commitment at ${sel.score}%.`
+          };
+       } else if (report.id === "attendance_summary") {
+          resultData = {
+             isClassReport: true,
+             isAttendance: true,
+             className: selectedClass?.name,
+             summary: { avg: `${classAvg}%`, attendance: `${classAtnd}%`, mastery: classAtnd > 90 ? "Excellent" : "Standard" },
+             fullList: enrichedPerformance,
+             lowAttendance: enrichedPerformance.filter(s => s.attendance < 80).map(s => ({ name: s.name, rate: s.attendance })),
+             aiRemarks: `Attendance is sitting at ${classAtnd}%.`
+          };
+       } else {
+          const atRisk = enrichedPerformance.filter(s => s.score < 60 || s.attendance < 75 || s.hasNegNote);
+          resultData = {
+             isClassReport: true,
+             isAtRisk: true,
+             className: selectedClass?.name,
+             atRiskList: atRisk,
+             aiRemarks: `Intervention Protocol: ${atRisk.length} scholars marked for audit.`
+          };
+       }
 
-           resultData = { 
-              isIndividual: true,
-              student_name: selectedStudent?.name,
-              score: selectedStudent?.score,
-              atnd: selectedStudent?.attendance,
-              standing: selectedStudent?.standing,
-              ai_remark: aiResponse?.data?.report_content || `Demonstrating specialized aptitude in academic studies. Maintains an academic posture of ${selectedStudent?.score}%.`
-           };
-        } else if (report.id === "attendance_summary") {
-           if (params.studentId) {
-              const selectedStudent = enrichedPerformance.find(s => roster.find(r => r.studentId === params.studentId)?.studentName === s.name) || enrichedPerformance[0];
-              resultData = {
-                 isIndividual: true,
-                 isAttendance: true,
-                 student_name: selectedStudent?.name,
-                 score: selectedStudent?.score,
-                 atnd: selectedStudent?.attendance,
-                 standing: selectedStudent?.attendance > 90 ? "Excellent" : (selectedStudent?.attendance > 75 ? "Regular" : "Irregular"),
-                 ai_remark: `Attendance analysis for ${selectedStudent?.name} shows a presence rate of ${selectedStudent?.attendance}%. Consistency in attendance is closely linked to academic mastery.`
-              };
-           } else {
-              const lowAtndStudents = enrichedPerformance.filter(s => s.attendance < 75);
-           resultData = {
-              isClassReport: true,
-              isAttendance: true,
-              className: selectedClass?.name || "Group",
-              subject: selectedClass?.subject || "General",
-              summary: {
-                 avg: `${classAvg}%`,
-                 attendance: `${classAtnd}%`,
-                 mastery: classAtnd > 90 ? "Excellent" : "Standard"
-              },
-              lowAttendance: lowAtndStudents.map(s => ({ name: s.name, rate: s.attendance })),
-              chartData: enrichedPerformance.map(s => ({ 
-                 name: s.name.split(' ')[0], 
-                 score: s.score,
-                 full_name: s.name,
-                 atnd: s.attendance
-              })),
-              aiRemarks: `The class ${selectedClass?.name || 'this group'} maintains an average attendance of ${classAtnd}%. ${lowAtndStudents.length} students are currently below the 75% threshold and may require administrative intervention.`,
-              fullList: enrichedPerformance
-           };
-           }
-        }
-
-       // CLOUD SYNC
-       const docRef = await addDoc(collection(db, "reports"), {
-          teacherId: teacherData.id,
-          teacherName: teacherData.name,
+       const firestorePayload = {
+          teacherId: teacherData.id || "unknown",
+          teacherName: teacherData.name || "Faculty",
           studentId: params.studentId || "all",
-          studentName: report.id === "individual_progress" ? resultData.student_name : "All Class",
-          classId: params.classId,
-          type: report.id,
-          title: report.title,
+          studentName: report.id === "individual_progress" ? (resultData.student_name || "Scholar") : "Class Registry",
+          classId: targetClassId || params.classId || "unknown",
+          type: report.id || "general",
+          title: report.title || "Academic Report",
           grade: selectedClass?.grade || "N/A",
-          className: selectedClass?.name,
+          className: selectedClass?.name || "General Registry",
           createdAt: serverTimestamp(),
           status: "Draft",
-          format: params.format,
-          data: resultData
-       });
+          format: params.format || "pdf",
+          data: JSON.parse(JSON.stringify(resultData)) // Deep-strip all undefineds
+       };
+
+       const docRef = await addDoc(collection(db, "reports"), firestorePayload);
 
        setCurrentReportId(docRef.id);
        setIsSent(false);
        setReportResult(resultData);
-       toast.success("Intelligence successfully Harvested! Review before transmission.");
+       toast.success("Intelligence Harvest Complete!");
     } catch (e: any) {
-       toast.error(e.message || "Failed to harvest logs.");
+       toast.error(e.message || "Harvesting failure.");
     } finally {
        setIsGenerating(false);
     }
   };
 
-  const handleSendToParent = async () => {
+  const handleSendToPortal = async (portal: "parent" | "principal" | "both") => {
     if (!currentReportId) return;
     setIsSending(true);
     try {
-      await updateDoc(doc(db, "reports", currentReportId), {
-        status: "Sent",
-        publishedToParent: true,
-        sentAt: serverTimestamp()
-      });
-      
-      // Always sync with Principal after parent sync (silent mode)
-      await handleSendToPrincipal(true);
+       const isToParent = portal === "parent" || portal === "both";
+       const isToPrincipal = portal === "principal" || portal === "both";
 
-      setIsSent(true);
-      toast.success("Intelligence successfully mirrored to Parent Dashboard!");
-    } catch (e: any) {
-      toast.error("Failed to sync with Parent Portal.");
-    } finally {
-      setIsSending(false);
-    }
-  };
+       await updateDoc(doc(db, "reports", currentReportId), {
+          status: portal === "both" ? "Global Broadcast Complete" : (portal === "parent" ? "Synced to Parent" : "Reported to Principal"),
+          publishedToParent: isToParent,
+          sentToPrincipal: isToPrincipal,
+          sentAt: serverTimestamp()
+       });
 
-  const handleSendToPrincipal = async (isSilent = false) => {
-    if (!currentReportId || !reportResult) return;
-    if (!isSilent) setIsSending(true);
-    try {
-      await updateDoc(doc(db, "reports", currentReportId), {
-        status: isSilent ? "Sent & Reported" : "Reported",
-        sentToPrincipal: true,
-        sentAt: serverTimestamp()
-      });
+       if (isToPrincipal) {
+          await addDoc(collection(db, "principal_reports"), {
+             teacherId: teacherData.id || "unknown",
+             teacherName: teacherData.name || "Faculty",
+             schoolId: teacherData.schoolId || "MAIN_NODE",
+             reportId: currentReportId,
+             reportType: (report.id || "general").toUpperCase(),
+             title: `${report.title || "Report"} - ${reportResult.className || "Class"}`,
+             content: reportResult.aiRemarks || reportResult.ai_remark || "Intelligence Manifest Attached.",
+             metrics: { 
+                avgScore: reportResult.summary?.avg || reportResult.score || 0, 
+                attendanceRate: reportResult.summary?.attendance || reportResult.atnd || 0,
+                flaggedCount: reportResult.atRiskList?.length || reportResult.lowAttendance?.length || 0
+             },
+             createdAt: serverTimestamp()
+          });
+       }
 
-      await addDoc(collection(db, "principal_reports"), {
-        teacherId: teacherData.id,
-        teacherName: teacherData.name,
-        schoolId: teacherData.schoolId || "Default_School",
-        reportType: reportResult.isIndividual ? "STUDENT_REPORT" : (reportResult.isAttendance ? "ATTENDANCE_REPORT" : "CLASS_PERF"),
-        title: reportResult.isIndividual 
-               ? `${reportResult.student_name} - ${reportResult.isAttendance ? 'Attendance' : 'Progress'} Report`
-               : `${reportResult.className} - ${reportResult.isAttendance ? 'Attendance Summary' : (reportResult.subject + ' Performance')}`,
-        content: reportResult.isIndividual ? reportResult.ai_remark : reportResult.aiRemarks,
-        metrics: reportResult.isIndividual ? {
-          score: reportResult.score || 0,
-          attendance: reportResult.atnd || 0
-        } : {
-          avgScore: reportResult.isAttendance ? 0 : parseInt(reportResult.summary.avg),
-          attendance: parseInt(reportResult.summary.attendance)
-        },
-        createdAt: serverTimestamp(),
-        readStatus: false,
-        grade: params.grade || "",
-        studentId: params.studentId || "all"
-      });
-
-      if (!isSilent) {
-        setIsSent(true);
-        toast.success("Report successfully transmitted to Principal's desk!");
-      }
-    } catch (e: any) {
-      console.error(e);
-      if (!isSilent) toast.error("Failed to sync with Principal Portal.");
-    } finally {
-      if (!isSilent) setIsSending(false);
+       setIsSent(true);
+       toast.success(portal === "both" ? "Global Infrastructure Sync Complete!" : "Registry Mirror Updated.");
+    } catch (e: any) { 
+       console.error("Sync Error:", e);
+       toast.error("Mirror sync error."); 
+    } finally { 
+       setIsSending(false); 
     }
   };
 
   const handleDownload = () => {
      if (params.format === 'excel') {
-        let dataToExport: any[] = [];
-        
-        if (reportResult.isClassReport) {
-           dataToExport = reportResult.fullList.map((s:any) => ({ 
-              'Student Name': s.name, 
-              'Roll Number': s.rollNo, 
-              'Academic Score (%)': s.score || 'N/A', 
-              'Attendance Rate (%)': s.attendance, 
-              'Academic Standing': s.standing 
-           }));
-        } else {
-           dataToExport = [{ 
-              'Student Name': reportResult.student_name, 
-              'Academic Score': reportResult.score || 'N/A', 
-              'Attendance (%)': reportResult.atnd, 
-              'AI Summary': reportResult.ai_remark 
-           }];
-        }
-        
-        const ws = XLSX.utils.json_to_sheet(dataToExport);
+        const ws = XLSX.utils.json_to_sheet(reportResult.fullList || [reportResult]);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Institutional Intelligence");
-        XLSX.writeFile(wb, `${report.id}_${reportResult.className || reportResult.student_name || 'Report'}.xlsx`);
-        toast.success("Excel Spreadsheet successfully generated!");
+        XLSX.utils.book_append_sheet(wb, ws, "Institutional Merit");
+        XLSX.writeFile(wb, `Intellect_Report_${report.id}.xlsx`);
      } else {
         window.print();
-        toast.success("Print command successful.");
      }
   };
 
-  const COLORS = ['#1e3a8a', '#4f46e5', '#818cf8', '#c7d2fe', '#6366f1', '#4338ca'];
-
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[850px] overflow-hidden p-0 rounded-[2.5rem] border-none shadow-2xl font-sans text-left print:shadow-none print:w-full">
-        <div className="bg-slate-50 p-10 max-h-[90vh] overflow-y-auto custom-scrollbar print:bg-white print:max-h-full print:p-0 print:overflow-visible">
+      <DialogContent className="sm:max-w-[850px] overflow-hidden p-0 rounded-[3rem] border-none shadow-2xl font-sans text-left print:shadow-none print:w-full">
+        <div className="bg-slate-50/50 p-12 max-h-[90vh] overflow-y-auto custom-scrollbar print:bg-white print:max-h-full print:p-0 print:overflow-visible">
           
           <div className="print:hidden">
-            <DialogHeader className="mb-0 text-left">
-                <div className="flex items-center justify-between">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 shadow-sm border border-slate-100 bg-white`}>
-                    {report && <report.icon className="w-7 h-7 text-[#1e3a8a]" />}
+            <DialogHeader className="mb-8 text-left">
+                <div className={`w-16 h-16 rounded-[2rem] flex items-center justify-center mb-10 shadow-2xl bg-white border border-slate-100`}>
+                    {report && <report.icon className="w-8 h-8 text-[#1e3a8a]" />}
                 </div>
-                </div>
-                <DialogTitle className="text-3xl font-black text-slate-800 tracking-tight leading-none group">
-                Compile <span className="text-[#1e3a8a]">{report?.title || 'Report'}</span>
+                <DialogTitle className="text-4xl font-black text-slate-900 tracking-tighter uppercase italic leading-none group">
+                Intelligence <span className="text-[#1e3a8a]">Manifest</span>
                 </DialogTitle>
-                <DialogDescription className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mt-3 italic flex items-center gap-2">
-                <ShieldCheck className="w-3 h-3 text-emerald-500"/> Verified Institution Data • API Active
+                <DialogDescription className="text-slate-400 font-bold uppercase tracking-[0.3em] text-[11px] mt-4 flex items-center gap-3">
+                   <ShieldCheck className="w-4 h-4 text-emerald-500"/> Verified Registry Source • Neural Link Active
                 </DialogDescription>
             </DialogHeader>
           </div>
 
           {!reportResult ? (
-             <div className="space-y-6 mt-10 print:hidden text-left">
-                <div className="space-y-2.5">
-                  <Label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Class Hub Selection</Label>
-                  <Select onValueChange={(val) => setParams({ ...params, classId: val })}>
-                    <SelectTrigger className="rounded-2xl h-16 border border-slate-100 bg-white font-bold text-slate-700 flex items-center gap-3">
-                      <BookOpen className="w-5 h-5 text-indigo-500" />
-                      <SelectValue placeholder="Identify subdivision..." />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-2xl p-2 border-slate-100 shadow-xl max-h-[250px] overflow-y-auto">
-                        {classes.map(c => (
-                          <SelectItem key={c.id} value={c.id} className="rounded-xl font-bold py-4">
-                             <div className="flex flex-col text-left">
-                                <span>{c.name}</span>
-                                <span className="text-[9px] text-slate-400 uppercase tracking-widest font-black">{c.grade} • {c.subject}</span>
-                             </div>
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
+             <div className="space-y-10 mt-14 print:hidden text-left animate-in fade-in slide-in-from-bottom-8 duration-700">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                   <div className="space-y-4">
+                      <Label className="text-[11px] font-black uppercase text-slate-500 tracking-widest ml-2 flex items-center gap-2"><Layers className="w-4 h-4" /> Subdivision Node</Label>
+                      <Select value={params.classId} onValueChange={(val) => setParams({ ...params, classId: val })}>
+                        <SelectTrigger className="rounded-[1.5rem] h-20 border border-slate-100 bg-white font-black text-slate-800 flex items-center px-8 shadow-sm">
+                           <SelectValue placeholder="Identify Portal..." />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-[2rem] p-4 border-slate-100 shadow-2xl">
+                            {classes.map(c => (
+                              <SelectItem key={c.id} value={c.classId} className="rounded-2xl font-black p-4 mb-2 hover:bg-slate-50">
+                                 <div className="flex flex-col text-left">
+                                    <span className="text-lg uppercase italic tracking-tighter">{c.name}</span>
+                                    <span className="text-[9px] text-slate-300 uppercase tracking-widest">{c.subject} • {c.grade} Registry</span>
+                                 </div>
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                   </div>
+                   {(report?.id === "individual_progress" || report?.id === "attendance_summary") && (
+                     <div className="space-y-4">
+                        <Label className="text-[11px] font-black uppercase text-slate-500 tracking-widest ml-2 flex items-center gap-2"><UserCircle className="w-4 h-4" /> Scholar Target</Label>
+                        <Select value={params.studentId} onValueChange={(val) => setParams({ ...params, studentId: val })}>
+                          <SelectTrigger className="rounded-[1.5rem] h-20 border border-slate-100 bg-white font-black text-slate-800 px-8 shadow-sm">
+                             <SelectValue placeholder="Locate Identity..." />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-[2rem] p-4 border-slate-100 shadow-2xl">
+                             <SelectItem value="all" className="rounded-2xl font-black p-4 mb-2 italic text-indigo-500">Universal Class Manifest</SelectItem>
+                             {roster.filter(s => s.classId === params.classId || !params.classId).map(s => (
+                               <SelectItem key={s.id} value={s.studentId} className="rounded-2xl font-black p-4 mb-2">{s.studentName}</SelectItem>
+                             ))}
+                          </SelectContent>
+                        </Select>
+                     </div>
+                   )}
                 </div>
-
-                {(report?.id === "individual_progress" || report?.id === "attendance_summary" || report?.id === "at_risk") && (
-                  <div className="space-y-2.5">
-                    <div className="flex items-center justify-between mb-1">
-                      <Label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Scholar Profile</Label>
-                      {report?.id === "attendance_summary" && (
-                         <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest italic">Optional for Class Summary</span>
-                      )}
-                    </div>
-                    <Select onValueChange={(val) => setParams({ ...params, studentId: val })}>
-                      <SelectTrigger className="rounded-2xl h-14 border border-slate-100 bg-white font-bold text-slate-700 flex items-center gap-2">
-                        <UserCircle className="w-5 h-5 text-slate-400" />
-                        <SelectValue placeholder="Locate student log..." />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-2xl border-slate-100 shadow-xl p-2">
-                        {report?.id === "attendance_summary" && <SelectItem value="all" className="rounded-xl font-bold py-3 text-indigo-600 italic">Generate for All Class</SelectItem>}
-                        {roster.filter(s => s.classId === params.classId).map(s => (
-                          <SelectItem key={s.id} value={s.studentId} className="rounded-xl font-bold py-3">{s.studentName}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                <div className="space-y-2.5">
-                  <Label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Foundation Type</Label>
-                  <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-4">
+                  <Label className="text-[11px] font-black uppercase text-slate-500 tracking-widest ml-2">Export Foundation</Label>
+                  <div className="flex gap-6">
                     {['pdf', 'excel'].map((f) => (
-                      <button
-                        key={f}
-                        onClick={() => setParams({ ...params, format: f })}
-                        className={`py-4 rounded-2xl border text-[11px] font-black uppercase tracking-widest transition-all ${
-                          params.format === f 
-                            ? 'bg-[#1e3a8a] text-white border-[#1e3a8a] shadow-xl shadow-blue-900/10' 
-                            : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'
-                        }`}
-                      >
-                        {f}
+                      <button key={f} onClick={() => setParams({ ...params, format: f })} className={`flex-1 h-20 rounded-[1.8rem] border-[3px] text-[12px] font-black uppercase tracking-widest transition-all ${params.format === f ? 'bg-[#1e3a8a] text-white border-[#1e3a8a] shadow-2xl' : 'bg-white text-slate-300 border-slate-50 hover:border-slate-200'}`}>
+                        {f === 'pdf' ? <div className="flex items-center justify-center gap-3"><FileText size={20}/> Print PDF</div> : <div className="flex items-center justify-center gap-3"><TableIcon size={20}/> Excel Ledger</div>}
                       </button>
                     ))}
                   </div>
                 </div>
-
-                <DialogFooter className="pt-6">
-                  <button
-                    onClick={handleGenerate}
-                    disabled={isGenerating}
-                    className="w-full h-16 rounded-[2rem] bg-[#1e3a8a] text-white text-xs font-black uppercase tracking-widest hover:bg-slate-900 transition-all flex items-center justify-center gap-3 shadow-xl"
-                  >
-                    {isGenerating ? (
-                      <><Loader2 className="w-5 h-5 animate-spin" /> Harvesting Platform Logs...</>
-                    ) : (
-                      <><Sparkles className="w-5 h-5" /> Compile Subject Analytics</>
-                    )}
+                <DialogFooter className="pt-10">
+                  <button onClick={handleGenerate} disabled={isGenerating} className="w-full h-24 rounded-[2.5rem] bg-[#1e3a8a] text-white text-[13px] font-black uppercase tracking-[0.3em] hover:bg-black transition-all flex items-center justify-center gap-4 shadow-2xl active:scale-95 disabled:opacity-50">
+                    {isGenerating ? <><Loader2 className="w-6 h-6 animate-spin" /> Establishing Sync...</> : <><Sparkles className="w-6 h-6" /> Extract Institutional Merit</>}
                   </button>
                 </DialogFooter>
              </div>
           ) : (
-            <div className="space-y-8 animate-in slide-in-from-bottom-6 duration-700 mt-0 print:m-0 print:space-y-12">
-               <div className="hidden print:block border-b-4 border-[#1e3a8a] pb-10 mb-10 text-left">
-                  <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tighter">Academic Verification Report</h1>
-                  <p className="text-sm font-black text-slate-400 uppercase tracking-widest mt-2">EduIntellect Platform Output • {new Date().toLocaleString('en-US', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-                  <div className="grid grid-cols-2 gap-10 mt-10">
-                    <div>
-                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Faculty Member</p>
-                        <p className="text-lg font-black text-slate-800">{teacherData?.name}</p>
-                    </div>
-                    <div>
-                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest"> Institutional Sub-division</p>
-                        <p className="text-lg font-black text-slate-800">{reportResult.className || 'General'}</p>
-                    </div>
-                  </div>
+            <div className="space-y-12 animate-in slide-in-from-bottom-8 duration-700 mt-0 print:m-0 print:space-y-16 text-left">
+               <div className="hidden print:block border-b-8 border-[#1e3a8a] pb-16 mb-16">
+                  <h1 className="text-6xl font-black text-slate-900 uppercase tracking-tighter italic">Registry Intelligence</h1>
+                  <p className="text-sm font-black text-slate-400 uppercase tracking-widest mt-3">Institution: {teacherData?.schoolName || 'EDU-INTELLECT MAIN NODE'} • ID: {currentReportId?.substring(0,8)}</p>
                </div>
 
                {reportResult.isClassReport ? (
-                 <div className="space-y-10 text-left">
-                    <div className="grid grid-cols-3 gap-6">
-                       {[
-                          { label: "Grade Index", val: reportResult.summary.avg, icon: TrendingUp, color: "text-blue-500" },
-                          { label: "Attendance", val: reportResult.summary.attendance, icon: Clock, color: "text-emerald-500" },
-                          { label: "Status", val: reportResult.summary.mastery, icon: Target, color: "text-purple-500" },
-                       ].map(s => (
-                          <div key={s.label} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm text-center print:border-slate-200">
-                             <div className={`w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center mx-auto mb-3 shadow-inner ${s.color} print:hidden`}><s.icon className="w-5 h-5"/></div>
-                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{s.label}</p>
-                             <p className="text-2xl font-black text-slate-800 tracking-tighter">{s.val}</p>
-                          </div>
-                       ))}
+                 <div className="space-y-12">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                       <StatCard label="Merit Index" val={reportResult.summary?.avg || "N/A"} icon={TrendingUp} color="text-indigo-600" />
+                       <StatCard label="Registry Presence" val={reportResult.summary?.attendance || "N/A"} icon={Clock} color="text-emerald-500" />
+                       <StatCard label="Manifest Status" val={reportResult.summary?.mastery || "Verified"} icon={ShieldCheck} color="text-indigo-400" />
                     </div>
 
-                    <div className="bg-white border border-slate-100 p-10 rounded-[3rem] shadow-sm print:border-slate-200">
-                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-10 flex items-center gap-2 font-black italic"><BarChart3 className="w-4 h-4 text-[#1e3a8a]"/> Distribution Pattern: {reportResult.className}</p>
-                       <div className="h-[280px] w-full">
+                    {reportResult.isAttendance && (
+                       <div className="bg-white border border-slate-100 p-12 rounded-[4rem] shadow-sm">
+                          <p className="text-[11px] font-black text-slate-300 uppercase tracking-widest mb-10 flex items-center gap-3 italic"><AlertTriangle className="w-5 h-5 text-amber-500"/> Critical Absence Registry (&lt;80%)</p>
+                          <div className="space-y-4">
+                             {reportResult.lowAttendance?.length > 0 ? reportResult.lowAttendance.map((s:any, i:number) => (
+                                <div key={i} className="flex items-center justify-between p-6 bg-slate-50/50 rounded-[2rem] border border-slate-50">
+                                   <div className="flex items-center gap-6">
+                                      <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center font-black text-slate-400 border border-slate-100">{s.name[0]}</div>
+                                      <p className="text-xl font-black text-slate-800 uppercase italic tracking-tighter">{s.name}</p>
+                                   </div>
+                                   <p className="text-2xl font-black text-rose-500">{s.rate}%</p>
+                                </div>
+                             )) : <p className="text-sm font-black text-emerald-500 uppercase tracking-widest text-center py-10 italic">Universal attendance manifest is stable.</p>}
+                          </div>
+                       </div>
+                    )}
+
+                    {reportResult.isAtRisk && (
+                       <div className="space-y-6">
+                          <p className="text-[11px] font-black text-slate-300 uppercase tracking-widest mb-4 flex items-center gap-3 italic"><ShieldAlert className="w-5 h-5 text-rose-500"/> Intervention Registry - {reportResult.atRiskList?.length || 0} scholars flagged</p>
+                          {reportResult.atRiskList?.map((s:any, i:number) => (
+                             <div key={i} className="bg-rose-50 border border-rose-100 p-10 rounded-[3.5rem] flex items-center justify-between group hover:bg-rose-100 transition-all shadow-sm">
+                                <div className="flex items-center gap-8">
+                                   <div className="w-20 h-20 rounded-[2rem] bg-white flex items-center justify-center font-black text-rose-500 shadow-sm border border-rose-100 text-3xl font-serif italic">{s.name[0]}</div>
+                                   <div>
+                                      <h4 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic leading-none mb-3">{s.name}</h4>
+                                      <div className="flex gap-4">
+                                         <span className="px-3 py-1 bg-white rounded-lg text-[9px] font-black uppercase text-rose-400 tracking-widest border border-rose-100">Merit: {s.score}%</span>
+                                         <span className="px-3 py-1 bg-white rounded-lg text-[9px] font-black uppercase text-rose-400 tracking-widest border border-rose-100">Atnd: {s.attendance}%</span>
+                                         {s.hasNegNote && <span className="px-3 py-1 bg-white rounded-lg text-[9px] font-black uppercase text-rose-500 tracking-widest border border-rose-200">Behavior Signal</span>}
+                                      </div>
+                                   </div>
+                                </div>
+                                <div className="text-right">
+                                   <div className="px-6 py-3 bg-white rounded-[1.5rem] text-[10px] font-black text-rose-600 uppercase tracking-widest shadow-sm border border-rose-100 group-hover:bg-rose-600 group-hover:text-white transition-all">Requires Priority Intervention</div>
+                                </div>
+                             </div>
+                          ))}
+                       </div>
+                    )}
+
+                    <div className="bg-white border border-slate-100 p-12 rounded-[4rem] shadow-sm print:border-slate-200">
+                       <p className="text-[11px] font-black text-slate-300 uppercase tracking-widest mb-12 flex items-center gap-3 italic"><BarChart3 className="w-5 h-5 text-[#1e3a8a]"/> Institutional Merit Distribution</p>
+                       <div className="h-[320px] w-full">
                           <ResponsiveContainer width="100%" height="100%">
                              <BarChart data={reportResult.chartData}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 900, fill: '#64748b' }} />
+                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontStyle: 'italic', fontWeight: 900, fill: '#64748b' }} />
                                 <YAxis axisLine={false} tickLine={false} hide />
-                                <Tooltip 
-                                   cursor={{ fill: '#f8fafc' }}
-                                   contentStyle={{ borderRadius: '1.5rem', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.15)', fontSize: '11px', fontWeight: 900, textTransform: 'uppercase' }}
-                                />
-                                <Bar dataKey="score" radius={[14, 14, 14, 14]} barSize={34}>
-                                   {reportResult.chartData.map((entry:any, index:number) => (
-                                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '2rem', border: 'none', boxShadow: '0 50px 100px -20px rgb(0 0 0 / 0.15)', fontSize: '11px', fontWeight: 900, textTransform: 'uppercase' }}/>
+                                <Bar dataKey="score" radius={[16, 16, 16, 16]} barSize={40}>
+                                   {reportResult.chartData?.map((_:any, index:number) => (
+                                      <Cell key={`cell-${index}`} fill={['#1e3a8a', '#4f46e5', '#818cf8', '#c7d2fe', '#6366f1'][index % 5]} />
                                    ))}
                                 </Bar>
                              </BarChart>
@@ -479,141 +436,48 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
                        </div>
                     </div>
 
-                    <div className="bg-white border border-slate-100 rounded-[3rem] p-10 shadow-sm print:border-slate-200">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8 flex items-center gap-2 italic"><Activity className="w-4 h-4 text-emerald-500"/> Individual Performance Registry</p>
-                        <div className="space-y-4">
-                           {reportResult.fullList.map((s:any, i:number) => (
-                              <div key={i} className="flex items-center justify-between p-4 bg-slate-50/50 rounded-2xl border border-transparent hover:border-slate-100 transition-all">
-                                 <div className="flex items-center gap-4">
-                                    <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center font-black text-[10px] text-slate-400 border border-slate-100">{s.name[0]}</div>
-                                    <span className="text-sm font-black text-slate-700">{s.name}</span>
-                                 </div>
-                                 <div className="flex gap-6">
-                                    <div className="text-right">
-                                       <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Avg Grade</p>
-                                       <p className="text-sm font-black text-slate-800">{s.score}%</p>
-                                    </div>
-                                    <div className="text-right">
-                                       <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Standing</p>
-                                       <p className={`text-[10px] font-black uppercase ${s.standing === 'Excellence' ? 'text-emerald-500' : 'text-[#1e3a8a]'}`}>{s.standing}</p>
-                                    </div>
-                                 </div>
-                              </div>
-                           ))}
-                        </div>
-                    </div>
-
-                     {reportResult.isAttendance && reportResult.lowAttendance?.length > 0 && (
-                        <div className="bg-rose-50 border border-rose-100 rounded-[3rem] p-10 shadow-sm print:bg-white print:border-rose-200">
-                           <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest mb-6 flex items-center gap-2 italic">
-                              <AlertTriangle className="w-4 h-4"/> Absentees Analysis: Attention Required
-                           </p>
-                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                              {reportResult.lowAttendance.map((s:any, i:number) => (
-                                 <div key={i} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-rose-100">
-                                    <span className="text-sm font-black text-slate-700">{s.name}</span>
-                                    <span className="text-sm font-black text-rose-600">{s.rate}%</span>
-                                 </div>
-                              ))}
-                           </div>
-                        </div>
-                     )}
-
-                    <div className="bg-[#1e3a8a] border border-blue-900/10 p-10 rounded-[3rem] relative overflow-hidden group shadow-2xl print:bg-slate-50 print:text-slate-900 print:shadow-none print:border-slate-200">
-                       <BrainCircuit className="absolute -right-10 -top-10 w-48 h-48 text-white/5 group-hover:rotate-12 transition-all opacity-20 print:hidden"/>
-                       <div className="flex items-center justify-between mb-6">
-                          <p className="text-[10px] font-black text-blue-200 uppercase tracking-[0.3em] flex items-center gap-3 print:text-slate-400">
-                             <Sparkles className="w-5 h-5 text-white animate-pulse print:text-black"/> 
-                             {reportResult.isAttendance ? 'Attendance Observation' : 'Professional Subject Observation'}
-                          </p>
-                       </div>
-                       <p className="text-base font-bold text-white leading-relaxed italic relative z-10 antialiased print:text-slate-800">"{reportResult.aiRemarks}"</p>
+                    <div className="bg-[#0f172a] p-12 rounded-[4rem] relative overflow-hidden group shadow-2xl print:bg-slate-50 print:text-slate-900 print:border-slate-200">
+                       <p className="text-[11px] font-black text-indigo-300 uppercase tracking-[0.4em] flex items-center gap-4 mb-8 print:text-slate-400 italic">
+                          <Bot size={24} className="animate-pulse print:text-indigo-600"/> Neural Intelligence Synthesis
+                       </p>
+                       <p className="text-xl font-bold text-white leading-relaxed italic relative z-10 print:text-slate-800">"{reportResult.aiRemarks}"</p>
                     </div>
                  </div>
                ) : (
-                 <div className="space-y-8 text-left">
-                    <div className="bg-white border border-slate-100 p-10 rounded-[3rem] flex items-center gap-8 shadow-sm print:border-slate-200">
-                        <div className={`w-20 h-20 ${reportResult.isAttendance ? 'bg-amber-50 text-amber-600' : 'bg-indigo-50 text-[#1e3a8a]'} rounded-[2rem] flex items-center justify-center shadow-inner font-black text-2xl`}>
-                            {reportResult.student_name?.[0]}
-                        </div>
+                 <div className="space-y-10">
+                    <div className="bg-white border border-slate-100 p-12 rounded-[4rem] flex items-center gap-10 shadow-sm print:border-slate-200">
+                        <div className="w-24 h-24 bg-indigo-50 text-[#1e3a8a] rounded-[2.5rem] flex items-center justify-center shadow-inner font-black text-4xl italic">{reportResult.student_name?.[0]}</div>
                         <div>
-                            <h3 className="text-3xl font-black text-slate-800 tracking-tight leading-none mb-3">{reportResult.student_name}</h3>
-                            <div className="flex items-center gap-8 uppercase tracking-widest font-black text-[10px] text-slate-400">
-                               {!reportResult.isAttendance && <div className="flex items-center gap-2"><TrendingUp size={12}/> Performance: <span className="text-slate-800">{reportResult.score}%</span></div>}
-                               <div className="flex items-center gap-2"><CheckCircle2 size={12}/> Presence: <span className="text-slate-800">{reportResult.atnd}%</span></div>
-                               <div className="flex items-center gap-2 text-indigo-600"><Target size={12}/> Standing: <span className="italic">{reportResult.standing}</span></div>
+                            <h3 className="text-5xl font-black text-slate-900 tracking-tighter leading-none mb-4 uppercase italic">{reportResult.student_name}</h3>
+                            <div className="flex items-center gap-10 uppercase tracking-widest font-black text-[11px] text-slate-400">
+                               <div className="flex items-center gap-3"><TrendingUp size={16} className="text-indigo-500"/> MERIT: <span className="text-slate-900">{reportResult.score}%</span></div>
+                               <div className="flex items-center gap-3"><Clock size={16} className="text-emerald-500"/> PRESENCE: <span className="text-slate-900">{reportResult.atnd}%</span></div>
                             </div>
                         </div>
                     </div>
-                    <div className={`${reportResult.isAttendance ? 'bg-amber-50 border-amber-100 text-amber-800' : 'bg-emerald-50 border-emerald-100 text-emerald-800'} border p-10 rounded-[3rem] text-left relative overflow-hidden print:bg-slate-50 print:border-slate-200`}>
-                        <p className={`text-[10px] font-black ${reportResult.isAttendance ? 'text-amber-600' : 'text-emerald-600'} uppercase tracking-widest mb-4 flex items-center gap-2 italic`}>
-                           <Sparkles className="w-4 h-4"/> {reportResult.isAttendance ? 'AI Attendance Analysis' : 'AI Student Analysis Summary'}
-                        </p>
-                        <p className="text-base font-bold leading-relaxed italic">"{reportResult.ai_remark}"</p>
+                    <div className="bg-emerald-50 border-emerald-100 text-emerald-900 border p-12 rounded-[4rem] text-left relative overflow-hidden print:bg-slate-50 shadow-inner">
+                        <ArrowUpRight className="absolute -right-8 -bottom-8 w-40 h-40 text-emerald-200 opacity-20 rotate-45" />
+                        <p className="text-[11px] font-black text-emerald-600 uppercase tracking-[0.4em] mb-6 flex items-center gap-4 italic"><Sparkles className="w-5 h-5"/> Scholar Diagnosis</p>
+                        <p className="text-2xl font-bold leading-relaxed italic">"{reportResult.ai_remark}"</p>
                     </div>
                  </div>
                )}
 
-                <div className="flex flex-col gap-4 pt-10 print:hidden">
-                  {reportResult.isIndividual && !isSent && (
-                    <button 
-                      onClick={handleSendToParent} 
-                      disabled={isSending}
-                      className="w-full h-20 bg-emerald-600 text-white rounded-[2.2rem] text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-3 shadow-2xl hover:bg-emerald-700 transition-all hover:translate-y-[-2px] active:scale-95 disabled:opacity-50"
-                    >
-                      {isSending ? (
-                        <><Loader2 className="w-6 h-6 animate-spin"/> Syncing with Parent & Principal...</>
-                      ) : (
-                        <><CheckCircle2 className="w-6 h-6"/> Confirm & Send to Parent & Principal</>
-                      )}
-                    </button>
-                  )}
-
-                  {!reportResult.isIndividual && !isSent && (
-                    <div className="flex flex-col gap-4">
-                      <button 
-                        onClick={handleSendToParent} 
-                        disabled={isSending}
-                        className="w-full h-20 bg-emerald-600 text-white rounded-[2.2rem] text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-3 shadow-2xl hover:bg-emerald-700 transition-all hover:translate-y-[-2px] active:scale-95 disabled:opacity-50"
-                      >
-                        {isSending ? (
-                          <><Loader2 className="w-6 h-6 animate-spin"/> Syncing with All Parents & Principal...</>
-                        ) : (
-                          <><CheckCircle2 className="w-6 h-6"/> Confirm & Send to Parents & Principal</>
-                        )}
-                      </button>
-                      <button 
-                        onClick={() => handleSendToPrincipal(false)} 
-                        disabled={isSending}
-                        className="w-full h-16 bg-white border border-slate-100 text-slate-400 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-slate-50 transition-all active:scale-95 disabled:opacity-50"
-                      >
-                        {isSending ? (
-                          <><Loader2 className="w-4 h-4 animate-spin"/> Sending to Principal only...</>
-                        ) : (
-                          <><ShieldCheck className="w-4 h-4"/> Only Send to Principal</>
-                        )}
-                      </button>
-                    </div>
-                  )}
-                  {isSent && (
-                    <div className="w-full h-20 bg-emerald-50 border-2 border-emerald-100 text-emerald-600 rounded-[2.2rem] flex items-center justify-center gap-3 font-black uppercase tracking-widest text-[11px]">
-                      <CheckCircle2 className="w-6 h-6" /> {reportResult.isIndividual ? "Report Published to Parent & Principal" : "Report Transmitted to Principal"}
-                    </div>
-                  )}
-
-                  <div className="flex gap-4">
-                    <button onClick={handleDownload} className="flex-1 h-20 bg-[#1e3a8a] text-white rounded-[2.2rem] text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-3 shadow-2xl hover:bg-slate-900 transition-all hover:translate-y-[-2px] active:scale-95">
-                      <Download className="w-6 h-6"/> {params.format === 'pdf' ? 'Open Institutional Print View' : 'Download Excel Registry Matrix'}
-                    </button>
-                    <button onClick={() => { setReportResult(null); setIsSent(false); }} className="px-8 h-20 bg-white border border-slate-100 text-slate-400 rounded-[2.2rem] hover:bg-slate-50 transition-colors active:scale-95">
-                      <RefreshCw className="w-6 h-6"/>
-                    </button>
-                  </div>
-                </div>
-
-               <div className="hidden print:block pt-20 text-center">
-                  <div className="w-full h-px bg-slate-200 mb-8" />
-                  <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">Official Academic Document • Verified via EduIntellect Cloud</p>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:hidden">
+                  {(report.id === "at_risk" || report.id === "attendance_summary") ? (
+                     <button onClick={()=>handleSendToPortal('both')} disabled={isSending || isSent} className="col-span-full h-28 bg-[#0f172a] text-white rounded-[2.8rem] text-[13px] font-black uppercase tracking-[0.3em] flex flex-col items-center justify-center gap-1 shadow-2xl hover:bg-black transition-all hover:translate-y-[-4px] active:scale-95 disabled:opacity-50 group">
+                        {isSending ? <Loader2 className="w-8 h-8 animate-spin"/> : <><div className="flex items-center gap-3"><Sparkles className="w-7 h-7 group-hover:rotate-180 transition-all duration-700"/> Broadcast to Both Portals</div><span className="text-[9px] opacity-60 font-bold tracking-widest italic leading-none">Synchronize Parent & Principal Portals Simultaneously</span></>}
+                     </button>
+                  ) : null}
+                  <button onClick={()=>handleSendToPortal('parent')} disabled={isSending || isSent} className={`h-28 bg-emerald-600 text-white rounded-[2.8rem] text-[13px] font-black uppercase tracking-[0.2em] flex flex-col items-center justify-center gap-1 shadow-2xl hover:bg-black transition-all hover:translate-y-[-4px] active:scale-95 disabled:opacity-50 group ${(report.id === "at_risk" || report.id === "attendance_summary") ? 'md:col-span-1' : 'col-span-full'}`}>
+                    {isSending ? <Loader2 className="w-8 h-8 animate-spin"/> : <><div className="flex items-center gap-3"><CheckCircle2 className="w-7 h-7 group-hover:scale-110 transition-all"/> Sync to Parent</div><span className="text-[9px] opacity-60 font-bold">Portal Manifest Update</span></>}
+                  </button>
+                  <button onClick={()=>handleSendToPortal('principal')} disabled={isSending || isSent} className={`h-28 bg-[#1e3a8a] text-white rounded-[2.8rem] text-[13px] font-black uppercase tracking-[0.2em] flex flex-col items-center justify-center gap-1 shadow-2xl hover:bg-black transition-all hover:translate-y-[-4px] active:scale-95 disabled:opacity-50 group ${(report.id === "at_risk" || report.id === "attendance_summary") ? 'md:col-span-1' : 'col-span-full'}`}>
+                    {isSending ? <Loader2 className="w-8 h-8 animate-spin"/> : <><div className="flex items-center gap-3"><ShieldCheck className="w-7 h-7 group-hover:rotate-12 transition-all"/> Transmit to Principal</div><span className="text-[9px] opacity-60 font-bold">Administrative Filing</span></>}
+                  </button>
+                  <button onClick={handleDownload} className="col-span-full h-24 bg-white border border-slate-100 text-[#1e3a8a] rounded-[2.8rem] text-[12px] font-black uppercase tracking-widest flex items-center justify-center gap-4 shadow-xl hover:bg-slate-50 transition-all active:scale-95">
+                    <Download className="w-7 h-7"/> {params.format === 'pdf' ? 'Initiate Print Protocol' : 'Export Excel Data Registry'}
+                  </button>
                </div>
             </div>
           )}
@@ -622,5 +486,13 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
     </Dialog>
   );
 };
+
+const StatCard = ({ label, val, icon: Icon, color }: any) => (
+   <div className="bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-sm text-center group hover:shadow-2xl transition-all print:border-slate-200">
+      <div className={`w-14 h-14 rounded-[1.8rem] bg-slate-50 flex items-center justify-center mx-auto mb-6 shadow-inner ${color}`}><Icon size={28}/></div>
+      <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 italic">{label}</p>
+      <p className="text-5xl font-black text-slate-900 tracking-tighter italic">{val}</p>
+   </div>
+);
 
 export default GenerateReport;

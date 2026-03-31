@@ -51,13 +51,17 @@ export default function StudentProfile({ student, onBack }: StudentProfileProps)
     // 2. Fetch Real Metrics
     const fetchData = async () => {
         try {
-            const qScores = query(collection(db, "test_scores"), where("studentId", "==", student.id));
-            const snapScores = await getDocs(qScores);
-            const scores = snapScores.docs.map(d => ({id: d.id, ...(d.data() as any)}));
-            scores.sort((a,b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+            const q1 = query(collection(db, "test_scores"), where("studentId", "==", student.id));
+            const q2 = student.email ? query(collection(db, "test_scores"), where("studentEmail", "==", student.email.toLowerCase())) : null;
+            
+            const [snap1, snap2] = await Promise.all([getDocs(q1), q2 ? getDocs(q2) : Promise.resolve({docs:[]})]);
+            const uniqueMap = new Map();
+            [...snap1.docs, ...snap2.docs].forEach(d => { if(!uniqueMap.has(d.id)) uniqueMap.set(d.id, {id: d.id, ...d.data()}); });
+            
+            const scores = Array.from(uniqueMap.values()).sort((a: any, b: any) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
             setRecentTests(scores.slice(0, 5));
 
-            const activityArray = scores.slice(0, 3).map(s => ({
+            const activityArray = scores.slice(0, 3).map((s: any) => ({
                 type: 'test',
                 title: `Scored ${s.percentage?.toFixed(0) || 0}% in ${s.testName || 'Assessment'}`,
                 subtitle: `${s.subject || 'Standard'} • ${s.timestamp ? new Date(s.timestamp.seconds * 1000).toLocaleDateString() : 'Recent Session'}`,
@@ -103,22 +107,30 @@ export default function StudentProfile({ student, onBack }: StudentProfileProps)
 
   useEffect(() => {
     if (activeTab === 'Feedback' && student.id) {
-        const qF = query(collection(db, "performance_feedback"), where("studentId", "==", student.id));
-        const unsub = onSnapshot(qF, (snap) => {
-            const data = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            data.sort((a:any, b:any) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
-            setPastFeedbacks(data);
-        });
-        return () => unsub();
+        const q1 = query(collection(db, "performance_feedback"), where("studentId", "==", student.id));
+        const q2 = student.email ? query(collection(db, "performance_feedback"), where("studentEmail", "==", student.email.toLowerCase())) : null;
+        
+        const processFeedback = (docs: any[]) => {
+            const unique = Array.from(new Map(docs.map(d => [d.id, {id: d.id, ...d.data()}])).values());
+            unique.sort((a: any, b: any) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+            setPastFeedbacks(unique);
+        };
+        const unsub1 = onSnapshot(q1, (snap) => processFeedback(snap.docs));
+        const unsub2 = q2 ? onSnapshot(q2, (snap) => processFeedback(snap.docs)) : () => {};
+        return () => { unsub1(); unsub2(); };
     }
     if (activeTab === 'Behaviour' && student.id) {
-        const qB = query(collection(db, "parent_notes"), where("studentId", "==", student.id));
-        const unsub = onSnapshot(qB, (snap) => {
-            const data = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            data.sort((a:any, b:any) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
-            setPastBehaviours(data);
-        });
-        return () => unsub();
+        const q1 = query(collection(db, "parent_notes"), where("studentId", "==", student.id));
+        const q2 = student.email ? query(collection(db, "parent_notes"), where("studentEmail", "==", student.email.toLowerCase())) : null;
+        
+        const processNotes = (docs: any[]) => {
+            const unique = Array.from(new Map(docs.map(d => [d.id, {id: d.id, ...d.data()}])).values());
+            unique.sort((a: any, b: any) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+            setPastBehaviours(unique);
+        };
+        const unsub1 = onSnapshot(q1, (snap) => processNotes(snap.docs));
+        const unsub2 = q2 ? onSnapshot(q2, (snap) => processNotes(snap.docs)) : () => {};
+        return () => { unsub1(); unsub2(); };
     }
   }, [activeTab, student.id]);
 
@@ -155,6 +167,7 @@ export default function StudentProfile({ student, onBack }: StudentProfileProps)
                   teacherId: teacherData?.id || "unknown",
                   teacherName: teacherData?.name || "Institutional Faculty",
                   studentId: student.id, 
+                  studentEmail: student.email || "",
                   studentName: student.name,
                   parentName: `Parent of ${student.name}`, 
                   subject: student.className || "General",
@@ -172,6 +185,7 @@ export default function StudentProfile({ student, onBack }: StudentProfileProps)
                   teacherId: teacherData?.id || "unknown",
                   teacherName: teacherData?.name || "Institutional Faculty",
                   studentId: student.id, 
+                  studentEmail: student.email || "",
                   studentName: student.name,
                   parentName: `Parent of ${student.name}`, 
                   subject: student.className || "General",

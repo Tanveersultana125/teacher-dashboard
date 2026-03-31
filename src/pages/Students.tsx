@@ -26,7 +26,6 @@ export default function Students() {
   // Real Database Fetching
   useEffect(() => {
     if (!teacherData?.id) {
-        console.log("Waiting for Teacher Auth Matrix...");
         return;
     }
     
@@ -68,12 +67,20 @@ export default function Students() {
             const attData = attSnap.docs.map(d => d.data());
 
             const final = studentsArray.map(stu => {
-                const stuScores = scoresData.filter(s => s.studentId === stu.id);
+                // Dual-Lookup for scores: check both id (which could be email or UID) and explicit email
+                const stuScores = scoresData.filter(s => 
+                    (s.studentId && s.studentId === stu.id) || 
+                    (s.studentEmail && stu.email && s.studentEmail.toLowerCase() === stu.email.toLowerCase())
+                );
+                
                 let totalPct = 0, count = 0;
                 stuScores.forEach(s => { if(!s.isAbsent && s.percentage) { totalPct += s.percentage; count++; } });
                 const avg = count > 0 ? (totalPct / count) : 0;
 
-                const stuAtt = attData.filter(a => a.studentId === stu.id || a.studentEmail === stu.email);
+                const stuAtt = attData.filter(a => 
+                    (a.studentId && a.studentId === stu.id) || 
+                    (a.studentEmail && stu.email && a.studentEmail.toLowerCase() === stu.email.toLowerCase())
+                );
                 const present = stuAtt.filter(a => a.status?.toLowerCase() === "present" || a.status?.toLowerCase() === "late").length;
                 const attPct = stuAtt.length > 0 ? (present / stuAtt.length) * 100 : 100;
 

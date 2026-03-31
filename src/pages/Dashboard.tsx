@@ -1,13 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { db } from '../lib/firebase';
-import { collection, query, where, onSnapshot, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDocs, orderBy, limit, serverTimestamp } from 'firebase/firestore';
 import { 
   Loader2, Users, Activity, TrendingUp, AlertCircle, 
   Calendar, Clock, CheckCircle, FileText, Bell, 
-  Layout, GraduationCap, ClipboardCheck, MessageSquare, Sparkles, BrainCircuit
+  Layout, GraduationCap, ClipboardCheck, MessageSquare, Sparkles, BrainCircuit, Heart, Search, ArrowUpRight,
+  ShieldCheck, Presentation, Zap, ShieldAlert, MoreVertical
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
+const StatCard = ({ label, value, tag, tagColor, iconColor, unit = "" }: any) => {
+   return (
+      <div className="bg-white border border-slate-100 p-6 rounded-2xl shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+         <div className="flex items-center justify-between mb-6">
+            <div className={`w-12 h-12 rounded-lg ${iconColor} flex items-center justify-center`} />
+            <div className={`px-3 py-1 rounded-full text-[10px] font-bold ${tagColor}`}>
+               {tag}
+            </div>
+         </div>
+         <div>
+            <h2 className="text-4xl font-bold text-slate-800 tracking-tight">{value}{unit}</h2>
+            <p className="text-sm text-slate-500 font-medium mt-1">{label}</p>
+         </div>
+      </div>
+   );
+};
 
 const Dashboard = () => {
   const { teacherData } = useAuth();
@@ -15,15 +33,15 @@ const Dashboard = () => {
   
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
-    attendanceRate: "0%",
+    avgAttendance: 0,
     pendingGrading: 0,
     atRiskCount: 0,
-    classesToday: 0
+    activeClasses: 0
   });
 
   const [todayClasses, setTodayClasses] = useState<any[]>([]);
   const [pendingTasks, setPendingTasks] = useState<any[]>([]);
-  const [needingAttention, setNeedingAttention] = useState<any[]>([]);
+  const [criticalStudents, setCriticalStudents] = useState<any[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -32,294 +50,235 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
-    if (!teacherData?.id) return;
+    if (!teacherData?.email && !teacherData?.id) return;
+    setLoading(true);
 
-    // 1. Fetch Assigned Classes via teaching_assignments junction
-    const qAssignments = query(collection(db, "teaching_assignments"), where("teacherId", "==", teacherData.id), where("status", "==", "active"));
-    const unsubClasses = onSnapshot(qAssignments, async (assignSnap) => {
-      const assignedClassIds = assignSnap.docs.map(d => d.data().classId).filter(Boolean);
-      
-      // Fetch Legacy classes (backward compatibility)
-      const qLegacy = query(collection(db, "classes"), where("teacherId", "==", teacherData.id));
-      const legacySnap = await getDocs(qLegacy);
-      const legacyIds = legacySnap.docs.map(d => d.id);
-      
-      const allIds = Array.from(new Set([...assignedClassIds, ...legacyIds]));
+    const tId = teacherData.id;
+    const tEmail = teacherData.email?.toLowerCase();
 
-      if (allIds.length === 0) {
-          setTodayClasses([]);
-          setStats(prev => ({ ...prev, classesToday: 0 }));
-          setPendingTasks(prev => prev.filter(t => t.id !== 'mark_atnd'));
-          return;
-      }
+    // 1. DATA HARVESTING - WIDER NET (Assignments + Classes by ID/Email)
+    const harvestAssignments = async () => {
+       try {
+         // Query assignments by ID
+         const q1 = query(collection(db, "teaching_assignments"), where("teacherId", "==", tId));
+         const q2 = query(collection(db, "classes"), where("teacherId", "==", tId));
+         
+         // Query by email (common secondary identifier)
+         const q3 = query(collection(db, "teaching_assignments"), where("teacherEmail", "==", tEmail));
+         const q4 = query(collection(db, "classes"), where("teacherEmail", "==", tEmail));
+         const q5 = query(collection(db, "classes"), where("teacher_id", "==", tId)); // Underscore check
 
-      // Fetch the actual class details to map names
-      const qClasses = query(collection(db, "classes"));
-      const classDocsSnap = await getDocs(qClasses);
-      const classMap = new Map();
-      classDocsSnap.docs.forEach(d => classMap.set(d.id, d.data()));
+         const [s1, s2, s3, s4, s5] = await Promise.all([
+            getDocs(q1), getDocs(q2), getDocs(q3), getDocs(q4), getDocs(q5)
+         ]);
 
-      const assignments = assignSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-      const clsData = assignments.map(a => {
-           const cls = classMap.get(a.classId);
-           return {
-               id: a.id,
-               actualClassId: a.classId,
-               name: `${cls?.name || 'Class'} - ${a.subjectName || a.subject || 'Subject'}`,
-               grade: cls?.grade || 'Grade N/A',
-               subject: a.subjectName || a.subject || 'Subject'
-           };
-      });
+         const allAssignments = [
+            ...s1.docs.map(d => ({ id: d.id, ...d.data() })),
+            ...s3.docs.map(d => ({ id: d.id, ...d.data() })),
+            ...s2.docs.map(d => ({ id: d.id, ...d.data(), classId: d.id, className: d.data().name })),
+            ...s4.docs.map(d => ({ id: d.id, ...d.data(), classId: d.id, className: d.data().name })),
+            ...s5.docs.map(d => ({ id: d.id, ...d.data(), classId: d.id, className: d.data().name }))
+         ];
 
-      // Add standalone legacy classes
-      legacyIds.forEach(lid => {
-          if (!assignments.some(a => a.classId === lid)) {
-              const cls = classMap.get(lid);
-              clsData.push({
-                 id: lid,
-                 actualClassId: lid,
-                 name: cls?.name || 'Legacy Class',
-                 grade: cls?.grade || 'Legacy',
-                 subject: 'General'
-              });
-          }
-      });
-          
-      setTodayClasses(clsData);
-      setStats(prev => ({ ...prev, classesToday: clsData.length }));
+         const uniqueAssignmentsMap = new Map();
+         allAssignments.forEach((a: any) => {
+            const cid = a.classId || a.id;
+            if (!uniqueAssignmentsMap.has(cid)) uniqueAssignmentsMap.set(cid, a);
+         });
+         const assignments = Array.from(uniqueAssignmentsMap.values());
 
-      // 2. LIVE ATTENDANCE TASKS
-      const todayString = new Date().toISOString().split('T')[0];
-      const qAtndToday = query(collection(db, "attendance"), where("teacherId", "==", teacherData.id), where("date", "==", todayString));
-      
-      const unsubAtndToday = onSnapshot(qAtndToday, (atndSnap) => {
-          // Check marked entities (by assignmentId, fallback to classId)
-          const markedIds = new Set(atndSnap.docs.map(d => d.data().assignmentId || d.data().classId));
-          const unmarked = clsData.filter(c => !markedIds.has(c.id) && !markedIds.has(c.actualClassId));
-          
-          setPendingTasks(prev => {
-             const others = prev.filter(t => t.id !== 'mark_atnd');
-             if (unmarked.length > 0) {
-                return [
-                   ...others,
-                   {
-                      id: 'mark_atnd',
-                      title: 'Mark Attendance',
-                      desc: `${unmarked[0].name} • Pending Registry`,
-                      icon: ClipboardCheck,
-                      color: 'bg-amber-500',
-                      count: unmarked.length,
-                      actionPath: '/attendance'
-                   }
-                ];
-             }
-             return others;
-          });
-      });
-    });
-
-    // 3. LIVE PENDING GRADING
-    const qPending = query(collection(db, "submissions"), where("teacherId", "==", teacherData.id), where("status", "==", "pending"));
-    const unsubPending = onSnapshot(qPending, (snap) => {
-      setStats(prev => ({ ...prev, pendingGrading: snap.size }));
-      setPendingTasks(prev => {
-         const others = prev.filter(t => t.id !== 'grade_papers');
-         if (snap.size > 0) {
-            return [
-               ...others,
-               {
-                  id: 'grade_papers',
-                  title: 'Review Assignments',
-                  desc: `${snap.size} real submissions pending`,
-                  count: snap.size,
-                  icon: FileText,
-                  color: 'bg-indigo-500',
-                  actionPath: '/gradebook'
-               }
-            ];
+         if (assignments.length === 0) {
+            setStats({ avgAttendance: 0, pendingGrading: 0, atRiskCount: 0, activeClasses: 0 });
+            setTodayClasses([]);
+            setPendingTasks([]);
+            setCriticalStudents([]);
+            setLoading(false);
+            return;
          }
-         return others;
-      });
-    });
 
-    // 4. SMART STUDENT MONITOR (Synced with ClassDetail Logic)
-    const qEnrol = query(collection(db, "enrollments"), where("teacherId", "==", teacherData.id));
-    const unsubEnrol = onSnapshot(qEnrol, async (snap) => {
-       const roster = snap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-       
-       const enriched = await Promise.all(roster.map(async (s: any) => {
-          const atndQ = query(collection(db, "attendance"), where("studentId", "==", s.studentId), where("teacherId", "==", teacherData.id));
-          const atndSnap = await getDocs(atndQ);
-          const presentCount = atndSnap.docs.filter(d => d.data().status === 'present' || d.data().status === 'late').length;
-          const atndRate = atndSnap.size > 0 ? (presentCount / atndSnap.size) * 100 : 95.0;
+         const classIds = assignments.map(a => a.classId || a.id);
+         
+         // 2. CHILD CONTEXT HARVESTING
+         const [studentsSnap, attSnap, scoresSnap, resultsSnap] = await Promise.all([
+            getDocs(query(collection(db, "enrollments"), where("classId", "in", classIds))),
+            getDocs(query(collection(db, "attendance"), where("teacherId", "==", tId))),
+            getDocs(query(collection(db, "gradebook_scores"), where("teacherId", "==", tId))),
+            getDocs(query(collection(db, "results"), where("teacherId", "==", tId)))
+         ]);
 
-          const resQ = query(collection(db, "results"), where("studentId", "==", s.studentId), where("teacherId", "==", teacherData.id));
-          const resSnap = await getDocs(resQ);
-          const totalScore = resSnap.docs.reduce((acc, curr) => acc + (parseFloat(curr.data().score) || 0), 0);
-          const avgScore = resSnap.size > 0 ? totalScore / resSnap.size : 85.0;
+         const students = studentsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+         const att = attSnap.docs.map(d => d.data());
+         const scores = [...scoresSnap.docs.map(d => d.data()), ...resultsSnap.docs.map(d => d.data())];
 
-          const standing = s.manualStatus || (atndRate < 80 || avgScore < 60 ? "At Risk" : (atndRate < 90 || avgScore < 75 ? "Needs Attention" : "Good Standing"));
+         // Calculations
+         const totalPres = att.filter(a => a.status === 'present' || a.status === 'late').length;
+         const avgAtnd = att.length > 0 ? (totalPres / att.length) * 100 : 0;
+         const pendingRev = scores.filter(s => s.status === 'pending').length;
 
-          return { ...s, standing, avgScore, atndRate };
-       }));
+         setStats({
+            avgAttendance: Number(avgAtnd.toFixed(1)),
+            pendingGrading: pendingRev,
+            atRiskCount: 0, // Calculated below
+            activeClasses: assignments.length
+         });
 
-       const critical = enriched.filter(s => s.standing === "At Risk" || s.standing === "Needs Attention").slice(0, 5);
-       
-       setStats(prev => ({ ...prev, atRiskCount: enriched.filter(e => e.standing === "At Risk").length }));
-       setNeedingAttention(critical.map(s => ({
-          id: s.id,
-          name: s.studentName || "Scholar",
-          initials: (s.studentName?.[0] || 'S'),
-          reason: s.standing === "At Risk" ? "Priority Academic Intervention" : `Performance: ${s.avgScore.toFixed(0)}% (Near Threshold)`,
-          action: "Intervene",
-          color: s.standing === "At Risk" ? "bg-rose-500" : "bg-amber-500",
-          actionPath: '/parent-notes',
-          isAtRisk: s.standing === "At Risk"
-       })));
-    });
+         // Pending Tasks Logic
+         const tasks: any[] = [];
+         const todayStr = new Date().toISOString().split('T')[0];
+         const markedToday = new Set(att.filter(a => a.date === todayStr).map(a => a.classId || a.assignmentId));
+         const pendingClasses = assignments.filter(a => !markedToday.has(a.classId || a.id));
 
-    // 5. ATTENDANCE RATE AGGREGATE
-    const qAtndRate = query(collection(db, "attendance"), where("teacherId", "==", teacherData.id));
-    const unsubAtndRate = onSnapshot(qAtndRate, (snap) => {
-       const docs = snap.docs;
-       if (docs.length === 0) {
-          setStats(prev => ({ ...prev, attendanceRate: "100%" }));
-       } else {
-          const present = docs.filter(d => d.data().status === 'present').length;
-          setStats(prev => ({ ...prev, attendanceRate: `${((present / docs.length) * 100).toFixed(1)}%` }));
+         if (pendingClasses.length > 0) tasks.push({ title: 'Mark Attendance', sub: `${pendingClasses.length} subdivisions pending`, color: 'bg-amber-500' });
+         if (pendingRev > 0) tasks.push({ title: 'Grade Unit Test Papers', sub: `${pendingRev} pending reviewer`, count: pendingRev, color: 'bg-rose-500' });
+
+         setPendingTasks(tasks);
+
+         // Risks & Trajectory
+         let rCount = 0;
+         const rList = students.map(s => {
+            const sId = s.studentId, sEmail = s.studentEmail?.toLowerCase();
+            const f = (arr: any[]) => arr.filter(i => (sId && (i.studentId === sId || i.id?.includes(sId))) || (sEmail && i.studentEmail?.toLowerCase() === sEmail));
+            const sAtt = f(att);
+            const sScores = f(scores);
+            const sA = sAtt.length > 0 ? (sAtt.filter(a => a.status === 'present' || a.status === 'late').length / sAtt.length) * 100 : 100;
+            const sM = sScores.length > 0 ? (sScores.reduce((acc, c) => acc + Number(c.percentage || (c.mark/c.maxMarks*100) || c.score || 0), 0) / sScores.length) : 80;
+            
+            let lvl = "stable";
+            let trig = "On Track";
+            if (sA < 75 || sM < 60) { lvl = "critical"; trig = sA < 75 ? "Attendance Failure" : "Merit Decline"; rCount++; }
+            else if (sA < 85 || sM < 70) { lvl = "observation"; trig = "Registry Dip"; }
+            return { ...s, level: lvl, trigger: trig, score: sM, atnd: sA };
+         }).filter(s => s.level !== "stable").sort((a,b) => (a.level === 'critical' ? -1 : 1)).slice(0, 4);
+
+         setStats(prev => ({ ...prev, atRiskCount: rCount }));
+         setCriticalStudents(rList);
+         
+         setTodayClasses(assignments.slice(0, 4).map((a, i) => ({
+            time: i === 0 ? '08:00' : (i === 1 ? '10:00' : (i === 2 ? '12:30' : '02:30')),
+            period: i < 2 ? 'AM' : 'PM',
+            subject: a.subjectName || a.subject || "Registry",
+            class: a.className || a.name || "Class",
+            students: students.filter(s => s.classId === (a.classId || a.id)).length,
+            isNow: i === 0
+         })));
+
+       } catch (error) {
+         console.error("Dashboard Harvest Failure:", error);
+       } finally {
+         setLoading(false);
        }
-    });
-
-    setLoading(false);
-    return () => {
-      unsubClasses();
-      unsubPending();
-      unsubEnrol();
-      unsubAtndRate();
     };
-  }, [teacherData?.id]);
+
+    harvestAssignments();
+  }, [teacherData?.id, teacherData?.email]);
 
   if (loading) return (
-     <div className="h-screen flex flex-col items-center justify-center bg-slate-50">
-        <div className="relative">
-           <div className="w-20 h-20 border-4 border-[#1e3a8a]/20 border-t-[#1e3a8a] rounded-full animate-spin"></div>
-           <div className="absolute inset-0 flex items-center justify-center"><BrainCircuit className="w-8 h-8 text-[#1e3a8a] animate-pulse"/></div>
-        </div>
-        <p className="mt-8 text-[11px] font-black text-slate-400 uppercase tracking-[0.5em] animate-pulse">Syncing Neural Health Logs...</p>
+     <div className="h-screen flex items-center justify-center bg-slate-50">
+        <Loader2 className="w-10 h-10 text-primary animate-spin" />
      </div>
   );
 
   return (
-    <div className="min-h-screen animate-in fade-in slide-in-from-bottom-10 duration-1000 pb-24 text-left font-sans">
-      
-      <div className="flex flex-col md:flex-row items-center justify-between gap-8 mb-16 px-2">
-        <div className="text-left w-full md:w-auto">
-           <div className="flex items-center gap-3 mb-5">
-              <Sparkles className="w-5 h-5 text-indigo-500 animate-pulse" />
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Live Institutional Engine</p>
-           </div>
-           <h1 className="text-6xl font-black text-slate-900 tracking-tighter leading-none mb-5">Insight Hub</h1>
-           <p className="text-base font-bold text-slate-400">Database pulse is active. Monitoring <span className="text-[#1e3a8a] uppercase">{teacherData?.name}</span> Subdivision.</p>
+    <div className="min-h-screen bg-[#f8fafc] p-8 font-sans text-left">
+      {/* Header */}
+      <div className="flex justify-between items-start mb-8">
+        <div>
+           <h1 className="text-3xl font-bold text-slate-800">Dashboard</h1>
+           <p className="text-slate-500 text-sm mt-1">Welcome back! Here's what's happening today.</p>
         </div>
-        
-        <div className="flex items-center gap-6 w-full md:w-auto">
-           <div className="flex-1 md:flex-none px-12 h-20 bg-white border border-slate-100 rounded-[2.5rem] shadow-sm flex items-center justify-center gap-5 text-base font-black text-slate-700">
-              <Calendar className="w-6 h-6 text-[#1e3a8a]"/>
-              {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              <span className="text-slate-200">|</span>
-              {currentTime.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
+        <div className="flex items-center gap-4">
+           <div className="bg-white px-6 py-2 rounded-xl border border-slate-100 shadow-sm text-sm font-semibold text-slate-600">
+              {currentTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
            </div>
-           <button className="w-20 h-20 bg-[#1e3a8a] rounded-[2.5rem] flex items-center justify-center text-white relative shadow-2xl shadow-blue-900/40 hover:scale-110 active:scale-95 transition-all">
-              <Bell className="w-8 h-8"/>
-              <div className="absolute top-5 right-5 w-4 h-4 bg-rose-500 rounded-full border-4 border-[#1e3a8a]" />
-           </button>
+           <div className="relative">
+              <div className="w-10 h-10 bg-white rounded-xl border border-slate-100 flex items-center justify-center shadow-sm">
+                 <Bell size={20} className="text-slate-400" />
+              </div>
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white">3</span>
+           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
-         <StatItem label="Avg Attendance" value={stats.attendanceRate} icon={Activity} color="emerald" tag="Stable" />
-         <StatItem label="Grading Load" value={stats.pendingGrading} icon={FileText} color="amber" tag="Pending" />
-         <StatItem label="At Risk Index" value={stats.atRiskCount} icon={AlertCircle} color="rose" tag="Critical" />
-         <StatItem label="Subdivisions" value={stats.classesToday} icon={Users} color="indigo" tag="Live" />
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+         <StatCard label="Attendance Rate" value={stats.avgAttendance} unit="%" tag={stats.avgAttendance > 90 ? "Stable" : "Action Required"} tagColor={stats.avgAttendance > 90 ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"} iconColor="bg-blue-100" />
+         <StatCard label="Pending Grading" value={stats.pendingGrading} tag={stats.pendingGrading > 0 ? "Urgent" : "Sync Complete"} tagColor={stats.pendingGrading > 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"} iconColor="bg-amber-100" />
+         <StatCard label="At-Risk Students" value={stats.atRiskCount} tag={stats.atRiskCount > 0 ? "Attention" : "Secure"} tagColor={stats.atRiskCount > 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"} iconColor="bg-rose-100" />
+         <StatCard label="Classes Today" value={stats.activeClasses} tag="Real-time" tagColor="bg-emerald-50 text-emerald-600" iconColor="bg-blue-100" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
          
-         <div className="lg:col-span-4 space-y-10 text-left">
-            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] mb-8 flex items-center gap-3 pl-4 border-l-4 border-slate-200">Institutional Session Log</h3>
-            <div className="space-y-6">
-               {todayClasses.length === 0 ? (
-                  <EmptyState icon={Clock} text="Registry is currently silent. No active subdivisions." />
-               ) : (
-                  todayClasses.map((cls, i) => (
-                    <div key={cls.id} className="bg-white border border-slate-100 p-8 rounded-[3.5rem] shadow-sm hover:shadow-2xl hover:-translate-x-3 transition-all group flex items-center gap-8 cursor-pointer relative overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent to-[#1e3a8a]/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <div className="text-center relative z-10 min-w-[60px]">
-                           <p className="text-2xl font-black text-slate-800 tracking-tighter leading-none">{i === 0 ? '09:00' : (i === 1 ? '11:30' : '02:00')}</p>
-                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Log Point</p>
+         {/* Today's Classes */}
+         <div className="bg-white rounded-2xl border border-slate-100 p-6 flex flex-col shadow-sm">
+            <h3 className="text-lg font-bold text-slate-800 mb-6 font-primary">Today's Classes</h3>
+            <div className="space-y-4">
+               {todayClasses.length > 0 ? todayClasses.map((cls, idx) => (
+                  <div key={idx} className="flex gap-4 p-4 rounded-xl border border-slate-50 hover:bg-slate-50 transition-colors group relative cursor-pointer" onClick={() => navigate('/my-classes')}>
+                     {cls.isNow && <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-blue-600 rounded-r-full" />}
+                     <div className="flex flex-col items-center justify-center min-w-[65px]">
+                        <span className="text-sm font-bold text-slate-800">{cls.time}</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">{cls.period}</span>
+                     </div>
+                     <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                           <h4 className="font-bold text-slate-800 truncate leading-tight mb-0.5">{cls.subject}</h4>
+                           {cls.isNow && <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold rounded uppercase">Now</span>}
                         </div>
-                        <div className="w-1.5 h-14 bg-[#1e3a8a] rounded-full relative z-10" />
-                        <div className="flex-1 min-w-0 relative z-10">
-                           <h4 className="text-xl font-black text-slate-800 truncate mb-1">{cls.name}</h4>
-                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{cls.grade} • {cls.subject}</p>
-                        </div>
-                        {i === 0 && <div className="px-5 py-2 rounded-full bg-[#1e3a8a] text-white text-[9px] font-black uppercase tracking-[0.2em] animate-pulse">Now</div>}
-                    </div>
-                  ))
-               )}
-            </div>
-         </div>
-
-         <div className="lg:col-span-4 space-y-10 text-left">
-            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] mb-8 flex items-center gap-3 pl-4 border-l-4 border-amber-200 text-amber-600">Pending Matrix Workflow</h3>
-            <div className="space-y-6">
-               {pendingTasks.length === 0 ? (
-                  <EmptyState icon={CheckCircle} text="Academic workflows are fully synchronized." color="text-emerald-500" />
-               ) : (
-                  pendingTasks.map(task => (
-                    <div key={task.id} onClick={() => navigate(task.actionPath)} className="bg-white border border-slate-100 p-8 rounded-[3.5rem] shadow-sm hover:shadow-xl transition-all group cursor-pointer flex items-center gap-8 border-b-4 border-b-slate-50">
-                        <div className={`w-16 h-16 rounded-[2rem] ${task.color} flex items-center justify-center text-white shadow-2xl transition-all group-hover:rotate-12`}>
-                           <task.icon className="w-8 h-8"/>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                           <div className="flex items-center justify-between gap-4 mb-2">
-                              <h4 className="text-base font-black text-slate-800 truncate">{task.title}</h4>
-                             {task.count > 0 && <span className="w-8 h-8 bg-rose-500 text-white rounded-full text-[11px] font-black flex items-center justify-center border-2 border-white shadow-xl">{task.count}</span>}
-                           </div>
-                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">{task.desc}</p>
-                        </div>
-                    </div>
-                  ))
-               )}
-            </div>
-         </div>
-
-         <div className="lg:col-span-4 space-y-10 text-left">
-            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] mb-8 flex items-center gap-3 pl-4 border-l-4 border-rose-200 text-rose-600">Smart Health Monitor</h3>
-            <div className="bg-white border border-slate-100 p-3 rounded-[4.5rem] shadow-sm space-y-2 min-h-[450px]">
-               {needingAttention.length === 0 ? (
-                  <div className="h-full min-h-[400px] flex flex-col items-center justify-center px-12 text-center opacity-40">
-                     <BrainCircuit className="w-16 h-16 text-slate-200 mb-6" />
-                     <p className="text-[11px] font-black uppercase text-slate-400 tracking-widest leading-relaxed">Neural Scan: All scholars are performing within standardized thresholds.</p>
+                        <p className="text-[11px] text-slate-500 font-medium italic">Class {cls.class} • {cls.students} scholars</p>
+                     </div>
                   </div>
-               ) : (
-                  needingAttention.map(student => (
-                    <div key={student.id} className="p-8 hover:bg-slate-50 transition-all group flex items-center gap-6 rounded-[3rem]">
-                       <div className={`w-16 h-16 rounded-[2rem] ${student.color} flex items-center justify-center text-white font-black text-2xl shadow-xl transition-all group-hover:scale-110`}>
-                          {student.initials}
-                       </div>
-                       <div className="flex-1 min-w-0">
-                          <h4 className="text-xl font-black text-slate-800 leading-none mb-2">{student.name}</h4>
-                          <p className={`text-[10px] font-bold uppercase tracking-tight flex items-center gap-2 ${student.isAtRisk ? 'text-rose-500' : 'text-amber-500'}`}>
-                             {student.isAtRisk && <AlertCircle className="w-3 h-3"/>}
-                             {student.reason}
-                          </p>
-                       </div>
-                       <button onClick={() => navigate(student.actionPath)} className="px-6 h-14 bg-[#1e3a8a] text-white rounded-[1.2rem] text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-slate-900 transition-all active:scale-95 shrink-0">
-                          {student.action}
-                       </button>
-                    </div>
-                  ))
+               )) : (
+                  <div className="py-20 text-center opacity-30 font-bold uppercase text-[10px] tracking-widest italic">No subdivisions identified.</div>
+               )}
+            </div>
+         </div>
+
+         {/* Pending Tasks */}
+         <div className="bg-white rounded-2xl border border-slate-100 p-6 flex flex-col shadow-sm">
+            <h3 className="text-lg font-bold text-slate-800 mb-6 font-primary">Pending Tasks</h3>
+            <div className="space-y-4">
+               {pendingTasks.length > 0 ? pendingTasks.map((task, idx) => (
+                  <div key={idx} className="bg-white rounded-xl border border-slate-50 p-4 transition-all hover:shadow-sm group cursor-pointer" onClick={() => navigate(task.title.includes('Attendance') ? '/attendance' : '/gradebook')}>
+                     <div className="flex items-center gap-4">
+                        <div className={`w-12 h-12 rounded-lg ${task.color} flex items-center justify-center text-white shadow-md transition-all group-hover:rotate-6`}>
+                           {task.count ? <span className="font-bold">{task.count}</span> : <ClipboardCheck className="w-6 h-6" />}
+                        </div>
+                        <div className="flex-1">
+                           <div className="flex items-center justify-between">
+                              <h4 className="font-bold text-slate-800 text-sm leading-tight">{task.title}</h4>
+                              {task.count && <span className="w-5 h-5 bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center rounded-full">{task.count}</span>}
+                           </div>
+                           <p className="text-[10px] text-slate-400 font-black mt-1 uppercase tracking-tighter italic">{task.sub}</p>
+                        </div>
+                     </div>
+                  </div>
+               )) : (
+                  <div className="py-20 text-center opacity-30 font-bold uppercase text-[10px] tracking-widest italic">Registry synchronized.</div>
+               )}
+            </div>
+         </div>
+
+         {/* Students Needing Attention */}
+         <div className="bg-white rounded-2xl border border-slate-100 p-6 flex flex-col shadow-sm">
+            <h3 className="text-lg font-bold text-slate-800 mb-6 font-primary">Students Needing Attention</h3>
+            <div className="space-y-4">
+               {criticalStudents.length > 0 ? criticalStudents.map((s, idx) => (
+                  <div key={idx} className="flex items-center gap-4 p-4 rounded-xl border border-slate-50">
+                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-bold ${idx % 4 === 0 ? 'bg-rose-500' : (idx % 4 === 1 ? 'bg-amber-500' : (idx % 4 === 2 ? 'bg-orange-500' : 'bg-[#1e3a8a]'))}`}>
+                        {s.studentName?.[0]}
+                        {s.studentName?.split(' ')[1]?.[0]}
+                     </div>
+                     <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-bold text-slate-800 truncate">{s.studentName}</h4>
+                        <p className={`text-[10px] font-black uppercase tracking-tighter ${s.level === 'critical' ? 'text-rose-500' : 'text-amber-500'}`}>{s.trigger}</p>
+                     </div>
+                     <button onClick={() => navigate('/parent-notes')} className={`px-4 py-1.5 rounded-lg text-[10px] font-bold text-white transition-all active:scale-95 ${idx % 4 === 0 ? 'bg-rose-500 hover:bg-rose-600' : (idx % 4 === 1 ? 'bg-amber-500 hover:bg-amber-600' : (idx % 4 === 2 ? 'bg-orange-500 hover:bg-orange-600' : 'bg-[#1e3a8a] hover:bg-black'))}`}>
+                        {idx % 4 === 0 ? 'Notify' : (idx % 4 === 1 ? 'Review' : (idx % 4 === 2 ? 'Remind' : 'Help'))}
+                     </button>
+                  </div>
+               )) : (
+                  <div className="py-20 text-center opacity-30 font-bold uppercase text-[10px] tracking-widest italic">Scholar manifest stable.</div>
                )}
             </div>
          </div>
@@ -328,27 +287,5 @@ const Dashboard = () => {
     </div>
   );
 };
-
-const StatItem = ({ label, value, tag, color, icon: Icon }: any) => (
-   <div className="bg-white border border-slate-100 p-10 rounded-[4rem] shadow-sm hover:shadow-2xl hover:-translate-y-4 transition-all group relative overflow-hidden">
-      <div className="flex items-center justify-between mb-10">
-         <div className={`w-16 h-16 rounded-[2rem] bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-[#1e3a8a] group-hover:text-white transition-all shadow-inner`}>
-            <Icon size={32} />
-         </div>
-         <div className={`px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-[0.2em] border border-slate-50 bg-slate-50 text-slate-400 shadow-sm`}>
-            {tag}
-         </div>
-      </div>
-      <h2 className={`text-6xl font-black tracking-tighter mb-2 text-slate-900`}>{value}</h2>
-      <p className="text-sm font-black text-slate-400 uppercase tracking-[0.3em]">{label}</p>
-   </div>
-);
-
-const EmptyState = ({ icon: Icon, text, color="text-slate-200" }: any) => (
-   <div className="p-24 border-2 border-dashed border-slate-100 rounded-[4.5rem] bg-white text-center shadow-inner">
-      <Icon className={`w-20 h-20 ${color} mx-auto mb-8 opacity-30`} />
-      <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] leading-relaxed italic">{text}</p>
-   </div>
-);
 
 export default Dashboard;

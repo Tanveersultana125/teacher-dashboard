@@ -52,15 +52,32 @@ const ClassDetail = () => {
       const roster = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       
       const enrichedStudents = await Promise.all(roster.map(async (s: any) => {
-          const atndQ = query(collection(db, "attendance"), where("studentId", "==", s.studentId), where("classId", "==", classId));
-          const atndSnap = await getDocs(atndQ);
-          const presentCount = atndSnap.docs.filter(d => d.data().status === 'present' || d.data().status === 'late').length;
-          const atndRate = atndSnap.size > 0 ? (presentCount / atndSnap.size) * 100 : 95.0;
+          const sid = s.studentId;
+          const email = s.studentEmail?.toLowerCase();
 
-          const resQ = query(collection(db, "results"), where("studentId", "==", s.studentId), where("classId", "==", classId));
-          const resSnap = await getDocs(resQ);
-          const totalScore = resSnap.docs.reduce((acc, curr) => acc + (parseFloat(curr.data().score) || 0), 0);
-          const avgScore = resSnap.size > 0 ? totalScore / resSnap.size : 78.5;
+          // Attendance Dual-Lookup
+          const qA1 = sid ? query(collection(db, "attendance"), where("studentId", "==", sid), where("classId", "==", classId)) : null;
+          const qA2 = email ? query(collection(db, "attendance"), where("studentEmail", "==", email), where("classId", "==", classId)) : null;
+          
+          const [snapA1, snapA2] = await Promise.all([
+             qA1 ? getDocs(qA1) : Promise.resolve({docs:[]}), 
+             qA2 ? getDocs(qA2) : Promise.resolve({docs:[]})
+          ]);
+          const uniqueAtt = Array.from(new Map([...snapA1.docs, ...snapA2.docs].map(d => [d.id, d.data()])).values());
+          const presentCount = uniqueAtt.filter((d:any) => d.status === 'present' || d.status === 'late').length;
+          const atndRate = uniqueAtt.length > 0 ? (presentCount / uniqueAtt.length) * 100 : 95.0;
+
+          // Results Dual-Lookup
+          const qR1 = sid ? query(collection(db, "results"), where("studentId", "==", sid), where("classId", "==", classId)) : null;
+          const qR2 = email ? query(collection(db, "results"), where("studentEmail", "==", email), where("classId", "==", classId)) : null;
+          
+          const [snapR1, snapR2] = await Promise.all([
+             qR1 ? getDocs(qR1) : Promise.resolve({docs:[]}), 
+             qR2 ? getDocs(qR2) : Promise.resolve({docs:[]})
+          ]);
+          const uniqueRes = Array.from(new Map([...snapR1.docs, ...snapR2.docs].map(d => [d.id, d.data()])).values());
+          const totalScore = uniqueRes.reduce((acc, curr:any) => acc + (parseFloat(curr.score) || 0), 0);
+          const avgScore = uniqueRes.length > 0 ? totalScore / uniqueRes.length : 78.5;
 
           // Use manually set status if exists, otherwise calculate
           let standing = s.manualStatus || (atndRate < 80 || avgScore < 60 ? "At Risk" : (atndRate < 90 || avgScore < 75 ? "Needs Attention" : "Good Standing"));

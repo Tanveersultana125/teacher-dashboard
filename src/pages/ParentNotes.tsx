@@ -34,8 +34,21 @@ const ParentNotes = () => {
 
   useEffect(() => {
     if (!teacherData?.id) return;
+    
+    // 1. Fetch Roster with Unified IDs
     const q1 = query(collection(db, "enrollments"), where("teacherId", "==", teacherData.id));
-    const unsub1 = onSnapshot(q1, (snap) => setRoster(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    const unsub1 = onSnapshot(q1, (snap) => {
+       const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+       // Deduplicate by sId or email
+       const map = new Map();
+       docs.forEach((d:any) => {
+          const key = (d.studentId || d.studentEmail || d.id).toLowerCase();
+          if(!map.has(key)) map.set(key, d);
+       });
+       setRoster(Array.from(map.values()));
+    });
+
+    // 2. High-Fidelity Universal Discourse Listener
     const q2 = query(collection(db, "parent_notes"), where("teacherId", "==", teacherData.id));
     const unsub2 = onSnapshot(q2, (snap) => {
       const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -43,6 +56,7 @@ const ParentNotes = () => {
       setAllNotes(data);
       setLoading(false);
     });
+
     return () => { unsub1(); unsub2(); };
   }, [teacherData?.id]);
 
@@ -50,15 +64,30 @@ const ParentNotes = () => {
 
   const lastMessages = useMemo(() => {
     const map = new Map();
-    [...allNotes].reverse().forEach(n => { if (!map.has(n.studentId)) map.set(n.studentId, n); });
+    [...allNotes].reverse().forEach(n => { 
+       const key = (n.studentId || n.studentEmail)?.toLowerCase();
+       if (key && !map.has(key)) map.set(key, n); 
+    });
     return map;
   }, [allNotes]);
 
-  const studentMessages = useMemo(() => selectedStudent ? allNotes.filter(n => n.studentId === selectedStudent.studentId) : [], [allNotes, selectedStudent]);
+  const studentMessages = useMemo(() => {
+    if(!selectedStudent) return [];
+    const sId = selectedStudent.studentId?.toLowerCase();
+    const sEmail = selectedStudent.studentEmail?.toLowerCase();
+    return allNotes.filter(n => 
+       (sId && n.studentId?.toLowerCase() === sId) || 
+       (sEmail && n.studentEmail?.toLowerCase() === sEmail)
+    );
+  }, [allNotes, selectedStudent]);
 
   const filteredRoster = useMemo(() => {
     return roster.filter(s => s.studentName?.toLowerCase().includes(searchQuery.toLowerCase()))
-      .sort((a,b) => (lastMessages.get(b.studentId)?.createdAt?.toMillis?.() || 0) - (lastMessages.get(a.studentId)?.createdAt?.toMillis?.() || 0));
+      .sort((a,b) => {
+         const keyA = (a.studentId || a.studentEmail)?.toLowerCase();
+         const keyB = (b.studentId || b.studentEmail)?.toLowerCase();
+         return (lastMessages.get(keyB)?.createdAt?.toMillis?.() || 0) - (lastMessages.get(keyA)?.createdAt?.toMillis?.() || 0);
+      });
   }, [roster, searchQuery, lastMessages]);
 
   const handleSendMessage = async () => {
@@ -67,9 +96,13 @@ const ParentNotes = () => {
     setMessageContent("");
     try {
       await addDoc(collection(db, "parent_notes"), {
-        teacherId: teacherData.id, teacherName: teacherData.name || "Teacher",
-        studentId: selectedStudent.studentId, studentName: selectedStudent.studentName,
-        parentName: `Parent of ${selectedStudent.studentName}`, subject: "Professional Discourse",
+        teacherId: teacherData.id, 
+        teacherName: teacherData.name || "Teacher",
+        studentId: selectedStudent.studentId || "", 
+        studentEmail: selectedStudent.studentEmail?.toLowerCase() || "",
+        studentName: selectedStudent.studentName,
+        parentName: `Parent of ${selectedStudent.studentName}`, 
+        subject: "Institutional Discourse",
         content, status: "Sent", from: "teacher", createdAt: serverTimestamp()
       });
     } catch (e) { toast.error("Sync failure."); setMessageContent(content); }
@@ -79,7 +112,8 @@ const ParentNotes = () => {
     if (!selectedStudent || !confirm(`Bhai, clear chat for ${selectedStudent.studentName}?`)) return;
     setLoading(true);
     try {
-      const q = query(collection(db, "parent_notes"), where("teacherId","==",teacherData.id), where("studentId","==",selectedStudent.studentId));
+      const sId = selectedStudent.studentId;
+      const q = query(collection(db, "parent_notes"), where("teacherId","==",teacherData.id), where("studentId","==",sId));
       const snap = await getDocs(q);
       const batch = writeBatch(db);
       snap.docs.forEach(d => batch.delete(d.ref));
@@ -92,7 +126,7 @@ const ParentNotes = () => {
     if (!selectedStudent) return;
     setIsGenerating(true);
     try {
-      const result = await AIController.getParentNoteGeneration({ student_name: selectedStudent.studentName, type: "Update", tone: "Professional", points: messageContent || "General" });
+      const result = await AIController.getParentNoteGeneration({ student_name: selectedStudent.studentName, type: "Update", tone: "Professional", points: messageContent || "General Performance" });
       if (result.status === "success" && result.data?.draft) setMessageContent(result.data.draft);
     } catch (e) { toast.error("AI Busy."); } finally { setIsGenerating(false); }
   };
@@ -101,7 +135,7 @@ const ParentNotes = () => {
     const total = allNotes.length;
     const studentThreads = new Map();
     allNotes.forEach(n => {
-      studentThreads.set(n.studentId, n.from);
+      studentThreads.set(n.studentId || n.studentEmail, n.from);
     });
     let pending = 0;
     let resolved = 0;
@@ -113,38 +147,44 @@ const ParentNotes = () => {
   }, [allNotes]);
 
   return (
-    <div className="h-full flex flex-col font-sans">
-      <div className="flex justify-between items-center mb-6 px-4">
-        <div><h1 className="text-3xl font-black text-slate-800 tracking-tight leading-none mb-1">Parent Notes</h1><p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Global Communication Pipeline</p></div>
-        <div className="flex gap-4">
-          {STATS_CONFIG.map(s => (
-            <div key={s.key} className="bg-white px-5 py-3 rounded-2xl flex items-center gap-3 border border-slate-100 shadow-sm transition-all hover:shadow-md">
-                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${s.color}`}><s.icon className="w-4 h-4" /></div>
-                 <div><p className="text-[9px] font-black text-slate-400 uppercase leading-none mb-1">{s.label}</p><p className="text-sm font-black text-slate-900 leading-none">{stats[s.key as keyof typeof stats]}</p></div>
-            </div>
-          ))}
-        </div>
+    <div className="h-full flex flex-col font-sans text-left">
+      <div className="bg-[#0f172a] rounded-[3rem] p-12 mb-8 shadow-2xl relative overflow-hidden group">
+         <div className="absolute top-0 right-0 p-12 opacity-5 scale-150 group-hover:rotate-12 transition-all duration-1000"><MessageSquare size={200} className="text-white"/></div>
+         <div className="relative z-10">
+            <h1 className="text-5xl font-black text-white tracking-tighter uppercase italic leading-none mb-4">Liaison Hub</h1>
+            <p className="text-lg font-bold text-slate-400 max-w-xl">Unified, encrypted communication link between <span className="text-indigo-400">Scholars</span> and their <span className="text-emerald-400">Guardians</span>.</p>
+         </div>
       </div>
 
-      <div className="flex-1 flex bg-white border border-slate-200 rounded-[2.5rem] shadow-2xl overflow-hidden min-h-[500px] mb-6">
-        <div className={`w-full md:w-[380px] border-r border-slate-100 flex flex-col bg-slate-50/10 ${selectedStudent ? 'hidden md:flex' : 'flex'}`}>
-          <div className="p-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+         {STATS_CONFIG.map(s => (
+            <div key={s.key} className="bg-white p-8 rounded-[2.5rem] border border-slate-100 flex items-center justify-between shadow-sm hover:shadow-xl transition-all">
+               <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{s.label}</p><h4 className="text-4xl font-black text-slate-900">{stats[s.key as keyof typeof stats]}</h4></div>
+               <div className={`w-16 h-16 rounded-3xl flex items-center justify-center ${s.color}`}><s.icon className="w-8 h-8" /></div>
+            </div>
+         ))}
+      </div>
+
+      <div className="flex-1 flex bg-white border border-slate-200 rounded-[3.5rem] shadow-2xl overflow-hidden min-h-[600px] mb-8 relative">
+        <div className={`w-full md:w-[420px] border-r border-slate-100 flex flex-col bg-slate-50/30 ${selectedStudent ? 'hidden md:flex' : 'flex'}`}>
+          <div className="p-8">
              <div className="relative group">
-                <input type="text" placeholder="Search scholars..." value={searchQuery} onChange={(e)=>setSearchQuery(e.target.value)} className="w-full pl-12 pr-4 h-14 bg-white border border-slate-100 rounded-2xl text-xs font-bold focus:ring-4 focus:ring-blue-50 transition-all uppercase tracking-widest placeholder:text-slate-200" />
-                <Search className="w-5 h-5 text-slate-300 absolute left-4 top-1/2 -translate-y-1/2" />
+                <input type="text" placeholder="Search roster..." value={searchQuery} onChange={(e)=>setSearchQuery(e.target.value)} className="w-full pl-14 pr-6 h-16 bg-white border border-slate-100 rounded-[1.5rem] text-sm font-black focus:ring-4 focus:ring-indigo-500/10 transition-all uppercase tracking-widest placeholder:text-slate-200" />
+                <Search className="w-6 h-6 text-slate-300 absolute left-5 top-1/2 -translate-y-1/2" />
              </div>
           </div>
-          <div className="flex-1 overflow-y-auto no-scrollbar">
-             {loading ? <div className="p-10 text-center animate-pulse font-black text-slate-300 uppercase text-xs">Syncing...</div> :
+          <div className="flex-1 overflow-y-auto custom-scrollbar px-2 pb-6">
+             {loading ? <div className="p-20 text-center animate-pulse"><Loader2 className="w-10 h-10 animate-spin mx-auto text-slate-200" /></div> :
                 filteredRoster.map(s => {
-                  const last = lastMessages.get(s.studentId);
-                  const active = selectedStudent?.studentId === s.studentId;
+                  const key = (s.studentId || s.studentEmail)?.toLowerCase();
+                  const last = lastMessages.get(key);
+                  const active = selectedStudent?.id === s.id;
                   return (
-                    <button key={s.id} onClick={()=>setSelectedStudent(s)} className={`w-full p-6 flex items-center gap-4 border-b border-slate-50 transition-all ${active ? 'bg-white shadow-xl z-20 translate-x-1' : 'hover:bg-white'}`}>
-                       <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-sm font-black shadow-inner transition-all ${active ? 'bg-[#1e3a8a] text-white rotate-3' : 'bg-slate-50 text-slate-200'}`}>{s.studentName?.substring(0,2).toUpperCase()}</div>
+                    <button key={s.id} onClick={()=>setSelectedStudent(s)} className={`w-full p-8 flex items-center gap-6 border-b border-slate-50 transition-all rounded-[2.5rem] mb-2 ${active ? 'bg-white shadow-2xl z-20 ring-1 ring-slate-100' : 'hover:bg-white/50'}`}>
+                       <div className={`w-16 h-16 rounded-[1.8rem] flex items-center justify-center text-lg font-black shadow-inner transition-all ${active ? 'bg-[#1e3a8a] text-white' : 'bg-slate-100 text-slate-300'}`}>{s.studentName?.substring(0,2).toUpperCase()}</div>
                        <div className="flex-1 text-left truncate">
-                          <div className="flex justify-between items-center mb-0.5"><h4 className="text-sm font-black text-slate-900 truncate uppercase tracking-tight">{s.studentName}</h4>{last && <span className="text-[9px] font-bold text-slate-400 uppercase">{new Date(last.createdAt?.toDate?.() || Date.now()).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span>}</div>
-                          <p className={`text-[11px] truncate ${active ? 'text-[#1e3a8a] font-bold' : 'text-slate-400 font-semibold'}`}>{last ? `${last.from==='teacher'?'✓ ':''}${last.content}` : 'New Discourse trace...'}</p>
+                          <div className="flex justify-between items-center mb-1"><h4 className="text-lg font-black text-slate-900 truncate uppercase tracking-tighter italic">{s.studentName}</h4>{last && <span className="text-[10px] font-black text-slate-300 uppercase">{new Date(last.createdAt?.toDate?.() || Date.now()).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span>}</div>
+                          <p className={`text-[12px] truncate uppercase tracking-widest ${active ? 'text-indigo-600 font-black' : 'text-slate-400 font-bold'}`}>{last ? `${last.from==='teacher'?'✓ ':''}${last.content}` : 'Initiate trace...'}</p>
                        </div>
                     </button>
                   );
@@ -152,40 +192,36 @@ const ParentNotes = () => {
           </div>
         </div>
 
-        <div className={`flex-1 flex flex-col ${!selectedStudent ? 'hidden md:flex' : 'flex'} relative bg-[#efeae2]`}>
+        <div className={`flex-1 flex flex-col ${!selectedStudent ? 'hidden md:flex' : 'flex'} relative bg-[#fafafa]`}>
           {selectedStudent ? (
             <>
-              <div className="chat-doodle absolute inset-0 opacity-[0.05] pointer-events-none z-0" />
-              <div className="px-8 py-3 bg-[#f0f2f5] border-b border-slate-200 flex justify-between items-center z-20 shadow-sm">
-                 <div className="flex items-center gap-4">
-                    <button onClick={()=>setSelectedStudent(null)} className="md:hidden p-2 hover:bg-slate-200 rounded-full"><ChevronLeft/></button>
-                    <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center p-0.5 border border-white shadow-sm overflow-hidden"><User className="text-slate-400"/></div>
+              <div className="px-10 py-6 bg-white border-b border-slate-100 flex justify-between items-center z-20 shadow-sm">
+                 <div className="flex items-center gap-6">
+                    <button onClick={()=>setSelectedStudent(null)} className="md:hidden p-3 hover:bg-slate-50 rounded-full"><ChevronLeft/></button>
+                    <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center p-0.5 border border-white shadow-sm overflow-hidden text-indigo-400"><User size={28}/></div>
                     <div>
-                       <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight leading-none mb-1">{selectedStudent.studentName}</h3>
-                       <p className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest flex items-center gap-2 animate-pulse"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> online</p>
+                       <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter italic leading-none mb-2">{selectedStudent.studentName}</h3>
+                       <p className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.3em] flex items-center gap-2 animate-pulse"><span className="w-2 h-2 rounded-full bg-emerald-500" /> Active Liaison Enabled</p>
                     </div>
                  </div>
-                 <div className="flex items-center gap-1">
-                    <button className="p-2.5 text-slate-500 hover:bg-slate-200 rounded-full transition-all"><Video size={20}/></button>
-                    <button className="p-2.5 text-slate-500 hover:bg-slate-200 rounded-full transition-all"><Phone size={18}/></button>
-                    <div className="w-px h-6 bg-slate-300 mx-1" />
-                    <button onClick={handleClearChat} className="p-2.5 text-slate-500 hover:bg-rose-50 hover:text-rose-500 rounded-full transition-all"><Trash2 size={20}/></button>
-                    <button className="p-2.5 text-slate-500 hover:bg-slate-200 rounded-full transition-all"><MoreVertical size={20}/></button>
+                 <div className="flex items-center gap-3">
+                    <button className="h-14 w-14 flex items-center justify-center text-slate-400 hover:bg-slate-50 rounded-2xl transition-all shadow-sm"><Video size={24}/></button>
+                    <button className="h-14 w-14 flex items-center justify-center text-slate-400 hover:bg-slate-50 rounded-2xl transition-all shadow-sm"><Phone size={22}/></button>
+                    <div className="w-px h-8 bg-slate-100 mx-2" />
+                    <button onClick={handleClearChat} className="h-14 w-14 flex items-center justify-center text-slate-300 hover:bg-rose-50 hover:text-rose-500 rounded-2xl transition-all"><Trash2 size={24}/></button>
                  </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-4 custom-scrollbar flex flex-col z-10">
+              <div className="flex-1 overflow-y-auto p-10 space-y-6 custom-scrollbar flex flex-col z-10 bg-[#f8fafc]/50">
                  {studentMessages.map((n, i) => {
-                    const isM = n.from === "teacher";
+                    const isT = n.from === "teacher";
                     return (
-                      <div key={n.id} className={`flex flex-col ${isM ? 'items-end' : 'items-start'} animate-in slide-in-from-bottom-2 duration-300`}>
-                         <div className={`relative px-4 py-2 rounded-2xl text-[14px] shadow-sm font-medium ${isM ? 'bg-[#d9fdd3] text-slate-800 rounded-tr-none' : 'bg-white text-slate-800 rounded-tl-none'}`}>
-                            {isM && <div className="absolute top-0 -right-2 w-0 h-0 border-[8px] border-transparent border-l-[#d9fdd3] border-t-[#d9fdd3]" />}
-                            {!isM && <div className="absolute top-0 -left-2 w-0 h-0 border-[8px] border-transparent border-r-white border-t-white" />}
+                      <div key={n.id} className={`flex flex-col ${isT ? 'items-end' : 'items-start'} animate-in slide-in-from-bottom-4 duration-500`}>
+                         <div className={`relative px-8 py-5 rounded-[2rem] text-[15px] shadow-sm font-bold max-w-[80%] ${isT ? 'bg-[#1e3a8a] text-white rounded-br-none' : 'bg-white text-slate-800 rounded-bl-none border border-slate-100'}`}>
                             <p className="whitespace-pre-wrap leading-relaxed">{n.content}</p>
-                            <div className="mt-1 flex items-center justify-end gap-1 opacity-40 text-[9px] font-black uppercase">
+                            <div className={`mt-3 flex items-center justify-end gap-2 opacity-50 text-[9px] font-black uppercase tracking-widest ${isT ? 'text-indigo-100' : 'text-slate-400'}`}>
                                {new Date(n.createdAt?.toDate?.() || Date.now()).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}
-                               {isM && <CheckCheck className="w-3.5 h-3.5 text-blue-500 ml-1" />}
+                               {isT && <CheckCheck className="w-4 h-4 ml-1" />}
                             </div>
                          </div>
                       </div>
@@ -194,39 +230,39 @@ const ParentNotes = () => {
                  <div ref={chatEndRef} />
               </div>
 
-              <div className="p-4 bg-[#f0f2f5] border-t border-slate-200 z-20">
-                 <div className="flex gap-2 overflow-x-auto no-scrollbar pb-3">
+              <div className="p-8 bg-white border-t border-slate-100 z-20">
+                 <div className="flex gap-3 overflow-x-auto no-scrollbar pb-6">
                     {TEMPLATES.map(t => (
-                       <button key={t.id} onClick={()=>setMessageContent(`Bhai, context: ${t.label} for ${selectedStudent.studentName}...`)} className="px-5 py-2 bg-white border border-slate-200 rounded-full text-[9px] font-black text-slate-500 uppercase tracking-widest hover:border-[#1e3a8a] hover:text-[#1e3a8a] transition-all shadow-sm active:scale-95 whitespace-nowrap">{t.label}</button>
+                       <button key={t.id} onClick={()=>setMessageContent(t.label === 'Good Progress' ? `Professional Update: ${selectedStudent.studentName} is manifesting exceptional scholarly merit in recent cycles.` : `Institutional Alert: We have identified gaps in ${selectedStudent.studentName}'s trajectory regarding ${t.label}.`)} className="px-6 py-3 bg-slate-50 border border-slate-100 rounded-full text-[10px] font-black text-slate-400 uppercase tracking-widest hover:border-[#1e3a8a] hover:text-[#1e3a8a] transition-all shadow-sm active:scale-95 whitespace-nowrap">{t.label}</button>
                     ))}
                  </div>
-                 <div className="flex items-center gap-3">
-                    <button className="p-2 text-slate-500 hover:bg-slate-300 rounded-full"><Smile size={24}/></button>
-                    <button className="p-2 text-slate-500 hover:bg-slate-300 rounded-full"><Paperclip size={20}/></button>
-                    <div className="flex-1 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center pr-2">
-                       <textarea rows={1} value={messageContent} onChange={(e)=>setMessageContent(e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();handleSendMessage();}}} placeholder="Type a message" className="flex-1 bg-transparent border-none focus:ring-0 p-3 text-sm font-medium resize-none no-scrollbar" />
-                       <button onClick={generateAI} disabled={isGenerating} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg group transition-all">{isGenerating ? <Loader2 className="animate-spin" size={16}/> : <Sparkles className="group-hover:scale-110 transition-transform" size={18}/>}</button>
+                 <div className="flex items-center gap-4 bg-slate-50 p-3 rounded-[2.5rem] border border-slate-100 shadow-inner">
+                    <button className="h-14 w-14 flex items-center justify-center text-slate-300 hover:text-indigo-500 bg-white shadow-sm rounded-full transition-all shrink-0"><Smile size={28}/></button>
+                    <div className="flex-1 bg-white rounded-[1.8rem] shadow-sm border border-slate-50 flex items-center pr-4 overflow-hidden">
+                       <textarea rows={1} value={messageContent} onChange={(e)=>setMessageContent(e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();handleSendMessage();}}} placeholder="Compose scholarly discourse..." className="flex-1 bg-transparent border-none focus:ring-0 px-6 py-4 text-sm font-black resize-none custom-scrollbar min-h-[60px]" />
+                       <button onClick={generateAI} disabled={isGenerating} className="h-12 w-12 flex items-center justify-center text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-all shrink-0">{isGenerating ? <Loader2 className="animate-spin" size={20}/> : <Sparkles size={24}/>}</button>
                     </div>
-                    <button onClick={handleSendMessage} disabled={!messageContent.trim()} className={`w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-lg ${messageContent.trim() ? 'bg-[#00a884] text-white shadow-[#00a884]/20' : 'bg-slate-300 text-slate-500'}`}><Send size={20}/></button>
+                    <button onClick={handleSendMessage} disabled={!messageContent.trim()} className={`h-16 w-16 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-2xl shrink-0 ${messageContent.trim() ? 'bg-[#1e3a8a] text-white' : 'bg-slate-200 text-slate-400'}`}><Send size={28}/></button>
                  </div>
               </div>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-10 text-center relative z-10">
-               <div className="w-32 h-32 bg-white rounded-full shadow-2xl flex items-center justify-center mb-10 border-4 border-slate-50 group transition-all hover:scale-105 hover:rotate-3"><MessageSquare className="w-12 h-12 text-slate-100 group-hover:text-[#00a884] transition-colors" /></div>
-               <h2 className="text-3xl font-black text-slate-800 mb-2 uppercase tracking-tight">Scholarly Discourse Trace</h2>
-               <p className="text-xs font-bold text-slate-400 max-w-xs uppercase tracking-[0.2em] leading-relaxed">Select a student from the registry to initiate an encrypted communication portal with respective guardians.</p>
-               <div className="mt-12 flex gap-8 opacity-20 grayscale"><Bot size={32}/><Clock size={32}/><CheckCheck size={32}/></div>
-               <div className="absolute bottom-10 text-[9px] font-black text-slate-300 uppercase tracking-widest flex items-center gap-2"><div className="w-3 h-3 bg-emerald-500 rounded-full opacity-50"/> End-to-End Encrypted Portal</div>
+            <div className="flex-1 flex flex-col items-center justify-center p-20 text-center relative z-10 glass-pattern">
+               <div className="w-48 h-48 bg-white rounded-full shadow-[0_50px_100px_-20px_rgba(30,58,138,0.25)] flex items-center justify-center mb-12 border-8 border-slate-50 group hover:rotate-6 transition-all duration-700">
+                  <MessageSquare className="w-16 h-16 text-slate-100 group-hover:text-indigo-600 transition-colors" />
+               </div>
+               <h2 className="text-5xl font-black text-slate-900 mb-4 uppercase tracking-tighter italic">Discourse Registry</h2>
+               <p className="text-sm font-black text-slate-300 max-w-sm uppercase tracking-[0.3em] leading-relaxed">Select a scholar from the manifest to establish an encrypted liaison node.</p>
+               <div className="absolute bottom-16 text-[10px] font-black text-indigo-400 uppercase tracking-[0.5em] flex items-center gap-3"><Bot size={20} className="animate-bounce" /> Distributed Scholastic Ledger Active</div>
             </div>
           )}
         </div>
       </div>
       <style>{`
         .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.05); border-radius: 10px; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .chat-doodle { background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-repeat: repeat; filter: contrast(0.5); }
+        .glass-pattern { background-image: radial-gradient(#e2e8f0 1.5px, transparent 1.5px); background-size: 30px 30px; }
       `}</style>
     </div>
   );

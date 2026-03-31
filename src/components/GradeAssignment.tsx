@@ -118,6 +118,10 @@ const GradeAssignment = ({ assignment, onBack }: GradeAssignmentProps) => {
   }, [assignment?.id, assignment?.classId, teacherData?.id]);
 
   const updateSub = (id: string, field: string, value: any) => {
+    if (field === "grade" && value !== "") {
+      const num = parseFloat(value);
+      if (!isNaN(num) && (num < 0 || num > 100)) return;
+    }
     setSubmissions(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
   };
 
@@ -144,6 +148,11 @@ const GradeAssignment = ({ assignment, onBack }: GradeAssignmentProps) => {
   };
 
   const handleSave = async () => {
+    const invalidGrades = submissions.filter(s => s.grade !== "" && (isNaN(parseFloat(s.grade)) || parseFloat(s.grade) < 0 || parseFloat(s.grade) > 100));
+    if (invalidGrades.length > 0) {
+      toast.error(`Invalid grades detected for: ${invalidGrades.map(s => s.name).join(", ")}. Must be 0-100.`);
+      return;
+    }
     setIsSaving(true);
     try {
         const promises = submissions.filter(s => s.grade !== "").map(sub => {
@@ -151,6 +160,7 @@ const GradeAssignment = ({ assignment, onBack }: GradeAssignmentProps) => {
             return setDoc(resRef, {
                 studentId: sub.id,
                 studentName: sub.name,
+                studentEmail: sub.email,
                 homeworkId: assignment.id, // Renamed from assignmentId to differentiate from teaching_assignment
                 assignmentId: assignment.assignmentId || "legacy", // Enforced Phase 1 spec: tracking the teaching_assignment
                 assignmentTitle: assignment.title,
