@@ -103,10 +103,15 @@ const Assignments = () => {
           // Ensure it's a valid date
           if (isNaN(deadline.getTime())) deadline = new Date();
 
-          // Fetch submissions for stats
-          const subQ = query(collection(db, "submissions"), where("assignmentId", "==", a.id));
-          const subSnap = await getDocs(subQ);
-          const subCount = subSnap.size;
+          // Fetch submissions for stats — DUAL LOOKUP (homeworkId OR assignmentId)
+          const subQ1 = query(collection(db, "submissions"), where("homeworkId", "==", a.id));
+          const subQ2 = query(collection(db, "submissions"), where("assignmentId", "==", a.id));
+          const [subSnap1, subSnap2] = await Promise.all([getDocs(subQ1), getDocs(subQ2)]);
+          // Deduplicate by student key
+          const subSet = new Map();
+          subSnap1.docs.forEach(d => subSet.set(d.data().studentId || d.data().studentEmail || d.id, d));
+          subSnap2.docs.forEach(d => { const k = d.data().studentId || d.data().studentEmail || d.id; if (!subSet.has(k)) subSet.set(k, d); });
+          const subCount = subSet.size;
 
           const resQ = query(collection(db, "results"), where("assignmentId", "==", a.id));
           const resSnap = await getDocs(resQ);
