@@ -59,17 +59,40 @@ const Reports = () => {
 
   useEffect(() => {
     if (!teacherData?.id) return;
-    const q = query(
-      collection(db, "reports"),
-      where("teacherId", "==", teacherData.id)
+
+    let snap1: any[] = [];
+    let snap2: any[] = [];
+
+    const merge = () => {
+      const seen = new Set<string>();
+      const combined = [...snap1, ...snap2].filter(d => {
+        if (seen.has(d.id)) return false;
+        seen.add(d.id);
+        return true;
+      });
+      combined.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+      setHistory(combined.slice(0, 10));
+    };
+
+    // 1. Teacher's own generated reports
+    const unsub1 = onSnapshot(
+      query(collection(db, "reports"), where("teacherId", "==", teacherData.id)),
+      snap => { snap1 = snap.docs.map(d => ({ id: d.id, ...d.data() as any })); merge(); }
     );
-    return onSnapshot(q, (snap) => {
-       const docs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
-       // Client-side sorting to bypass index requirement
-       docs.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
-       setHistory(docs.slice(0, 5));
-    });
-  }, [teacherData?.id]);
+
+    // 2. Principal-published school-level reports
+    const unsub2 = teacherData.schoolId
+      ? onSnapshot(
+          query(collection(db, "reports"),
+            where("schoolId",          "==", teacherData.schoolId),
+            where("publishedToTeacher","==", true)
+          ),
+          snap => { snap2 = snap.docs.map(d => ({ id: d.id, ...d.data() as any })); merge(); }
+        )
+      : () => {};
+
+    return () => { unsub1(); unsub2(); };
+  }, [teacherData?.id, teacherData?.schoolId]);
 
   const handleOpenGenerate = (report: any) => {
     setSelectedReport(report);
