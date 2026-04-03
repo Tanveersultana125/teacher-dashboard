@@ -15,6 +15,7 @@ import Gradebook from "./pages/Gradebook";
 import ConceptMastery from "./pages/ConceptMastery";
 import RisksAlerts from "./pages/RisksAlerts";
 import ParentNotes from "./pages/ParentNotes";
+import PrincipalNotes from "./pages/PrincipalNotes";
 import Reports from "./pages/Reports";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
@@ -59,6 +60,7 @@ const AppRoutes = () => {
         <Route path="/concept-mastery" element={<ConceptMastery />} />
         <Route path="/risks-alerts" element={<RisksAlerts />} />
         <Route path="/parent-notes" element={<ParentNotes />} />
+        <Route path="/principal-notes" element={<PrincipalNotes />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>

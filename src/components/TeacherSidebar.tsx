@@ -11,6 +11,7 @@ import {
   Brain,
   AlertTriangle,
   MessageSquare,
+  School,
   BarChart3,
   Settings,
   LogOut
@@ -27,6 +28,7 @@ const navItems = [
   { title: "Concept Mastery", path: "/concept-mastery", icon: Brain },
   { title: "Risks & Alerts", path: "/risks-alerts", icon: AlertTriangle },
   { title: "Parent Notes", path: "/parent-notes", icon: MessageSquare },
+  { title: "Principal Notes", path: "/principal-notes", icon: School },
   { title: "Reports", path: "/reports", icon: BarChart3 },
   { title: "Settings", path: "/settings", icon: Settings },
 ];
