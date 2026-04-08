@@ -1,32 +1,34 @@
 import { useState, useEffect } from "react";
 import ConceptMasteryDetail from "@/components/ConceptMasteryDetail";
-import { BrainCircuit, Loader2, Target, Users, Sparkles, BookOpen, ChevronRight, GraduationCap, Clock, Award, ShieldAlert, BarChart3 } from "lucide-react";
-import { AIController } from "../ai/controller/ai-controller";
+import { Loader2, Search } from "lucide-react";
 import { db } from "../lib/firebase";
-import { collection, query, onSnapshot, getDocs, where, Timestamp } from "firebase/firestore";
+import { collection, query, onSnapshot, getDocs, where } from "firebase/firestore";
 import { useAuth } from "../lib/AuthContext";
-import { toast } from "sonner";
 
-const cellColor = (pct: number) => {
-  if (pct >= 80) return "bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-sm shadow-emerald-500/5";
-  if (pct >= 50) return "bg-amber-50 text-amber-600 border border-amber-100 shadow-sm shadow-amber-500/5";
-  if (pct >= 1) return "bg-rose-50 text-rose-600 border border-rose-100 shadow-sm shadow-rose-500/5";
-  return "bg-slate-50 text-slate-300 border border-slate-100 italic";
+const pctTextColor = (pct: number) => {
+  if (pct >= 80) return "text-emerald-600 font-semibold";
+  if (pct >= 50) return "text-amber-500 font-semibold";
+  if (pct >= 1) return "text-rose-600 font-semibold";
+  return "text-slate-300";
 };
+
+const avatarColors = [
+  "bg-blue-600", "bg-indigo-600", "bg-violet-600", "bg-teal-600",
+  "bg-cyan-600", "bg-rose-500", "bg-amber-500", "bg-emerald-600",
+];
 
 const ConceptMastery = () => {
   const { teacherData } = useAuth();
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
-  
+
   const [dynamicHeaders, setDynamicHeaders] = useState<string[]>([]);
   const [masteryData, setMasteryData] = useState<any[]>([]);
   const [classAverages, setClassAverages] = useState<number[]>([]);
-  
+
   const [classes, setClasses] = useState<any[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string>("");
   const [loading, setLoading] = useState(true);
-  
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [search, setSearch] = useState("");
 
   // 1. Fetch Teacher's Active Assignments
   useEffect(() => {
@@ -41,18 +43,18 @@ const ConceptMastery = () => {
       const assignmentOptions = assignments.map(a => {
         const cls = classMap.get(a.classId);
         return {
-          id: a.id, 
+          id: a.id,
           classId: a.classId,
-          name: `${cls?.name || 'Class'} - ${a.subjectName || a.subject || 'Subject'}`
+          name: `${cls?.name || "Class"} - ${a.subjectName || a.subject || "Subject"}`,
         };
       });
-      
+
       const qLegacy = query(collection(db, "classes"), where("teacherId", "==", teacherData.id));
       const legacySnap = await getDocs(qLegacy);
       const lOps = legacySnap.docs.map(d => ({ id: d.id, classId: d.id, name: d.data().name }));
-      
+
       const combined = [...assignmentOptions];
-      lOps.forEach(lo => { if(!combined.some(c => c.classId === lo.classId)) combined.push(lo); });
+      lOps.forEach(lo => { if (!combined.some(c => c.classId === lo.classId)) combined.push(lo); });
 
       setClasses(combined);
       if (combined.length > 0 && !selectedClassId) setSelectedClassId(combined[0].id);
@@ -69,176 +71,262 @@ const ConceptMastery = () => {
     const selAssignment = classes.find(c => c.id === selectedClassId);
     const targetClassId = selAssignment?.classId || selectedClassId;
 
-    // A. Fetch Registry Components (Tests/Gradebook Columns)
     const unsubRegistry = onSnapshot(query(collection(db, "gradebook_columns"), where("classId", "==", targetClassId)), (gbSnap) => {
-       const gbCols = gbSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-       
-       onSnapshot(query(collection(db, "tests_registry"), where("classId", "==", targetClassId)), (tSnap) => {
-          const classTests = tSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-          
-          const potentialTopicsSet = new Set<string>();
-          classTests.forEach(t => { if (t.topics && Array.isArray(t.topics)) t.topics.forEach((c: string) => potentialTopicsSet.add(c.toUpperCase())); });
-          gbCols.forEach(col => { if(col.name) potentialTopicsSet.add(col.name.toUpperCase()); });
-          const potentialTopics = Array.from(potentialTopicsSet).sort();
+      const gbCols = gbSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
 
-          // B. RE-ACTIVE SCORE LISTENERS (Summative + Formative + Results)
-          let s1:any=[], s2:any=[], s3:any=[];
-          
-          const processMatrix = (roster: any[]) => {
-             const activeConceptsMap = new Map<string, boolean>();
-             const builtMatrix = roster.map((s: any) => {
-                const sEmail = s.email?.toLowerCase();
-                const sId = s.realId;
-                const filterByStudent = (arr: any[]) => arr.filter(item => (sId && (item.studentId === sId || item.id?.includes(sId))) || (sEmail && item.studentEmail?.toLowerCase() === sEmail));
-                
-                const sSum = filterByStudent(s1);
-                const sFor = filterByStudent(s2);
-                const sRes = filterByStudent(s3);
+      onSnapshot(query(collection(db, "tests_registry"), where("classId", "==", targetClassId)), (tSnap) => {
+        const classTests = tSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
 
-                const conceptScores = potentialTopics.map(concept => {
-                   const rSum = sSum.filter(sc => classTests.find(t => t.id === sc.testId)?.topics?.some((t:any) => t.trim().toUpperCase() === concept));
-                   const rFor = sFor.filter(sc => sc.columnName?.trim().toUpperCase() === concept || sc.columnId === gbCols.find(c => c.name?.trim().toUpperCase() === concept)?.id);
-                   const rRes = sRes.filter(sc => sc.testName?.trim().toUpperCase() === concept || sc.assignmentTitle?.trim().toUpperCase() === concept || sc.title?.trim().toUpperCase() === concept);
+        const potentialTopicsSet = new Set<string>();
+        classTests.forEach(t => { if (t.topics && Array.isArray(t.topics)) t.topics.forEach((c: string) => potentialTopicsSet.add(c.toUpperCase())); });
+        gbCols.forEach(col => { if (col.name) potentialTopicsSet.add(col.name.toUpperCase()); });
+        const potentialTopics = Array.from(potentialTopicsSet).sort();
 
-                   const combined = [...rSum, ...rFor, ...rRes];
-                   if (combined.length === 0) return 0;
-                   activeConceptsMap.set(concept, true);
+        let s1: any[] = [], s2: any[] = [], s3: any[] = [];
 
-                   let total = 0, count = 0;
-                   combined.forEach(sc => {
-                      let pct = Number(sc.percentage ?? (sc.mark/sc.maxMarks*100) ?? (sc.score/sc.maxScore*100) ?? sc.score ?? 0);
-                      if (pct >= 0) { total += pct; count++; }
-                   });
-                   return count > 0 ? Math.round(total / count) : 0;
-                });
-                return { ...s, rawConcepts: conceptScores };
-             });
+        const processMatrix = (roster: any[]) => {
+          const activeConceptsMap = new Map<string, boolean>();
+          const builtMatrix = roster.map((s: any) => {
+            const sEmail = s.email?.toLowerCase();
+            const sId = s.realId;
+            const filterByStudent = (arr: any[]) => arr.filter(item =>
+              (sId && (item.studentId === sId || item.id?.includes(sId))) ||
+              (sEmail && item.studentEmail?.toLowerCase() === sEmail)
+            );
 
-             const filteredHeaders = potentialTopics.filter(h => activeConceptsMap.has(h));
-             setDynamicHeaders(filteredHeaders);
+            const sSum = filterByStudent(s1);
+            const sFor = filterByStudent(s2);
+            const sRes = filterByStudent(s3);
 
-             const final = builtMatrix.map(s => ({
-                ...s, concepts: potentialTopics.map((h, i) => ({h, v: s.rawConcepts[i]})).filter(it => activeConceptsMap.has(it.h)).map(it => it.v)
-             })).sort((a,b) => a.name.localeCompare(b.name));
+            const conceptScores = potentialTopics.map(concept => {
+              const rSum = sSum.filter(sc => classTests.find(t => t.id === sc.testId)?.topics?.some((t: any) => t.trim().toUpperCase() === concept));
+              const rFor = sFor.filter(sc => sc.columnName?.trim().toUpperCase() === concept || sc.columnId === gbCols.find(c => c.name?.trim().toUpperCase() === concept)?.id);
+              const rRes = sRes.filter(sc => sc.testName?.trim().toUpperCase() === concept || sc.assignmentTitle?.trim().toUpperCase() === concept || sc.title?.trim().toUpperCase() === concept);
 
-             const avgs = filteredHeaders.map((_, idx) => {
-                let sum = 0, count = 0;
-                final.forEach(st => { if (st.concepts[idx] > 0) { sum += st.concepts[idx]; count++; } });
-                return count > 0 ? Math.round(sum / count) : 0;
-             });
+              const combined = [...rSum, ...rFor, ...rRes];
+              if (combined.length === 0) return 0;
+              activeConceptsMap.set(concept, true);
 
-             setClassAverages(avgs);
-             setMasteryData(final);
-             setLoading(false);
-          };
-
-          onSnapshot(query(collection(db, "enrollments"), where("classId", "==", targetClassId)), (enrollSnap) => {
-             const roster = enrollSnap.docs.map(d => {
-                const e = d.data();
-                return { id: d.id, realId: e.studentId, email: e.studentEmail, name: e.studentName, initials: e.studentName?.substring(0,2).toUpperCase() || "SC", color: "bg-[#1e3a8a]" };
-             });
-
-             onSnapshot(query(collection(db, "test_scores"), where("classId", "==", targetClassId)), (snap) => { s1 = snap.docs.map(d => d.data()); processMatrix(roster); });
-             onSnapshot(query(collection(db, "gradebook_scores"), where("classId", "==", targetClassId)), (snap) => { s2 = snap.docs.map(d => d.data()); processMatrix(roster); });
-             onSnapshot(query(collection(db, "results"), where("classId", "==", targetClassId)), (snap) => { s3 = snap.docs.map(d => d.data()); processMatrix(roster); });
+              let total = 0, count = 0;
+              combined.forEach(sc => {
+                const pct = Number(sc.percentage ?? (sc.mark / sc.maxMarks * 100) ?? (sc.score / sc.maxScore * 100) ?? sc.score ?? 0);
+                if (pct >= 0) { total += pct; count++; }
+              });
+              return count > 0 ? Math.round(total / count) : 0;
+            });
+            return { ...s, rawConcepts: conceptScores };
           });
-       });
+
+          const filteredHeaders = potentialTopics.filter(h => activeConceptsMap.has(h));
+          setDynamicHeaders(filteredHeaders);
+
+          const final = builtMatrix.map(s => ({
+            ...s,
+            concepts: potentialTopics
+              .map((h, i) => ({ h, v: s.rawConcepts[i] }))
+              .filter(it => activeConceptsMap.has(it.h))
+              .map(it => it.v),
+          })).sort((a, b) => a.name.localeCompare(b.name));
+
+          const avgs = filteredHeaders.map((_, idx) => {
+            let sum = 0, count = 0;
+            final.forEach(st => { if (st.concepts[idx] > 0) { sum += st.concepts[idx]; count++; } });
+            return count > 0 ? Math.round(sum / count) : 0;
+          });
+
+          setClassAverages(avgs);
+          setMasteryData(final);
+          setLoading(false);
+        };
+
+        onSnapshot(query(collection(db, "enrollments"), where("classId", "==", targetClassId)), (enrollSnap) => {
+          const roster = enrollSnap.docs.map((d, idx) => {
+            const e = d.data();
+            return {
+              id: d.id,
+              realId: e.studentId,
+              email: e.studentEmail,
+              name: e.studentName,
+              initials: e.studentName?.substring(0, 2).toUpperCase() || "SC",
+              color: avatarColors[idx % avatarColors.length],
+            };
+          });
+
+          onSnapshot(query(collection(db, "test_scores"), where("classId", "==", targetClassId)), (snap) => { s1 = snap.docs.map(d => d.data()); processMatrix(roster); });
+          onSnapshot(query(collection(db, "gradebook_scores"), where("classId", "==", targetClassId)), (snap) => { s2 = snap.docs.map(d => d.data()); processMatrix(roster); });
+          onSnapshot(query(collection(db, "results"), where("classId", "==", targetClassId)), (snap) => { s3 = snap.docs.map(d => d.data()); processMatrix(roster); });
+        });
+      });
     });
 
     return () => unsubRegistry();
   }, [teacherData?.id, selectedClassId, classes]);
 
+  const filtered = masteryData.filter(s => s.name?.toLowerCase().includes(search.toLowerCase()));
+  const weakConcepts = dynamicHeaders
+    .map((h, i) => ({ h, avg: classAverages[i] }))
+    .filter(c => c.avg > 0 && c.avg < 80)
+    .sort((a, b) => a.avg - b.avg);
+
+  const selectedClass = classes.find(c => c.id === selectedClassId);
+
+  const exportCSV = () => {
+    const rows = [["Student", ...dynamicHeaders].join(",")];
+    masteryData.forEach(s => rows.push([`"${s.name}"`, ...s.concepts.map((c: number) => c > 0 ? `${c}%` : "")].join(",")));
+    rows.push(["Class Avg", ...classAverages.map(a => a > 0 ? `${a}%` : "")].join(","));
+    const blob = new Blob([rows.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "concept_mastery.csv"; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const formatHeader = (h: string) => {
+    return h.charAt(0).toUpperCase() + h.slice(1).toLowerCase().replace(/_/g, " ");
+  };
+
   if (selectedStudent) {
-    return <ConceptMasteryDetail student={selectedStudent} concepts={dynamicHeaders} scores={selectedStudent.concepts} onBack={() => setSelectedStudent(null)} />;
+    return (
+      <ConceptMasteryDetail
+        student={selectedStudent}
+        concepts={dynamicHeaders}
+        scores={selectedStudent.concepts}
+        className={selectedClass?.name || ""}
+        onBack={() => setSelectedStudent(null)}
+      />
+    );
   }
 
   return (
-    <div className="animate-in fade-in duration-700 pb-20 text-left">
-      <div className="bg-[#0f172a] rounded-[3.5rem] p-12 mb-12 shadow-2xl relative overflow-hidden group border border-white/5">
-         <div className="absolute top-0 right-0 p-12 opacity-5 scale-150 group-hover:rotate-45 transition-all duration-1000">
-            <BrainCircuit size={200} className="text-white" />
-         </div>
-         <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-12">
-            <div className="text-left font-sans">
-               <div className="flex items-center gap-4 mb-6">
-                  <Award className="w-5 h-5 text-indigo-400" />
-                  <p className="text-[11px] font-black text-indigo-400 uppercase tracking-[0.4em]">Merit & Trajectory Audit</p>
-               </div>
-               <h1 className="text-6xl font-black text-white tracking-tighter uppercase italic leading-none mb-6">Scholastic Pulse</h1>
-               <p className="text-lg font-bold text-slate-400 max-w-2xl leading-relaxed">
-                  Judging student proficiency strictly on <span className="text-indigo-300 italic">Database Merit</span>. Every point manifestation across Gradebooks and Tests is archived here.
-               </p>
+    <div className="animate-in fade-in duration-500 pb-20">
+
+      {/* Header */}
+      <div className="mb-6">
+        <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Result of click: "Concept Mastery"</p>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-800">Concept Mastery</h1>
+            <p className="text-sm text-slate-400 mt-1">Track student understanding across all assessed concepts.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search student..."
+                className="pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-44 bg-white"
+              />
             </div>
-            
-            <div className="flex flex-col sm:flex-row gap-6 w-full lg:w-auto">
-               <div className="space-y-4">
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Subject Portal</p>
-                  <select value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)} className="h-20 px-10 bg-white/5 border border-white/10 rounded-[2.2rem] text-xs font-black text-white uppercase tracking-widest focus:ring-4 ring-indigo-500/20 transition-all cursor-pointer min-w-[320px]">
-                     {classes.map(c => <option key={c.id} value={c.id} className="text-slate-900">{c.name}</option>)}
-                  </select>
-               </div>
-            </div>
-         </div>
+            <button
+              onClick={exportCSV}
+              disabled={masteryData.length === 0}
+              className="px-4 py-2 text-sm font-semibold border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors bg-white disabled:opacity-40"
+            >
+              Export
+            </button>
+          </div>
+        </div>
       </div>
 
+      {/* Legend + Class Selector */}
+      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+        {classes.length > 0 && (
+          <select
+            value={selectedClassId}
+            onChange={e => setSelectedClassId(e.target.value)}
+            className="text-sm border border-slate-200 rounded-xl px-3 py-2 focus:outline-none bg-white"
+          >
+            {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        )}
+        <div className="flex items-center gap-5 flex-wrap ml-auto">
+          <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-emerald-500 inline-block" /><span className="text-xs text-slate-500">Mastered (80%+)</span></div>
+          <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-amber-400 inline-block" /><span className="text-xs text-slate-500">Developing (50-79%)</span></div>
+          <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-rose-500 inline-block" /><span className="text-xs text-slate-500">Weak (&lt;50%)</span></div>
+          <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-slate-200 inline-block" /><span className="text-xs text-slate-500">Not Assessed</span></div>
+        </div>
+      </div>
+
+      {/* Table */}
       {loading ? (
-        <div className="py-48 flex flex-col items-center justify-center bg-white border border-slate-50 rounded-[4rem] shadow-sm mx-4">
-           <div className="w-40 h-40 border-4 border-[#1e3a8a]/5 border-t-[#1e3a8a] rounded-full animate-spin flex items-center justify-center mb-12"><BrainCircuit className="w-12 h-12 text-[#1e3a8a] animate-pulse" /></div>
-           <p className="text-[12px] font-black text-slate-400 uppercase tracking-[0.5em] animate-pulse">Scanning Registry Merit...</p>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-slate-300" />
         </div>
       ) : masteryData.length === 0 ? (
-        <div className="py-48 flex flex-col items-center justify-center bg-white border border-dashed border-slate-200 rounded-[4rem] text-center mx-4 group">
-           <ShieldAlert size={80} className="mb-10 text-slate-200 group-hover:text-rose-500 transition-colors" />
-           <h2 className="text-4xl font-black text-slate-800 mb-6 tracking-tighter uppercase italic">No Active Merit Trails</h2>
-           <p className="text-base font-bold text-slate-400 max-w-sm mb-12">Registry Manifestation requires <span className="text-[#1e3a8a]">Gradebook Scores</span> to initialize scholarly judgment.</p>
+        <div className="bg-white border border-slate-100 rounded-2xl p-12 text-center shadow-sm">
+          <p className="text-sm text-slate-400">No data found. Add gradebook columns or test scores to see concept mastery.</p>
         </div>
       ) : (
-        <div className="mx-4 bg-white border border-slate-100 rounded-[4rem] overflow-hidden shadow-2xl relative text-left">
-            <div className="overflow-x-auto custom-scrollbar">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-slate-50/100 border-b border-slate-200">
-                    <th className="py-14 px-12 text-[11px] font-black text-slate-400 uppercase tracking-widest min-w-[360px] text-left sticky left-0 z-20 bg-slate-50/100 backdrop-blur-md border-r border-slate-100 uppercase italic">Scholar Registry</th>
-                    {dynamicHeaders.map((h) => (
-                      <th key={h} className="text-center py-14 px-10 text-[12px] font-black text-[#1e3a8a] uppercase tracking-tighter min-w-[220px] border-r border-slate-50 last:border-0 italic">{h}</th>
+        <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm mb-5">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b border-slate-100">
+                  <th className="py-4 px-5 text-left text-xs font-semibold text-slate-500 sticky left-0 bg-white z-10 min-w-[180px]">Student</th>
+                  {dynamicHeaders.map(h => (
+                    <th key={h} className="py-4 px-4 text-center text-xs font-semibold text-slate-500 min-w-[110px]">
+                      {formatHeader(h)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {filtered.map(s => (
+                  <tr
+                    key={s.id}
+                    onClick={() => setSelectedStudent(s)}
+                    className="hover:bg-slate-50 cursor-pointer transition-colors"
+                  >
+                    <td className="py-3.5 px-5 sticky left-0 bg-white border-r border-slate-50 z-10">
+                      <div className="flex items-start gap-2.5">
+                        <div className={`w-8 h-8 rounded-lg ${s.color} flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5`}>
+                          {s.initials}
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-bold text-slate-500">{s.initials}</p>
+                          <p className="text-sm font-semibold text-slate-800 whitespace-nowrap">{s.name}</p>
+                        </div>
+                      </div>
+                    </td>
+                    {s.concepts.map((c: number, i: number) => (
+                      <td key={i} className="py-3.5 px-4 text-center">
+                        <span className={`text-sm ${pctTextColor(c)}`}>{c > 0 ? `${c}%` : "—"}</span>
+                      </td>
                     ))}
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {masteryData.map((s) => (
-                    <tr key={s.id} className="hover:bg-slate-50/80 transition-colors group">
-                      <td onClick={() => setSelectedStudent(s)} className="py-10 px-12 cursor-pointer sticky left-0 z-10 bg-white group-hover:bg-slate-50/80 transition-all border-r border-slate-200 shadow-[20px_0_40px_-20px_rgba(0,0,0,0.15)]">
-                        <div className="flex items-center gap-10">
-                          <div className={`w-20 h-20 rounded-[2.5rem] ${s.color} flex items-center justify-center text-white text-2xl font-black shadow-2xl group-hover:rotate-12 transition-all`}>{s.initials}</div>
-                          <div className="text-left flex-1 min-w-0">
-                            <p className="font-black text-slate-900 text-2xl tracking-tighter uppercase leading-none mb-3 group-hover:text-[#1e3a8a] transition-all truncate">{s.name}</p>
-                            <p className="text-[11px] font-black text-slate-300 uppercase tracking-[0.2em] truncate">{s.email}</p>
-                          </div>
-                        </div>
-                      </td>
-                      {s.concepts.map((c:number, i:number) => (
-                        <td key={i} className="py-10 px-10 text-center border-r border-slate-50 last:border-0 focus-within:bg-indigo-50/20">
-                          <div className={`text-[17px] font-black px-12 py-7 rounded-[2.5rem] inline-flex items-center justify-center min-w-[140px] shadow-sm transition-all group-hover:scale-110 ${cellColor(c)}`}>
-                            {c > 0 ? `${c}%` : "—"}
-                          </div>
-                        </td>
-                      ))}
-                    </tr>
+                ))}
+
+                {/* Class Avg Row */}
+                <tr className="bg-slate-50 border-t-2 border-slate-200">
+                  <td className="py-3.5 px-5 sticky left-0 bg-slate-50 z-10 border-r border-slate-100">
+                    <span className="text-sm font-bold text-slate-700">Class Avg</span>
+                  </td>
+                  {classAverages.map((avg, i) => (
+                    <td key={i} className="py-3.5 px-4 text-center">
+                      <span className={`text-sm font-bold ${pctTextColor(avg)}`}>{avg > 0 ? `${avg}%` : "—"}</span>
+                    </td>
                   ))}
-                  
-                  {classAverages.length > 0 && (
-                    <tr className="bg-[#1e3a8a] border-t-8 border-white/10 shadow-2xl relative z-30">
-                      <td className="py-16 px-12 font-black text-white uppercase italic tracking-[0.4em] text-[13px] sticky left-0 z-10 bg-[#1e3a8a] border-r border-white/10 flex items-center gap-4"><BarChart3 className="shrink-0" /> Subdivision Aggregate</td>
-                      {classAverages.map((avg, i) => (
-                        <td key={`avg-${i}`} className="py-16 px-10 text-center border-r border-white/5 last:border-0 font-black text-indigo-100 text-4xl tracking-tighter italic">
-                          {avg > 0 ? `${avg}%` : "—"}
-                        </td>
-                      ))}
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Weak Concepts Requiring Attention */}
+      {!loading && weakConcepts.length > 0 && (
+        <div className="border border-rose-200 bg-rose-50/40 rounded-2xl p-5">
+          <h3 className="text-sm font-bold text-slate-800 mb-3">Weak Concepts Requiring Attention</h3>
+          <div className="flex flex-wrap gap-2">
+            {weakConcepts.map(c => (
+              <span
+                key={c.h}
+                className={`text-xs font-semibold px-4 py-2 rounded-full ${c.avg < 50 ? "bg-rose-100 text-rose-600" : "bg-amber-100 text-amber-600"}`}
+              >
+                {formatHeader(c.h)} (Class Avg: {c.avg}%)
+              </span>
+            ))}
+          </div>
         </div>
       )}
     </div>

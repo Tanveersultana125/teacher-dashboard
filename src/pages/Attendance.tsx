@@ -95,13 +95,18 @@ const Attendance = () => {
     todayDate.setHours(0, 0, 0, 0);
 
     const makeDay = (d: Date, isFuture = false) => {
-      const dateStr = d.toLocaleDateString("en-CA");
-      const dayRecs = records.filter(r => r.date === dateStr && r.classId === selectedClassId);
-      const pres    = dayRecs.filter(r => r.status === "present" || r.status === "late").length;
-      const abs     = dayRecs.filter(r => r.status === "absent").length;
-      const total   = enrollments.filter(e => e.classId === selectedClassId).length || 1;
-      const rate    = dayRecs.length > 0 ? ((pres / total) * 100).toFixed(1) : null;
-      const wd      = d.getDay();
+      const dateStr  = d.toLocaleDateString("en-CA");
+      const dayRecs  = records.filter(r => r.date === dateStr && r.classId === selectedClassId);
+      const pres     = dayRecs.filter(r => r.status === "present" || r.status === "late").length;
+      const abs      = dayRecs.filter(r => r.status === "absent").length;
+      const total    = enrollments.filter(e => e.classId === selectedClassId).length || 1;
+      const rate     = dayRecs.length > 0 ? ((pres / total) * 100).toFixed(1) : null;
+      const wd       = d.getDay();
+      const isWeekend = wd === 0 || wd === 6;
+      const hasData  = dayRecs.length > 0;
+      const isToday  = dateStr === todayStr;
+      // Past weekday with no records = teacher forgot to mark
+      const isForgotten = !isFuture && !isToday && !isWeekend && !hasData;
       return {
         label:     d.toLocaleDateString("en-US", { weekday: "short" }),
         dateLabel: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
@@ -109,10 +114,11 @@ const Attendance = () => {
         present:   pres,
         absent:    abs,
         rate:      rate ? `${rate}%` : null,
-        isToday:   dateStr === todayStr,
-        hasData:   dayRecs.length > 0,
+        isToday,
+        hasData,
         isFuture,
-        isWeekend: wd === 0 || wd === 6,
+        isWeekend,
+        isForgotten,
       };
     };
 
@@ -269,6 +275,8 @@ const Attendance = () => {
                 className={`rounded-xl p-4 border transition-all ${
                   day.isToday
                     ? "border-amber-400 bg-white ring-1 ring-amber-400 shadow-sm"
+                    : day.isForgotten
+                    ? "border-slate-200 bg-slate-100"
                     : "border-slate-100 bg-slate-50"
                 }`}
               >
@@ -299,10 +307,12 @@ const Attendance = () => {
                   >
                     Mark Now
                   </button>
-                ) : day.isToday && day.isWeekend ? (
+                ) : day.isWeekend ? (
                   <p className="text-xs font-semibold text-slate-300">Weekend</p>
                 ) : day.isFuture ? (
                   <p className="text-xs font-semibold text-slate-400">Upcoming</p>
+                ) : day.isForgotten ? (
+                  <p className="text-xs font-semibold text-slate-400">Not Marked</p>
                 ) : (
                   <p className="text-xs text-slate-300">—</p>
                 )}

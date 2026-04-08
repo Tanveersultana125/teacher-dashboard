@@ -3,286 +3,490 @@ import StudentProfile from "@/components/StudentProfile";
 import { useAuth } from "../lib/AuthContext";
 import { db } from "../lib/firebase";
 import { collection, query, where, onSnapshot, getDocs, addDoc, deleteDoc, doc as firestoreDoc, serverTimestamp } from "firebase/firestore";
-import { Search, Loader2, UserPlus, X, Trash2 } from "lucide-react"; // Only Icons here
+import { Search, Loader2, UserPlus, X, Trash2, Users, TrendingUp, AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 import { sendEmail } from "../lib/resend";
 import { toast } from "sonner";
 
+const AVATAR_COLORS = [
+  "bg-blue-500", "bg-emerald-500", "bg-indigo-500",
+  "bg-purple-500", "bg-rose-500", "bg-amber-500", "bg-teal-500"
+];
+
+function getAvatarColor(name: string) {
+  return AVATAR_COLORS[Math.abs((name || "").charCodeAt(0)) % AVATAR_COLORS.length];
+}
+
 export default function Students() {
   const { teacherData } = useAuth();
-  
+
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState("All");
+  const [filterClass, setFilterClass] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
-  
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [newStudentEmail, setNewStudentEmail] = useState("");
   const [newStudentName, setNewStudentName] = useState("");
   const [newStudentClassId, setNewStudentClassId] = useState("");
   const [teacherClasses, setTeacherClasses] = useState<any[]>([]);
+  const [addLoading, setAddLoading] = useState(false);
 
-  // Real Database Fetching
   useEffect(() => {
-    if (!teacherData?.id) {
-        return;
-    }
-    
+    if (!teacherData?.id) return;
     setLoading(true);
+
     try {
-        const qEnroll = query(collection(db, "enrollments"), where("teacherId", "==", teacherData.id));
-        
-        const unsubEnroll = onSnapshot(qEnroll, async (snap) => {
-            const enrolledDocs = snap.docs.map(d => ({id: d.id, ...d.data()} as any));
-            const uniqueMap = new Map();
-            
-            enrolledDocs.forEach(e => {
-                const sid = e.studentId || e.studentEmail;
-                if (!uniqueMap.has(sid)) {
-                    uniqueMap.set(sid, {
-                        id: sid,
-                        name: e.studentName,
-                        email: e.studentEmail,
-                        rollNo: e.rollNo || (800 + Math.floor(Math.random()*100)).toString(),
-                        className: e.className,
-                        classId: e.classId,
-                        initials: e.studentName?.substring(0, 2).toUpperCase() || "ST",
-                        attendancePct: 0,
-                        avgScorePct: 0,
-                        statusTag: "Good" 
-                    });
-                }
+      const qEnroll = query(collection(db, "enrollments"), where("teacherId", "==", teacherData.id));
+
+      const unsubEnroll = onSnapshot(qEnroll, async (snap) => {
+        const enrolledDocs = snap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+        const uniqueMap = new Map();
+
+        enrolledDocs.forEach(e => {
+          const sid = e.studentId || e.studentEmail;
+          if (!uniqueMap.has(sid)) {
+            uniqueMap.set(sid, {
+              id: sid,
+              name: e.studentName,
+              email: e.studentEmail,
+              rollNo: e.rollNo || (800 + Math.floor(Math.random() * 100)).toString(),
+              className: e.className,
+              classId: e.classId,
+              initials: e.studentName?.substring(0, 2).toUpperCase() || "ST",
+              attendancePct: 0,
+              avgScorePct: 0,
+              statusTag: "Good"
             });
-
-            const studentsArray = Array.from(uniqueMap.values());
-
-            // Bulk fetch related data
-            const qScores = query(collection(db, "test_scores"), where("teacherId", "==", teacherData.id));
-            const scoresSnap = await getDocs(qScores);
-            const scoresData = scoresSnap.docs.map(d => d.data());
-
-            const qAtt = query(collection(db, "attendance"), where("teacherId", "==", teacherData.id));
-            const attSnap = await getDocs(qAtt);
-            const attData = attSnap.docs.map(d => d.data());
-
-            const final = studentsArray.map(stu => {
-                // Dual-Lookup for scores: check both id (which could be email or UID) and explicit email
-                const stuScores = scoresData.filter(s => 
-                    (s.studentId && s.studentId === stu.id) || 
-                    (s.studentEmail && stu.email && s.studentEmail.toLowerCase() === stu.email.toLowerCase())
-                );
-                
-                let totalPct = 0, count = 0;
-                stuScores.forEach(s => { if(!s.isAbsent && s.percentage) { totalPct += s.percentage; count++; } });
-                const avg = count > 0 ? (totalPct / count) : 0;
-
-                const stuAtt = attData.filter(a => 
-                    (a.studentId && a.studentId === stu.id) || 
-                    (a.studentEmail && stu.email && a.studentEmail.toLowerCase() === stu.email.toLowerCase())
-                );
-                const present = stuAtt.filter(a => a.status?.toLowerCase() === "present" || a.status?.toLowerCase() === "late").length;
-                const attPct = stuAtt.length > 0 ? (present / stuAtt.length) * 100 : 100;
-
-                let tag = "Good";
-                if (avg < 60 || attPct < 85) tag = "Attention";
-                if (avg > 0 && avg < 45) tag = "At Risk";
-
-                return { ...stu, avgScorePct: avg, attendancePct: attPct, statusTag: tag };
-            });
-
-            final.sort((a,b) => (a.name || "").localeCompare(b.name || ""));
-            setStudents(final);
-            setLoading(false);
+          }
         });
 
-        const qCls = query(collection(db, "classes"), where("teacherId", "==", teacherData.id));
-        const unsubCls = onSnapshot(qCls, (snap) => {
-           setTeacherClasses(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        const studentsArray = Array.from(uniqueMap.values());
+
+        const qScores = query(collection(db, "test_scores"), where("teacherId", "==", teacherData.id));
+        const scoresSnap = await getDocs(qScores);
+        const scoresData = scoresSnap.docs.map(d => d.data());
+
+        const qAtt = query(collection(db, "attendance"), where("teacherId", "==", teacherData.id));
+        const attSnap = await getDocs(qAtt);
+        const attData = attSnap.docs.map(d => d.data());
+
+        const final = studentsArray.map(stu => {
+          const stuScores = scoresData.filter(s =>
+            (s.studentId && s.studentId === stu.id) ||
+            (s.studentEmail && stu.email && s.studentEmail.toLowerCase() === stu.email.toLowerCase())
+          );
+
+          let totalPct = 0, count = 0;
+          stuScores.forEach(s => { if (!s.isAbsent && s.percentage) { totalPct += s.percentage; count++; } });
+          const avg = count > 0 ? (totalPct / count) : 0;
+
+          const stuAtt = attData.filter(a =>
+            (a.studentId && a.studentId === stu.id) ||
+            (a.studentEmail && stu.email && a.studentEmail.toLowerCase() === stu.email.toLowerCase())
+          );
+          const present = stuAtt.filter(a => a.status?.toLowerCase() === "present" || a.status?.toLowerCase() === "late").length;
+          const attPct = stuAtt.length > 0 ? (present / stuAtt.length) * 100 : 100;
+
+          let tag = "Good";
+          if (avg < 60 || attPct < 85) tag = "Attention";
+          if (avg > 0 && avg < 45) tag = "At Risk";
+
+          return { ...stu, avgScorePct: avg, attendancePct: attPct, statusTag: tag };
         });
 
-        return () => { unsubEnroll(); unsubCls(); };
+        final.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+        setStudents(final);
+        setLoading(false);
+      });
+
+      const qCls = query(collection(db, "classes"), where("teacherId", "==", teacherData.id));
+      const unsubCls = onSnapshot(qCls, (snap) => {
+        setTeacherClasses(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      });
+
+      return () => { unsubEnroll(); unsubCls(); };
     } catch (e) {
-        console.error("Matrix Sync Error", e);
+      console.error("Students fetch error", e);
+      setLoading(false);
     }
   }, [teacherData?.id]);
 
   const handleDelete = async (student: any) => {
-      if (!teacherData?.id) return;
-      if (!confirm(`Unenroll ${student.name}?`)) return;
-      try {
-          const q = query(
-              collection(db, "enrollments"), 
-              where("teacherId", "==", teacherData.id),
-              where("studentEmail", "==", student.email),
-              where("classId", "==", student.classId)
-          );
-          const snap = await getDocs(q);
-          if (!snap.empty) {
-              await deleteDoc(firestoreDoc(db, "enrollments", snap.docs[0].id));
-              toast.success("Roster updated.");
-          }
-      } catch (err) {
-          toast.error("Cleanup failed.");
+    if (!teacherData?.id) return;
+    if (!confirm(`Remove ${student.name} from your class?`)) return;
+    try {
+      const q = query(
+        collection(db, "enrollments"),
+        where("teacherId", "==", teacherData.id),
+        where("studentEmail", "==", student.email),
+        where("classId", "==", student.classId)
+      );
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        await deleteDoc(firestoreDoc(db, "enrollments", snap.docs[0].id));
+        toast.success(`${student.name} removed successfully.`);
       }
+    } catch {
+      toast.error("Failed to remove student. Please try again.");
+    }
+  };
+
+  const handleAddStudent = async () => {
+    if (!newStudentEmail || !newStudentName || !newStudentClassId) {
+      toast.error("Please fill in all fields.");
+      return;
+    }
+    const targetClass = teacherClasses.find(c => c.id === newStudentClassId);
+    if (!targetClass || !teacherData?.id) return;
+
+    setAddLoading(true);
+    try {
+      const sid = newStudentEmail.toLowerCase().trim();
+      await addDoc(collection(db, "enrollments"), {
+        teacherId: teacherData.id,
+        schoolId: teacherData.schoolId,
+        branchId: teacherData.branchId,
+        studentId: sid,
+        studentEmail: sid,
+        studentName: newStudentName,
+        className: targetClass.name,
+        classId: targetClass.id,
+        createdAt: serverTimestamp(),
+      });
+
+      const qCheck = query(collection(db, "students"), where("email", "==", sid));
+      const checkSnap = await getDocs(qCheck);
+      if (checkSnap.empty) {
+        await addDoc(collection(db, "students"), {
+          name: newStudentName,
+          email: sid,
+          studentId: sid,
+          teacherId: teacherData.id,
+          schoolId: teacherData.schoolId,
+          branchId: teacherData.branchId,
+          classId: targetClass.id,
+          className: targetClass.name,
+          status: "invited",
+          createdAt: serverTimestamp(),
+        });
+      }
+
+      try {
+        await sendEmail({
+          to: sid,
+          subject: `Welcome to ${teacherData.schoolName || "EduIntellect"} - Account Created`,
+          html: `
+            <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+              <h2 style="color: #1e3a8a;">Welcome, ${newStudentName}!</h2>
+              <p>You have been enrolled in <strong>${targetClass.name}</strong> by <strong>${teacherData.name || "your teacher"}</strong>.</p>
+              <p>You can now log in to access your classes, assignments, and progress reports.</p>
+              <div style="margin: 30px 0; text-align: center;">
+                <a href="https://parent-dashboard-ten.vercel.app/" style="background: #1e3a8a; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Go to Portal</a>
+              </div>
+            </div>
+          `
+        });
+        toast.success("Student enrolled and invitation sent!");
+      } catch {
+        toast.warning("Student enrolled, but invitation email could not be sent.");
+      }
+
+      setShowAddModal(false);
+      setNewStudentEmail("");
+      setNewStudentName("");
+      setNewStudentClassId("");
+    } catch {
+      toast.error("Failed to enroll student. Please try again.");
+    } finally {
+      setAddLoading(false);
+    }
   };
 
   if (selectedStudent) return <StudentProfile student={selectedStudent} onBack={() => setSelectedStudent(null)} />;
 
-  const filtered = students.filter(s => s.name?.toLowerCase().includes(search.toLowerCase()) || s.rollNo?.includes(search));
+  const uniqueClasses = [...new Set(students.map(s => s.className).filter(Boolean))];
+
+  const filtered = students.filter(s => {
+    const matchSearch = s.name?.toLowerCase().includes(search.toLowerCase()) || s.rollNo?.includes(search);
+    const matchStatus = filterStatus === "All" || s.statusTag === filterStatus;
+    const matchClass = filterClass === "All" || s.className === filterClass;
+    return matchSearch && matchStatus && matchClass;
+  });
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
+  const goodCount = students.filter(s => s.statusTag === "Good").length;
+  const attentionCount = students.filter(s => s.statusTag === "Attention").length;
+  const atRiskCount = students.filter(s => s.statusTag === "At Risk").length;
+
   return (
-    <div className="animate-in fade-in duration-500 pb-20 text-left">
-      <div className="flex flex-col md:flex-row items-center justify-between mb-12 gap-6">
-        <div className="text-left w-full">
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 font-mono opacity-60">SYSTEM STATUS: "USER_MANAGEMENT_READY"</p>
-           <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-none italic uppercase">Students</h1>
+    <div className="animate-in fade-in duration-500 pb-20">
+
+      {/* Header */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Students</h1>
+          <p className="text-sm text-slate-500 mt-1">View and manage all your students across classes.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3 mt-4 md:mt-0">
-           <button onClick={() => setShowAddModal(true)} className="bg-[#1e3a8a] text-white px-8 py-3.5 rounded-2xl text-[10px] font-black shadow-2xl shadow-blue-200 uppercase tracking-widest flex items-center gap-3 hover:scale-105 transition-all">
-              <UserPlus className="w-5 h-5" /> Add Target
-           </button>
-           <div className="relative">
-               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-               <input type="text" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search identifier..." className="w-64 pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold focus:bg-white focus:ring-4 ring-blue-50/50 outline-none transition-all placeholder:text-slate-300 placeholder:font-black tracking-tight" />
-           </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="flex items-center gap-2 bg-[#1e3a8a] text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-md hover:bg-blue-900 transition-all"
+        >
+          <UserPlus className="w-4 h-4" />
+          Add Student
+        </button>
+      </div>
+
+      {/* Stats Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        {[
+          { label: "Total Students", value: students.length, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
+          { label: "Performing Well", value: goodCount, icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50" },
+          { label: "Need Attention", value: attentionCount, icon: TrendingUp, color: "text-amber-600", bg: "bg-amber-50" },
+          { label: "At Risk", value: atRiskCount, icon: AlertTriangle, color: "text-rose-600", bg: "bg-rose-50" },
+        ].map(stat => (
+          <div key={stat.label} className="bg-white border border-slate-100 rounded-2xl p-5 flex items-center gap-4 shadow-sm">
+            <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center`}>
+              <stat.icon className={`w-5 h-5 ${stat.color}`} />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-800">{stat.value}</p>
+              <p className="text-xs text-slate-400">{stat.label}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-8">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+            placeholder="Search by name or roll number..."
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all"
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-slate-400 ml-1" />
+          <select
+            value={filterStatus}
+            onChange={e => { setFilterStatus(e.target.value); setCurrentPage(1); }}
+            className="bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all cursor-pointer"
+          >
+            <option value="All">All Status</option>
+            <option value="Good">Good</option>
+            <option value="Attention">Attention</option>
+            <option value="At Risk">At Risk</option>
+          </select>
+
+          <select
+            value={filterClass}
+            onChange={e => { setFilterClass(e.target.value); setCurrentPage(1); }}
+            className="bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all cursor-pointer"
+          >
+            <option value="All">All Classes</option>
+            {uniqueClasses.map(cls => (
+              <option key={cls} value={cls}>{cls}</option>
+            ))}
+          </select>
         </div>
       </div>
 
+      {/* Student Grid */}
       {loading ? (
-          <div className="py-40 flex flex-col items-center justify-center">
-             <Loader2 className="w-16 h-16 text-[#1e3a8a] animate-spin mb-8 opacity-20" />
-             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] animate-pulse">Syncing Institutional Roster Matrix...</p>
-          </div>
+        <div className="py-40 flex flex-col items-center justify-center gap-4">
+          <Loader2 className="w-10 h-10 text-[#1e3a8a] animate-spin opacity-40" />
+          <p className="text-sm text-slate-400">Loading students...</p>
+        </div>
+      ) : paginated.length === 0 ? (
+        <div className="py-32 flex flex-col items-center justify-center gap-3">
+          <Users className="w-12 h-12 text-slate-200" />
+          <p className="text-slate-500 font-medium">No students found</p>
+          <p className="text-sm text-slate-400">Try changing your filters or add a new student</p>
+        </div>
       ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-              {paginated.map(student => (
-                  <div key={student.id} className="bg-white border border-slate-100 rounded-[2.5rem] p-8 hover:shadow-2xl transition-all flex flex-col group relative overflow-hidden">
-                      <div className="flex justify-between items-start mb-8">
-                         <div className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center text-white text-2xl font-black italic shadow-lg ${['bg-blue-500', 'bg-emerald-500', 'bg-indigo-500', 'bg-purple-500'][Math.abs(student.name.charCodeAt(0)) % 4]}`}>
-                            {student.initials}
-                         </div>
-                         <div className="flex gap-2">
-                             <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${student.statusTag === 'Good' ? 'bg-emerald-50 text-emerald-500' : student.statusTag === 'Attention' ? 'bg-amber-50 text-amber-500' : 'bg-rose-50 text-rose-500'}`}>{student.statusTag}</span>
-                             <button onClick={(e) => { e.stopPropagation(); handleDelete(student); }} className="w-9 h-9 flex items-center justify-center bg-rose-50 text-rose-400 hover:text-rose-600 rounded-xl transition-all border border-transparent hover:border-rose-100 shadow-sm"><Trash2 className="w-4 h-4"/></button>
-                         </div>
-                      </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          {paginated.map(student => {
+            const statusStyles = {
+              "Good": { badge: "bg-emerald-50 text-emerald-600 border border-emerald-100", bar: "bg-emerald-500" },
+              "Attention": { badge: "bg-amber-50 text-amber-600 border border-amber-100", bar: "bg-amber-400" },
+              "At Risk": { badge: "bg-rose-50 text-rose-600 border border-rose-100", bar: "bg-rose-500" },
+            }[student.statusTag] || { badge: "bg-slate-50 text-slate-500", bar: "bg-slate-300" };
 
-                      <h3 className="text-xl font-black text-slate-800 leading-tight mb-1 italic uppercase tracking-tighter">{student.name}</h3>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8">Class {student.className} • ID: {student.rollNo}</p>
-
-                      <div className="space-y-4 mb-8 border-t border-slate-50 pt-6">
-                          <div className="flex justify-between items-center bg-slate-50/50 p-3 rounded-xl">
-                              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Attendance</span>
-                              <span className={`text-xs font-black ${student.attendancePct >= 90 ? 'text-emerald-500' : 'text-amber-500'}`}>{student.attendancePct.toFixed(0)}%</span>
-                          </div>
-                          <div className="flex justify-between items-center bg-slate-50/50 p-3 rounded-xl">
-                              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Performance</span>
-                              <span className="text-xs font-black text-slate-800">{student.avgScorePct > 0 ? `${student.avgScorePct.toFixed(1)}%` : "PENDING"}</span>
-                          </div>
-                      </div>
-
-                      <button onClick={() => setSelectedStudent(student)} className="w-full bg-slate-900 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-black transition-all shadow-xl shadow-slate-200">View Dossier</button>
+            return (
+              <div
+                key={student.id}
+                className="bg-white border border-slate-100 rounded-2xl p-6 hover:shadow-lg hover:border-slate-200 transition-all flex flex-col group"
+              >
+                {/* Card Top */}
+                <div className="flex justify-between items-start mb-5">
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white text-lg font-bold shadow-sm ${getAvatarColor(student.name)}`}>
+                    {student.initials}
                   </div>
-              ))}
-          </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${statusStyles.badge}`}>
+                      {student.statusTag}
+                    </span>
+                    <button
+                      onClick={e => { e.stopPropagation(); handleDelete(student); }}
+                      className="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
+                      title="Remove student"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Student Info */}
+                <h3 className="text-base font-bold text-slate-800 leading-tight mb-0.5">{student.name}</h3>
+                <p className="text-xs text-slate-400 mb-5">Class {student.className} &bull; Roll: {student.rollNo}</p>
+
+                {/* Stats */}
+                <div className="space-y-3 mb-5">
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-xs text-slate-400">Attendance</span>
+                      <span className={`text-xs font-bold ${student.attendancePct >= 90 ? "text-emerald-600" : student.attendancePct >= 75 ? "text-amber-600" : "text-rose-600"}`}>
+                        {student.attendancePct.toFixed(0)}%
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${student.attendancePct >= 90 ? "bg-emerald-500" : student.attendancePct >= 75 ? "bg-amber-400" : "bg-rose-500"}`}
+                        style={{ width: `${Math.min(student.attendancePct, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-xs text-slate-400">Avg. Score</span>
+                      <span className={`text-xs font-bold ${student.avgScorePct >= 75 ? "text-emerald-600" : student.avgScorePct >= 50 ? "text-amber-600" : student.avgScorePct === 0 ? "text-slate-400" : "text-rose-600"}`}>
+                        {student.avgScorePct > 0 ? `${student.avgScorePct.toFixed(1)}%` : "No data"}
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${student.avgScorePct >= 75 ? "bg-emerald-500" : student.avgScorePct >= 50 ? "bg-amber-400" : "bg-rose-500"}`}
+                        style={{ width: `${Math.min(student.avgScorePct, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action */}
+                <button
+                  onClick={() => setSelectedStudent(student)}
+                  className="w-full mt-auto bg-slate-900 text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-[#1e3a8a] transition-all"
+                >
+                  View Profile
+                </button>
+              </div>
+            );
+          })}
+        </div>
       )}
 
+      {/* Pagination */}
+      {!loading && totalPages > 1 && (
+        <div className="flex items-center justify-between mt-8">
+          <p className="text-xs text-slate-400">
+            Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filtered.length)}–{Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} students
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className={`w-8 h-8 rounded-lg text-xs font-semibold transition-all ${currentPage === page ? "bg-[#1e3a8a] text-white" : "text-slate-500 hover:bg-slate-50 border border-slate-200"}`}
+              >
+                {page}
+              </button>
+            ))}
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Add Student Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-xl animate-in fade-in duration-300">
-          <div className="bg-white rounded-[3rem] p-10 w-full max-w-xl shadow-2xl relative border border-white/20">
-             <button onClick={() => setShowAddModal(false)} className="absolute top-8 right-8 w-10 h-10 flex items-center justify-center bg-slate-50 rounded-full text-slate-400 hover:text-slate-800 transition-all"><X className="w-6 h-6"/></button>
-             <h2 className="text-4xl font-black text-slate-900 tracking-tighter italic mb-2 uppercase leading-none">Enroll Target</h2>
-             <p className="text-[11px] font-black text-slate-400 mb-10 uppercase tracking-[0.2em] opacity-40">System Injection: Phase 3 Student Onboarding</p>
-             
-             <div className="space-y-6">
-                <div>
-                   <label className="block text-[10px] font-black text-[#1e3a8a] uppercase tracking-widest mb-2 ml-1">Student / Account Title</label>
-                   <input type="text" value={newStudentName} onChange={e => setNewStudentName(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-4 text-sm font-black text-slate-800 focus:bg-white focus:border-indigo-500 outline-none transition-all shadow-inner tracking-tight" placeholder="e.g. Rahul Verma" />
-                </div>
-                <div>
-                   <label className="block text-[10px] font-black text-[#1e3a8a] uppercase tracking-widest mb-2 ml-1">Target Communications (Email)</label>
-                   <input type="email" value={newStudentEmail} onChange={e => setNewStudentEmail(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-4 text-sm font-black text-slate-800 focus:bg-white focus:border-indigo-500 outline-none transition-all shadow-inner tracking-tight" placeholder="name@institutional.app" />
-                </div>
-                <div>
-                   <label className="block text-[10px] font-black text-[#1e3a8a] uppercase tracking-widest mb-2 ml-1">Assigned Academic Network (Class)</label>
-                   <select value={newStudentClassId} onChange={e => setNewStudentClassId(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-4 text-sm font-black text-slate-800 focus:bg-white focus:border-indigo-500 outline-none transition-all shadow-inner appearance-none">
-                     <option value="" disabled>Select authorized cluster...</option>
-                     {teacherClasses.map(cls => (
-                       <option key={cls.id} value={cls.id}>{cls.name} {cls.grade ? `(${cls.grade})` : ""}</option>
-                     ))}
-                   </select>
-                </div>
-                
-                <button 
-                  onClick={async () => {
-                     if(!newStudentEmail || !newStudentName || !newStudentClassId) return;
-                     const targetClass = teacherClasses.find(c => c.id === newStudentClassId);
-                     if(!targetClass || !teacherData?.id) return;
-                     
-                     try {
-                        const sid = newStudentEmail.toLowerCase().trim();
-                        await addDoc(collection(db, "enrollments"), {
-                           teacherId: teacherData.id,
-                           schoolId: teacherData.schoolId,
-                           branchId: teacherData.branchId,
-                           studentId: sid,
-                           studentEmail: sid,
-                           studentName: newStudentName,
-                           className: targetClass.name,
-                           classId: targetClass.id,
-                           createdAt: serverTimestamp(),
-                        });
-                        
-                        const qCheck = query(collection(db, "students"), where("email", "==", sid));
-                        const checkSnap = await getDocs(qCheck);
-                        if (checkSnap.empty) {
-                           await addDoc(collection(db, "students"), {
-                               name: newStudentName,
-                               email: sid,
-                               studentId: sid,
-                               teacherId: teacherData.id,
-                               schoolId: teacherData.schoolId,
-                               branchId: teacherData.branchId,
-                               classId: targetClass.id,
-                               className: targetClass.name,
-                               status: "invited",
-                               createdAt: serverTimestamp(),
-                           });
-                        }
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl relative">
+            <button
+              onClick={() => setShowAddModal(false)}
+              className="absolute top-5 right-5 w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-all"
+            >
+              <X className="w-5 h-5" />
+            </button>
 
-                        try {
-                           await sendEmail({
-                              to: sid,
-                              subject: `Access Provisioned: ${teacherData.schoolName || "Institutional Portal"}`,
-                              html: `
-                                <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-                                  <h2 style="color: #1e3a8a;">Welcome, ${newStudentName}!</h2>
-                                  <p>Your institutional access has been provisioned for <strong>${targetClass.name}</strong>.</p>
-                                  <p>Instructor: <strong>${teacherData.name || "Faculty Member"}</strong></p>
-                                  <div style="margin: 30px 0; text-align: center;">
-                                    <a href="https://parent-dashboard-ten.vercel.app/" style="background: #1e3a8a; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Login to Secure Portal</a>
-                                  </div>
-                                </div>
-                              `
-                           });
-                           toast.success("Injection Successful & Invitation Dispatched!");
-                        } catch (emailErr) {
-                           toast.warning("Registry updated, but email carrier failed.");
-                        }
+            <h2 className="text-xl font-bold text-slate-900 mb-1">Add Student</h2>
+            <p className="text-sm text-slate-400 mb-6">Enroll a new student into your class.</p>
 
-                        setShowAddModal(false);
-                        setNewStudentEmail(""); setNewStudentName(""); setNewStudentClassId("");
-                     } catch(err) {
-                        toast.error("Database Injection Failed.");
-                     }
-                  }}
-                  className="w-full bg-[#1e3a8a] text-white rounded-[1.5rem] py-5 font-black text-[11px] uppercase tracking-[0.3em] mt-8 shadow-2xl shadow-blue-300/30 hover:bg-blue-900 transition-all border-none"
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Student Name</label>
+                <input
+                  type="text"
+                  value={newStudentName}
+                  onChange={e => setNewStudentName(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-50 outline-none transition-all"
+                  placeholder="e.g. Rahul Verma"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Email Address</label>
+                <input
+                  type="email"
+                  value={newStudentEmail}
+                  onChange={e => setNewStudentEmail(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-50 outline-none transition-all"
+                  placeholder="student@email.com"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Assign to Class</label>
+                <select
+                  value={newStudentClassId}
+                  onChange={e => setNewStudentClassId(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-50 outline-none transition-all cursor-pointer appearance-none"
                 >
-                   Execute Registry Update
-                </button>
-             </div>
+                  <option value="" disabled>Select a class...</option>
+                  {teacherClasses.map(cls => (
+                    <option key={cls.id} value={cls.id}>{cls.name}{cls.grade ? ` (${cls.grade})` : ""}</option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                onClick={handleAddStudent}
+                disabled={addLoading}
+                className="w-full bg-[#1e3a8a] text-white rounded-xl py-3 font-semibold text-sm mt-2 hover:bg-blue-900 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {addLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                {addLoading ? "Enrolling..." : "Enroll Student"}
+              </button>
+            </div>
           </div>
         </div>
       )}
