@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { db } from '../lib/firebase';
 import { collection, query, where, onSnapshot, getDocs, orderBy, limit, serverTimestamp } from 'firebase/firestore';
-import { 
-  Loader2, Users, Activity, TrendingUp, AlertCircle, 
-  Calendar, Clock, CheckCircle, FileText, Bell, 
+import {
+  Loader2, Users, Activity, TrendingUp, AlertCircle,
+  Calendar, Clock, CheckCircle, FileText, Bell,
   Layout, GraduationCap, ClipboardCheck, MessageSquare, Sparkles, BrainCircuit, Heart, Search, ArrowUpRight,
-  ShieldCheck, Presentation, Zap, ShieldAlert, MoreVertical
+  ShieldCheck, Presentation, Zap, ShieldAlert, MoreVertical, X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -56,10 +56,42 @@ const Dashboard = () => {
   const [pendingTasks, setPendingTasks] = useState<any[]>([]);
   const [criticalStudents, setCriticalStudents] = useState<any[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [unreadNotes, setUnreadNotes] = useState<any[]>([]);
+  const [showNotifPanel, setShowNotifPanel] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
+  }, []);
+
+  // Real-time unread parent messages listener
+  useEffect(() => {
+    if (!teacherData?.id) return;
+    const q = query(
+      collection(db, "parent_notes"),
+      where("teacherId", "==", teacherData.id),
+      where("from", "==", "parent")
+    );
+    return onSnapshot(q, (snap) => {
+      const unread = snap.docs
+        .map(d => ({ id: d.id, ...d.data() } as any))
+        .filter(n => n.read !== true)
+        .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0))
+        .slice(0, 10);
+      setUnreadNotes(unread);
+    });
+  }, [teacherData?.id]);
+
+  // Close notification panel on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setShowNotifPanel(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   // Real-time attendance rate — scoped + date-filtered (last 30 days only)
@@ -272,11 +304,75 @@ const Dashboard = () => {
            <div className="bg-white px-3 sm:px-5 py-2 rounded-xl border border-slate-200 shadow-sm text-xs sm:text-sm font-semibold text-slate-600 whitespace-nowrap">
               {currentTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
            </div>
-           <div className="relative">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-white rounded-xl border border-slate-200 flex items-center justify-center shadow-sm">
-                 <Bell size={16} className="text-slate-400" />
-              </div>
-              <span className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-rose-500 text-white text-[9px] sm:text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white">3</span>
+           {/* Notification Bell */}
+           <div className="relative" ref={notifRef}>
+              <button
+                onClick={() => setShowNotifPanel(p => !p)}
+                className="w-9 h-9 sm:w-10 sm:h-10 bg-white rounded-xl border border-slate-200 flex items-center justify-center shadow-sm hover:bg-slate-50 transition-colors"
+              >
+                <Bell size={16} className="text-slate-400" />
+              </button>
+              {unreadNotes.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-rose-500 text-white text-[9px] sm:text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white pointer-events-none">
+                  {unreadNotes.length > 9 ? "9+" : unreadNotes.length}
+                </span>
+              )}
+
+              {/* Notification Dropdown Panel */}
+              {showNotifPanel && (
+                <div className="absolute right-0 top-12 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+                    <div>
+                      <p className="text-sm font-bold text-slate-800">Notifications</p>
+                      <p className="text-[10px] text-slate-400 font-medium">
+                        {unreadNotes.length > 0 ? `${unreadNotes.length} unread message${unreadNotes.length > 1 ? "s" : ""} from parents` : "All caught up!"}
+                      </p>
+                    </div>
+                    <button onClick={() => setShowNotifPanel(false)} className="p-1 rounded-lg hover:bg-slate-100 transition-colors">
+                      <X size={14} className="text-slate-400" />
+                    </button>
+                  </div>
+                  <div className="max-h-72 overflow-y-auto">
+                    {unreadNotes.length === 0 ? (
+                      <div className="py-10 text-center text-slate-300 text-sm font-semibold">No new notifications</div>
+                    ) : (
+                      unreadNotes.map((note) => (
+                        <button
+                          key={note.id}
+                          onClick={() => { setShowNotifPanel(false); navigate("/parent-notes"); }}
+                          className="w-full flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left border-b border-slate-50 last:border-0"
+                        >
+                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <MessageSquare size={14} className="text-blue-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-slate-800 truncate">
+                              {note.studentName || "Parent Message"}
+                            </p>
+                            <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                              {note.content || "New message received"}
+                            </p>
+                            <p className="text-[10px] text-slate-300 font-medium mt-1">
+                              {note.createdAt?.toDate?.().toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) || "Recently"}
+                            </p>
+                          </div>
+                          <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-2" />
+                        </button>
+                      ))
+                    )}
+                  </div>
+                  {unreadNotes.length > 0 && (
+                    <div className="px-4 py-3 border-t border-slate-100">
+                      <button
+                        onClick={() => { setShowNotifPanel(false); navigate("/parent-notes"); }}
+                        className="w-full py-2 bg-[#1e3272] text-white rounded-xl text-xs font-semibold hover:bg-[#162558] transition-colors"
+                      >
+                        View All Messages
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
            </div>
         </div>
       </div>

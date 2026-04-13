@@ -17,6 +17,7 @@ const MyClasses = () => {
   const [enrollments, setEnrollments] = useState<any[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<any[]>([]);
   const [scoresRecords, setScoresRecords] = useState<any[]>([]);
+  const [startTimesMap, setStartTimesMap] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -32,6 +33,17 @@ const MyClasses = () => {
     );
     const unsubAssign = onSnapshot(qAssign, async (snap) => {
       const assignedIds = snap.docs.map(d => d.data().classId).filter(Boolean);
+
+      // Build classId → startTime map from teaching_assignments
+      const timesMap = new Map<string, string>();
+      snap.docs.forEach(d => {
+        const data = d.data();
+        if (data.classId && (data.startTime || data.scheduleTime)) {
+          timesMap.set(data.classId, data.startTime || data.scheduleTime);
+        }
+      });
+      setStartTimesMap(timesMap);
+
       const legacySnap = await getDocs(query(collection(db, "classes"), where("teacherId", "==", teacherData.id)));
       const legacyIds = legacySnap.docs.map(d => d.id);
       const allIds = Array.from(new Set([...assignedIds, ...legacyIds]));
@@ -87,8 +99,6 @@ const MyClasses = () => {
     </div>
   );
 
-  const classTimes = ["09:00 AM", "10:30 AM", "12:00 PM", "02:00 PM"];
-
   const filteredClasses = classes.filter(cls => {
     const nameMatch = cls.name?.toLowerCase().includes(searchQuery.toLowerCase());
     if (!nameMatch) return false;
@@ -143,9 +153,9 @@ const MyClasses = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {filteredClasses.map((cls, idx) => {
+          {filteredClasses.map((cls) => {
             const m = getMetrics(cls.id);
-            const nextTime = classTimes[idx % classTimes.length];
+            const nextTime = startTimesMap.get(cls.id) || cls.startTime || cls.scheduleTime || "—";
 
             return (
               <div key={cls.id} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col">
@@ -183,7 +193,9 @@ const MyClasses = () => {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-slate-500">Next Class</span>
-                    <span className="text-sm font-bold text-[#1e3272]">Today, {nextTime}</span>
+                    <span className="text-sm font-bold text-[#1e3272]">
+                      {nextTime === "—" ? "—" : `Today, ${nextTime}`}
+                    </span>
                   </div>
                 </div>
 
