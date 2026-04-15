@@ -520,31 +520,6 @@ export default function TestsExams() {
 
       </div>
 
-      {/* ── Mobile bottom tab bar ─────────────────────────────────────────── */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40" style={{
-        background: T.s0, borderTop: `1px solid ${T.bdr}`,
-        padding: '9px 18px 17px', display: 'flex', justifyContent: 'space-between',
-      }}>
-        {tabs.map(tab => {
-          const isActive = tab.path === activePath;
-          return (
-            <button
-              key={tab.path}
-              onClick={() => navigate(tab.path)}
-              style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                cursor: 'pointer', background: 'none', border: 'none', padding: 0, fontFamily: 'inherit',
-              }}
-            >
-              {tab.icon(isActive)}
-              <span style={{ fontSize: 9, color: isActive ? T.blue : T.ink2, fontWeight: isActive ? 500 : 400 }}>
-                {tab.label}
-              </span>
-              {isActive && <div style={{ width: 13, height: 2.5, borderRadius: 2, background: T.blue, marginTop: -2 }} />}
-            </button>
-          );
-        })}
-      </div>
 
     </div>
   );

@@ -1,11 +1,64 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from "react";
 import { db } from "../lib/firebase";
 import { collection, query, where, onSnapshot, getDocs, doc, setDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { useAuth } from "../lib/AuthContext";
-import { Loader2, Search, ChevronLeft } from 'lucide-react';
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import * as XLSX from 'xlsx';
+import * as XLSX from "xlsx";
 
+// ── Design tokens ─────────────────────────────────────────────────────────────
+const T = {
+  hero:  "#08090C",
+  bg:    "#F5F6F9",
+  white: "#ffffff",
+  ink1:  "#08090C",
+  ink2:  "#42475A",
+  ink3:  "#8C92A4",
+  s1:    "#F5F6F9",
+  s2:    "#ECEEF4",
+  bdr:   "#E2E5EE",
+  blue:  "#3B5BDB",
+  blBg:  "#EDF2FF",
+  grn2:  "#2F9E44",
+  glBg:  "#EBFBEE",
+  red:   "#C92A2A",
+  rlBg:  "#FFF5F5",
+  amb:   "#C87014",
+  alBg:  "#FFF9DB",
+  tea:   "#0C8599",
+  tlBg:  "#E3FAFC",
+};
+
+// ── Avatar helpers ────────────────────────────────────────────────────────────
+const AV = [
+  { bg: "#FFF9DB", c: "#C87014" },
+  { bg: "#E3FAFC", c: "#0C8599" },
+  { bg: "#EDF2FF", c: "#3B5BDB" },
+  { bg: "#F3F0FF", c: "#6741D9" },
+  { bg: "#EBFBEE", c: "#087F5B" },
+  { bg: "#FFF5F5", c: "#C92A2A" },
+  { bg: "#FFF4E6", c: "#D9480F" },
+];
+const avStyle = (name: string) => {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return AV[h % AV.length];
+};
+const getInitials = (name: string) => {
+  const p = name.trim().split(/\s+/);
+  return (p.length >= 2 ? p[0][0] + p[p.length - 1][0] : p[0].slice(0, 2)).toUpperCase();
+};
+
+// ── Grade helper ──────────────────────────────────────────────────────────────
+const gradeInfo = (score: number, max: number) => {
+  const pct = (score / max) * 100;
+  if (pct >= 80) return { label: "A", bg: T.glBg, color: T.grn2, band: T.grn2 };
+  if (pct >= 60) return { label: "B", bg: T.blBg, color: T.blue, band: T.blue };
+  if (pct >= 40) return { label: "C", bg: T.alBg, color: T.amb, band: T.amb };
+  return { label: "D", bg: T.rlBg, color: T.red, band: T.red };
+};
+
+// ── Props ─────────────────────────────────────────────────────────────────────
 interface EnterScoresProps {
   test: any;
   onBack: () => void;
@@ -18,381 +71,462 @@ export default function EnterScores({ test, onBack }: EnterScoresProps) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
-  
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
   const maxScore = parseFloat(test?.marks) || 50;
 
+  // ── Firebase: fetch roster + existing scores ────────────────────────────
   useEffect(() => {
     if (!test?.classId || !teacherData?.id) return;
 
-    const schoolId = teacherData.schoolId as string | undefined;
-    const branchId = teacherData.branchId as string | undefined;
-    const SC: any[] = [];
-    if (schoolId) SC.push(where("schoolId", "==", schoolId));
-    if (branchId) SC.push(where("branchId", "==", branchId));
-
-    // Fetch Enrollments to get roster (scoped by school)
-    // Enrollment docs don't store teacherId — they're keyed by classId + schoolId.
-    // Adding where("teacherId",...) here would always return 0 students.
-    const qRoster = query(
-      collection(db, "enrollments"),
-      where("classId", "==", test.classId),
-      ...SC
-    );
+    const qRoster = query(collection(db, "enrollments"), where("classId", "==", test.classId));
 
     const unsub = onSnapshot(qRoster, async (snap) => {
-      // Get existing scores if they were already saved previously
-      const qScores = query(collection(db, "test_scores"), where("testId", "==", test.id), ...SC);
+      const qScores = query(collection(db, "test_scores"), where("testId", "==", test.id));
       const scoresSnap = await getDocs(qScores);
       const existingScores = scoresSnap.docs.map(d => d.data());
 
       const roster = snap.docs.map(d => {
         const data = d.data() as any;
         const studentId = data.studentId || d.id;
-        
         const existing = existingScores.find(s => s.studentId === studentId);
-        
         return {
           id: studentId,
-          name: data.studentName,
+          name: data.studentName || "Student",
           email: data.studentEmail,
           rollNo: data.rollNo || "—",
-          initials: data.studentName?.substring(0, 2).toUpperCase() || "ST",
-          score: existing ? existing.score.toString() : "",
-          isAbsent: existing ? existing.isAbsent : false
+          className: data.className || test.className || "",
+          score: existing ? existing.score?.toString() : "",
+          note: "",
+          isAbsent: existing ? existing.isAbsent : false,
         };
       });
-      
-      roster.sort((a,b) => (a.name || "").localeCompare(b.name || ""));
+      roster.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
       setStudents(roster);
       setLoading(false);
     });
     return () => unsub();
   }, [test?.classId, test?.id, teacherData?.id]);
 
-  const getMetrics = (scoreStr: string) => {
-     if (!scoreStr && scoreStr !== "0") return { grade: '-', pct: 0, color: 'text-slate-400 bg-slate-100', text: 'text-slate-500' };
-     const val = parseFloat(scoreStr);
-     if (isNaN(val)) return { grade: '-', pct: 0, color: 'text-slate-400 bg-slate-100', text: 'text-slate-500' };
-     const pct = (val / maxScore) * 100;
-     
-     if (pct >= 80) return { grade: 'A', pct, color: 'text-emerald-500 bg-emerald-50 border-emerald-200', text: 'text-emerald-600' };
-     if (pct >= 60) return { grade: 'B', pct, color: 'text-blue-500 bg-blue-50 border-blue-200', text: 'text-blue-600' };
-     if (pct >= 40) return { grade: 'C', pct, color: 'text-amber-500 bg-amber-50 border-amber-200', text: 'text-amber-600' };
-     return { grade: 'D', pct, color: 'text-rose-500 bg-rose-50 border-rose-200', text: 'text-rose-600' };
-  };
-
+  // ── Score change handler ────────────────────────────────────────────────
   const handleScoreChange = (id: string, val: string) => {
-     if (val === "" || val === "-") { setStudents(prev => prev.map(s => s.id === id ? { ...s, score: val === "-" ? "" : val } : s)); return; }
-     const num = parseFloat(val);
-     if (isNaN(num) || num < 0 || num > maxScore) return;
-     setStudents(prev => prev.map(s => s.id === id ? { ...s, score: val } : s));
+    if (val === "" || val === "-") {
+      setStudents(prev => prev.map(s => s.id === id ? { ...s, score: val === "-" ? "" : val } : s));
+      return;
+    }
+    const num = parseFloat(val);
+    if (isNaN(num) || num < 0 || num > maxScore) return;
+    setStudents(prev => prev.map(s => s.id === id ? { ...s, score: val } : s));
   };
 
-  const calculateStats = () => {
-     let totalScored = 0;
-     let countScored = 0;
-     const distrib = { a: 0, b: 0, c: 0, d: 0, absent: 0 };
-
-     students.forEach(s => {
-        if (s.isAbsent) {
-           distrib.absent++;
-           return;
-        }
-        if (s.score !== "") {
-           const { grade, pct } = getMetrics(s.score);
-           totalScored += parseFloat(s.score);
-           countScored++;
-           if (grade === 'A') distrib.a++;
-           if (grade === 'B') distrib.b++;
-           if (grade === 'C') distrib.c++;
-           if (grade === 'D') distrib.d++;
-        }
-     });
-
-     const avg = countScored > 0 ? (totalScored / countScored) : 0;
-     const avgPct = countScored > 0 ? (avg / maxScore) * 100 : 0;
-
-     return { avg, avgPct, distrib };
+  const toggleAbsent = (id: string) => {
+    setStudents(prev => prev.map(s => {
+      if (s.id !== id) return s;
+      return { ...s, isAbsent: !s.isAbsent, score: !s.isAbsent ? "" : s.score };
+    }));
   };
 
+  // ── Stats ───────────────────────────────────────────────────────────────
+  const calcStats = () => {
+    let total = 0, count = 0;
+    const dist = { a: 0, b: 0, c: 0, d: 0, absent: 0 };
+    students.forEach(s => {
+      if (s.isAbsent) { dist.absent++; return; }
+      if (s.score !== "" && !isNaN(parseFloat(s.score))) {
+        const v = parseFloat(s.score);
+        total += v; count++;
+        const pct = (v / maxScore) * 100;
+        if (pct >= 80) dist.a++;
+        else if (pct >= 60) dist.b++;
+        else if (pct >= 40) dist.c++;
+        else dist.d++;
+      }
+    });
+    const avg = count > 0 ? total / count : 0;
+    const avgPct = count > 0 ? (avg / maxScore) * 100 : 0;
+    return { avg, avgPct, dist, count };
+  };
+  const { avg, avgPct, dist, count: scoredCount } = calcStats();
+
+  // ── Import/Export Excel ─────────────────────────────────────────────────
   const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
-     const file = e.target.files?.[0];
-     if (!file) return;
-
-     const reader = new FileReader();
-     reader.onload = (evt) => {
-        try {
-           const data = evt.target?.result;
-           const workbook = XLSX.read(data, { type: 'binary' });
-           const sheetName = workbook.SheetNames[0];
-           const sheet = workbook.Sheets[sheetName];
-           const jsonData = XLSX.utils.sheet_to_json<any>(sheet);
-
-           let updatedCount = 0;
-           setStudents(prev => {
-              const updated = [...prev];
-              jsonData.forEach(row => {
-                 const roll = row["Roll No"] || row["RollNo"] || row["Roll Number"] || row["rollNo"];
-                 const name = row["Name"] || row["Student Name"];
-                 const score = row["Score"] || row["Marks"];
-                 
-                 if (score !== undefined) {
-                    const studentIndex = updated.findIndex(s => 
-                       (roll && s.rollNo?.toString() === roll.toString()) || 
-                       (name && s.name?.toLowerCase() === name.toString().toLowerCase())
-                    );
-                    if (studentIndex >= 0) {
-                       const parsedScore = parseFloat(score);
-                       if (!isNaN(parsedScore) && parsedScore <= maxScore) {
-                          updated[studentIndex] = { ...updated[studentIndex], score: parsedScore.toString() };
-                          updatedCount++;
-                       }
-                    }
-                 }
-              });
-              return updated;
-           });
-           
-           toast.success(`Excel Imported: ${updatedCount} scores mapped.`);
-        } catch {
-           toast.error("Failed to parse Excel file.");
-        }
-        if (fileInputRef.current) fileInputRef.current.value = '';
-     };
-     reader.readAsBinaryString(file);
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const wb = XLSX.read(evt.target?.result, { type: "binary" });
+        const json = XLSX.utils.sheet_to_json<any>(wb.Sheets[wb.SheetNames[0]]);
+        let updated = 0;
+        setStudents(prev => {
+          const copy = [...prev];
+          json.forEach(row => {
+            const roll = row["Roll No"] || row["RollNo"] || row["rollNo"];
+            const name = row["Name"] || row["Student Name"];
+            const score = row["Score"] || row["Marks"];
+            if (score !== undefined) {
+              const idx = copy.findIndex(s =>
+                (roll && s.rollNo?.toString() === roll.toString()) ||
+                (name && s.name?.toLowerCase() === name.toString().toLowerCase())
+              );
+              if (idx >= 0) {
+                const p = parseFloat(score);
+                if (!isNaN(p) && p <= maxScore) { copy[idx] = { ...copy[idx], score: p.toString() }; updated++; }
+              }
+            }
+          });
+          return copy;
+        });
+        toast.success(`${updated} scores imported from Excel.`);
+      } catch { toast.error("Failed to parse Excel file."); }
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+    reader.readAsBinaryString(file);
   };
 
   const handleExportExcel = () => {
-     const data = students.map(s => ({
-        "Test Name": test.title,
-        "Class Name": test.className,
-        "Teacher Name": teacherData?.name || "Teacher",
-        "Roll No": s.rollNo,
-        "Student Name": s.name,
-        "Score": s.score || "",
-        "Total Marks": maxScore
-     }));
-
-     const worksheet = XLSX.utils.json_to_sheet(data);
-     const workbook = XLSX.utils.book_new();
-     XLSX.utils.book_append_sheet(workbook, worksheet, "Scores");
-     XLSX.writeFile(workbook, `${test.className}_${test.title}_Scores.xlsx`);
-     toast.success("Excel Template Downloaded!");
+    const data = students.map(s => ({
+      "Test Name": test.title, "Class Name": test.className,
+      "Roll No": s.rollNo, "Student Name": s.name,
+      "Score": s.score || "", "Total Marks": maxScore,
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Scores");
+    XLSX.writeFile(wb, `${test.className}_${test.title}_Scores.xlsx`);
+    toast.success("Excel exported!");
   };
 
-  const { avg, avgPct, distrib } = calculateStats();
-
+  // ── Save to Firebase ────────────────────────────────────────────────────
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Only save students that have been scored or marked absent.
-      // Saving ALL students would null-out any scores entered in a previous partial save session.
       const promises = students.filter(s => s.score !== "" || s.isAbsent).map(s => {
-         const scoreDocRef = doc(db, "test_scores", `${test.id}_${s.id}`);
-         const metrics = getMetrics(s.score);
-         return setDoc(scoreDocRef, {
-            testId: test.id,
-            testName: test.title,
-            studentId: s.id,
-            studentName: s.name,
-            studentEmail: s.email,
-            classId: test.classId,
-            teacherId: teacherData?.id,
-            schoolId: teacherData?.schoolId || "",
-            branchId: teacherData?.branchId || "",
-            score: s.score === "" ? null : parseFloat(s.score),
-            maxScore: maxScore,
-            percentage: metrics.pct,
-            grade: metrics.grade,
-            isAbsent: s.isAbsent,
-            timestamp: serverTimestamp()
-         });
+        const pct = s.score !== "" ? (parseFloat(s.score) / maxScore) * 100 : 0;
+        const g = s.score !== "" ? gradeInfo(parseFloat(s.score), maxScore) : null;
+        return setDoc(doc(db, "test_scores", `${test.id}_${s.id}`), {
+          testId: test.id, testName: test.title,
+          studentId: s.id, studentName: s.name, studentEmail: s.email,
+          classId: test.classId, teacherId: teacherData?.id,
+          schoolId: teacherData?.schoolId || "", branchId: teacherData?.branchId || "",
+          score: s.score === "" ? null : parseFloat(s.score),
+          maxScore, percentage: pct, grade: g?.label || "-",
+          isAbsent: s.isAbsent, timestamp: serverTimestamp(),
+        });
       });
-
       await Promise.all(promises);
-      
-      // Update Test Status
-      await updateDoc(doc(db, "tests", test.id), {
-         status: "Completed",
-         classAverage: avgPct
-      });
-
-      toast.success("Scores perfectly synced across all Dashboards!");
+      await updateDoc(doc(db, "tests", test.id), { status: "Completed", classAverage: avgPct });
+      toast.success("Scores saved successfully!");
       onBack();
-    } catch {
-      toast.error("Failed to sync scores matrix.");
-    } finally {
-      setSaving(false);
-    }
+    } catch { toast.error("Failed to save scores."); }
+    finally { setSaving(false); }
   };
 
+  // ── Pagination ──────────────────────────────────────────────────────────
   const filtered = students.filter(s => s.name?.toLowerCase().includes(search.toLowerCase()));
-  const totalStudents = filtered.length;
-  const totalPages = Math.ceil(totalStudents / itemsPerPage) || 1;
-  const paginatedStudents = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
+  const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  const getAvatarColor = (initials: string) => {
-    const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-purple-500', 'bg-indigo-500'];
-    const idx = initials.charCodeAt(0) % colors.length;
-    return colors[idx];
-  };
-
+  // ── Render ──────────────────────────────────────────────────────────────
   return (
-    <div className="animate-in fade-in duration-500 pb-20 text-left bg-transparent">
-      
-      {/* ── HEADER ── */}
-      <div className="flex flex-col md:flex-row justify-between mb-8">
-        <div>
-           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1 cursor-pointer hover:text-blue-600 transition-colors w-fit" onClick={onBack}>
-              <ChevronLeft className="w-3 h-3" /> RESULT OF CLICK: "ENTER TEST SCORES"
-           </p>
-           <h1 className="text-3xl font-black text-slate-800 tracking-tight leading-none mb-2">Enter Test Scores</h1>
-           <p className="text-sm font-semibold text-slate-500">{test.title} • {test.className} • {maxScore} marks</p>
+    <div style={{ minHeight: "100vh", background: T.bg }}>
+
+      {/* ═══ DARK HERO ═══════════════════════════════════════════════════ */}
+      <div className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8" style={{ background: T.hero }}>
+        <div style={{ padding: "10px 22px 0" }}>
+          {/* Back */}
+          <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", marginBottom: 10, padding: 0 }}>
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke={T.blue} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="8,2 3,6.5 8,11" />
+            </svg>
+            <span style={{ fontSize: 12, color: T.blue }}>Back to tests</span>
+          </button>
+
+          <p style={{ fontSize: 9, fontWeight: 500, color: "rgba(255,255,255,0.28)", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 5 }}>Enter scores</p>
+          <h1 style={{ fontSize: 22, fontWeight: 500, color: "#fff", letterSpacing: "-0.5px", lineHeight: 1.1 }}>
+            Enter test<br />scores
+          </h1>
+          <p style={{ fontSize: 11, color: "rgba(255,255,255,0.38)", marginTop: 5, display: "flex", alignItems: "center", gap: 6 }}>
+            {test.title || "Test"}
+            <span style={{ width: 3, height: 3, borderRadius: "50%", background: "rgba(255,255,255,0.3)" }} />
+            {test.className || "Class"}
+            <span style={{ width: 3, height: 3, borderRadius: "50%", background: "rgba(255,255,255,0.3)" }} />
+            {maxScore} marks
+          </p>
         </div>
-        <div className="flex items-center gap-6 mt-4 md:mt-0">
-           <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-slate-400">Class Average:</span>
-              <span className="text-lg font-black text-[#1e3272]">{avg.toFixed(1)}/{maxScore} ({avgPct.toFixed(0)}%)</span>
-           </div>
-           <button 
-              onClick={handleSave} 
-              disabled={saving} 
-              className="bg-[#22c55e] text-white px-6 py-2.5 rounded-lg text-sm font-semibold shadow-sm hover:bg-emerald-600 transition-all flex items-center gap-2 disabled:opacity-50"
-           >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin"/> : null} Save Scores
-           </button>
+
+        {/* Class avg + Save */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 22px 20px" }}>
+          <div>
+            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>Class average</p>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginTop: 2 }}>
+              <span style={{ fontSize: 16, fontWeight: 500, color: "#fff", letterSpacing: "-0.3px" }}>{avg.toFixed(1)}/{maxScore}</span>
+              <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>({avgPct.toFixed(0)}%)</span>
+            </div>
+          </div>
+          <button onClick={handleSave} disabled={saving} style={{
+            padding: "9px 16px", borderRadius: 11,
+            background: T.grn2, border: "none", color: "#fff",
+            fontSize: 12, fontWeight: 500, cursor: "pointer",
+            fontFamily: "inherit",
+            display: "flex", alignItems: "center", gap: 5,
+            opacity: saving ? 0.7 : 1,
+          }}>
+            {saving ? <Loader2 style={{ width: 12, height: 12 }} className="animate-spin" /> : (
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="1.6" strokeLinecap="round">
+                <polyline points="1.5,6.5 4.5,10 10.5,3" />
+              </svg>
+            )}
+            {saving ? "Saving..." : "Save scores"}
+          </button>
         </div>
       </div>
 
-      {/* ── STATS CARDS ── */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-         <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm text-center">
-            <h3 className="text-3xl font-black text-emerald-500 mb-1">{distrib.a}</h3>
-            <p className="text-xs font-semibold text-slate-500">A Grade (80%+)</p>
-         </div>
-         <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm text-center">
-            <h3 className="text-3xl font-black text-[#1e3272] mb-1">{distrib.b}</h3>
-            <p className="text-xs font-semibold text-slate-500">B Grade (60-79%)</p>
-         </div>
-         <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm text-center">
-            <h3 className="text-3xl font-black text-amber-500 mb-1">{distrib.c}</h3>
-            <p className="text-xs font-semibold text-slate-500">C Grade (40-59%)</p>
-         </div>
-         <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm text-center">
-            <h3 className="text-3xl font-black text-rose-500 mb-1">{distrib.d}</h3>
-            <p className="text-xs font-semibold text-slate-500">D Grade (&lt;40%)</p>
-         </div>
-         <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm text-center">
-            <h3 className="text-3xl font-black text-slate-400 mb-1">{distrib.absent}</h3>
-            <p className="text-xs font-semibold text-slate-500">Absent</p>
-         </div>
-      </div>
+      {/* ═══ BODY ════════════════════════════════════════════════════════ */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 11, paddingTop: 14 }}>
 
-      {/* ── STUDENT SCORES CONTAINER ── */}
-      <div className="bg-white border border-slate-100 rounded-2xl shadow-sm text-left overflow-hidden">
-         <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-slate-900 leading-tight">Student Scores</h2>
-            <div className="flex items-center gap-3">
-               <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                  <input type="text" value={search} onChange={(e)=>setSearch(e.target.value)} className="w-48 pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none" placeholder="Search student..." />
-               </div>
-               <button onClick={handleExportExcel} className="bg-[#1e3272] text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-blue-900 transition-colors shadow-sm">
-                  Export Template
-               </button>
-               <button onClick={() => fileInputRef.current?.click()} className="bg-white border border-slate-200 px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
-                  Import
-               </button>
-               <input type="file" ref={fileInputRef} accept=".xlsx, .xls, .csv" onChange={handleImportExcel} className="hidden" />
+        {/* Grade distribution label */}
+        <p style={{ fontSize: 10, fontWeight: 500, color: T.ink3, letterSpacing: "0.07em", textTransform: "uppercase", padding: "0 2px" }}>Grade distribution</p>
+
+        {/* Grade grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9 }}>
+          {[
+            { label: "A grade (80%+)", val: dist.a, color: T.grn2 },
+            { label: "B grade (60–79%)", val: dist.b, color: T.blue },
+            { label: "C grade (40–59%)", val: dist.c, color: T.amb },
+            { label: "D grade (<40%)", val: dist.d, color: T.red },
+          ].map(g => {
+            const maxBar = Math.max(dist.a, dist.b, dist.c, dist.d, 1);
+            return (
+              <div key={g.label} style={{ background: T.white, border: `1px solid ${T.bdr}`, borderRadius: 16, padding: 14 }}>
+                <p style={{ fontSize: 26, fontWeight: 500, color: g.color, letterSpacing: "-0.5px", lineHeight: 1, margin: 0 }}>{g.val}</p>
+                <p style={{ fontSize: 11, color: T.ink3, marginTop: 4 }}>{g.label}</p>
+                <div style={{ height: 3, borderRadius: 2, background: T.s2, marginTop: 8, overflow: "hidden" }}>
+                  <div style={{ height: "100%", borderRadius: 2, background: g.color, width: `${(g.val / maxBar) * 100}%`, transition: "width 0.3s" }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Absent card */}
+        <div style={{ background: T.white, border: `1px solid ${T.bdr}`, borderRadius: 16, padding: 14, display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 38, height: 38, borderRadius: 11, background: T.rlBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke={T.red} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M8 2L15 14H1L8 2z" /><line x1="8" y1="6.5" x2="8" y2="10" />
+              <circle cx="8" cy="12" r=".8" fill={T.red} stroke="none" />
+            </svg>
+          </div>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 22, fontWeight: 500, color: T.ink1, letterSpacing: "-0.4px", margin: 0 }}>{dist.absent}</p>
+            <p style={{ fontSize: 11, color: T.ink3, marginTop: 1 }}>Absent / not attempted</p>
+          </div>
+          <div style={{ width: 48, height: 5, borderRadius: 3, background: T.s2, overflow: "hidden" }}>
+            <div style={{ height: "100%", borderRadius: 3, background: T.red, width: `${students.length > 0 ? (dist.absent / students.length) * 100 : 0}%` }} />
+          </div>
+        </div>
+
+        {/* Student scores header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <p style={{ fontSize: 16, fontWeight: 500, color: T.ink1, letterSpacing: "-0.2px", margin: 0 }}>Student scores</p>
+            <p style={{ fontSize: 10, color: T.ink3, marginTop: 2 }}>{filtered.length} student{filtered.length !== 1 ? "s" : ""} · Click to enter marks</p>
+          </div>
+          <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+            {/* Search */}
+            <div style={{ position: "relative" }}>
+              <svg style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} width="12" height="12" viewBox="0 0 12 12" fill="none" stroke={T.ink3} strokeWidth="1.5" strokeLinecap="round">
+                <circle cx="5.5" cy="5.5" r="3.5" /><line x1="8" y1="8" x2="11" y2="11" />
+              </svg>
+              <input
+                value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+                placeholder="Search..."
+                style={{ width: 110, padding: "8px 10px 8px 28px", borderRadius: 10, border: `1px solid ${T.bdr}`, background: T.white, fontSize: 11, color: T.ink1, fontFamily: "inherit", outline: "none" }}
+              />
             </div>
-         </div>
+            {/* Export */}
+            <button onClick={handleExportExcel} style={{
+              padding: "8px 11px", borderRadius: 10, background: T.ink1,
+              border: "none", color: "#fff", fontSize: 10, fontWeight: 500,
+              cursor: "pointer", fontFamily: "inherit",
+              display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap",
+            }}>
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="#fff" strokeWidth="1.5" strokeLinecap="round">
+                <polyline points="5.5,2 5.5,8" /><polyline points="3,6 5.5,8.5 8,6" /><line x1="1.5" y1="10" x2="9.5" y2="10" />
+              </svg>
+              Export
+            </button>
+          </div>
+        </div>
 
-         {loading ? (
-            <div className="py-20 flex flex-col items-center justify-center">
-               <Loader2 className="w-8 h-8 text-[#1e3272] animate-spin mb-4" />
-               <p className="text-sm font-medium text-slate-500">Loading roster...</p>
+        {/* Hidden file input for import */}
+        <input type="file" ref={fileInputRef} accept=".xlsx,.xls,.csv" onChange={handleImportExcel} style={{ display: "none" }} />
+
+        {/* Student cards */}
+        {loading ? (
+          <div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}>
+            <Loader2 style={{ width: 24, height: 24, color: T.blue }} className="animate-spin" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "40px 14px", fontSize: 12, color: T.ink3 }}>No students found</div>
+        ) : (
+          paginated.map(s => {
+            const av = avStyle(s.name || "S");
+            const hasScore = s.score !== "" && !isNaN(parseFloat(s.score));
+            const scoreVal = hasScore ? parseFloat(s.score) : 0;
+            const pct = hasScore ? Math.round((scoreVal / maxScore) * 100) : 0;
+            const g = hasScore ? gradeInfo(scoreVal, maxScore) : null;
+
+            return (
+              <div key={s.id} style={{ background: T.white, border: `1px solid ${T.bdr}`, borderRadius: 17, overflow: "hidden" }}>
+                {/* Color band */}
+                <div style={{ height: 3, background: s.isAbsent ? T.red : g ? g.band : T.s2 }} />
+
+                <div style={{ padding: 14 }}>
+                  {/* Top: avatar + name + badge */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                    <div style={{
+                      width: 40, height: 40, borderRadius: 12,
+                      background: av.bg, color: av.c,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 12, fontWeight: 500, flexShrink: 0,
+                    }}>
+                      {getInitials(s.name)}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 14, fontWeight: 500, color: T.ink1, margin: 0 }}>{s.name}</p>
+                      <p style={{ fontSize: 11, color: T.ink3, marginTop: 2 }}>Roll: {s.rollNo}{s.className ? ` · ${s.className}` : ""}</p>
+                    </div>
+                    <span style={{
+                      padding: "3px 8px", borderRadius: 20, fontSize: 10, fontWeight: 500,
+                      background: s.isAbsent ? T.rlBg : g ? g.bg : T.s2,
+                      color: s.isAbsent ? T.red : g ? g.color : T.ink3,
+                    }}>
+                      {s.isAbsent ? "Absent" : hasScore ? `${scoreVal}/${maxScore}` : "Not entered"}
+                    </span>
+                  </div>
+
+                  {/* Score input */}
+                  <div style={{ marginBottom: 10 }}>
+                    <p style={{ fontSize: 9, fontWeight: 500, color: T.ink3, letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 6 }}>
+                      Score — {test.title || "Test"}
+                    </p>
+                    <div style={{ position: "relative" }}>
+                      <input
+                        type="number"
+                        min={0} max={maxScore}
+                        value={s.score}
+                        disabled={s.isAbsent}
+                        onChange={e => handleScoreChange(s.id, e.target.value)}
+                        placeholder="Enter score"
+                        style={{
+                          width: "100%", padding: "10px 40px 10px 12px",
+                          borderRadius: 11, border: `1px solid ${T.bdr}`,
+                          background: T.s1, fontSize: 15, fontWeight: 500,
+                          color: T.ink1, fontFamily: "inherit", outline: "none",
+                          opacity: s.isAbsent ? 0.4 : 1,
+                        }}
+                      />
+                      <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontSize: 11, fontWeight: 500, color: T.ink3, pointerEvents: "none" }}>
+                        /{maxScore}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Grade bar (shown when score entered) */}
+                  {hasScore && g && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                      <span style={{ padding: "5px 10px", borderRadius: 20, fontSize: 11, fontWeight: 500, background: g.bg, color: g.color }}>
+                        Grade {g.label}
+                      </span>
+                      <div style={{ flex: 1, height: 5, borderRadius: 3, background: T.s2, overflow: "hidden" }}>
+                        <div style={{ height: "100%", borderRadius: 3, background: g.band, width: `${pct}%`, transition: "width 0.3s" }} />
+                      </div>
+                      <span style={{ fontSize: 11, fontWeight: 500, color: T.ink3 }}>{pct}%</span>
+                    </div>
+                  )}
+
+                  {/* Note input */}
+                  <input
+                    placeholder="Add note (optional)..."
+                    style={{
+                      width: "100%", padding: "8px 12px", borderRadius: 10,
+                      border: `1px solid ${T.bdr}`, background: T.s1,
+                      fontSize: 11, color: T.ink3, fontFamily: "inherit", outline: "none",
+                    }}
+                  />
+
+                  {/* Absent toggle */}
+                  <div onClick={() => toggleAbsent(s.id)} style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, cursor: "pointer" }}>
+                    <div style={{
+                      width: 18, height: 18, borderRadius: 6,
+                      border: s.isAbsent ? "none" : `1.5px solid ${T.bdr}`,
+                      background: s.isAbsent ? T.red : T.s1,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      transition: "background 80ms",
+                    }}>
+                      {s.isAbsent && (
+                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
+                          <polyline points="1.5,5 4,8 8.5,2" />
+                        </svg>
+                      )}
+                    </div>
+                    <span style={{ fontSize: 11, color: T.ink3 }}>Mark as absent</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+
+        {/* Pager */}
+        {!loading && filtered.length > 0 && (
+          <div style={{
+            background: T.white, border: `1px solid ${T.bdr}`, borderRadius: 14,
+            padding: "11px 13px", display: "flex", alignItems: "center", justifyContent: "space-between",
+          }}>
+            <span style={{ fontSize: 11, color: T.ink3 }}>
+              Showing {Math.min(filtered.length, (currentPage - 1) * itemsPerPage + 1)} – {Math.min(filtered.length, currentPage * itemsPerPage)} of {filtered.length}
+            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => p - 1)}
+                style={{
+                  width: 28, height: 28, borderRadius: 8,
+                  border: `1px solid ${T.bdr}`, background: T.s1,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: currentPage === 1 ? "default" : "pointer",
+                  opacity: currentPage === 1 ? 0.4 : 1,
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke={T.ink2} strokeWidth="1.6" strokeLinecap="round"><polyline points="8,2 4,6 8,10" /></svg>
+              </button>
+              <div style={{
+                width: 28, height: 28, borderRadius: 8, background: T.ink1,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 12, fontWeight: 500, color: "#fff",
+              }}>
+                {currentPage}
+              </div>
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(p => p + 1)}
+                style={{
+                  width: 28, height: 28, borderRadius: 8,
+                  border: `1px solid ${T.bdr}`, background: T.s1,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: currentPage === totalPages ? "default" : "pointer",
+                  opacity: currentPage === totalPages ? 0.4 : 1,
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke={T.ink2} strokeWidth="1.6" strokeLinecap="round"><polyline points="4,2 8,6 4,10" /></svg>
+              </button>
             </div>
-         ) : (
-            <div className="p-6">
-               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {paginatedStudents.map((student) => {
-                     const metrics = getMetrics(student.score);
+          </div>
+        )}
 
-                     return (
-                        <div key={student.id} className="bg-white border border-slate-100 rounded-2xl p-5 hover:border-slate-300 transition-colors flex flex-col items-start shadow-sm relative overflow-hidden">
-                           <div className="flex items-center gap-4 mb-4">
-                              <div className={`w-11 h-11 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-sm ${getAvatarColor(student.initials)}`}>
-                                 {student.initials}
-                              </div>
-                              <div>
-                                 <h3 className="text-[15px] font-bold text-slate-900 leading-tight truncate">{student.name}</h3>
-                                 <p className="text-xs text-slate-500 mt-1">{student.rollNo}</p>
-                              </div>
-                           </div>
-                           
-                           <div className="w-full relative mb-4">
-                              <input
-                                 type="number"
-                                 value={student.score}
-                                 min={0}
-                                 max={maxScore}
-                                 step="0.5"
-                                 onChange={(e) => handleScoreChange(student.id, e.target.value)}
-                                 className="w-full block py-2 px-3 bg-white border border-slate-200 rounded-lg text-sm font-bold focus:outline-none focus:border-blue-500"
-                              />
-                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 select-none">/{maxScore}</span>
-                           </div>
-
-                           <div className="w-full flex items-center justify-between mt-auto">
-                              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border ${metrics.color}`}>
-                                 {metrics.grade}
-                              </div>
-                              <span className={`text-[15px] font-black ${metrics.text}`}>
-                                 {student.score ? `${metrics.pct.toFixed(0)}%` : '-'}
-                              </span>
-                           </div>
-                        </div>
-                     );
-                  })}
-               </div>
-            </div>
-         )}
-
-         {/* ── PAGINATION ── */}
-         {!loading && totalStudents > 0 && (
-            <div className="p-6 border-t border-slate-100 flex items-center justify-between">
-               <p className="text-sm font-medium text-slate-500">
-                  Showing {Math.min(totalStudents, (currentPage - 1) * itemsPerPage + 1)} - {Math.min(totalStudents, currentPage * itemsPerPage)} of {totalStudents} students
-               </p>
-               <div className="flex items-center gap-1.5">
-                  <button 
-                     disabled={currentPage === 1}
-                     onClick={() => setCurrentPage(prev => prev - 1)}
-                     className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                  >
-                     Previous
-                  </button>
-                  {[...Array(totalPages)].map((_, i) => (
-                     <button 
-                        key={i} 
-                        onClick={() => setCurrentPage(i + 1)}
-                        className={`w-9 h-9 rounded-lg text-sm font-medium flex items-center justify-center transition-colors ${currentPage === i + 1 ? 'bg-[#1e3272] text-white' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}
-                     >
-                        {i + 1}
-                     </button>
-                  ))}
-                  <button 
-                     disabled={currentPage === totalPages}
-                     onClick={() => setCurrentPage(prev => prev + 1)}
-                     className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                  >
-                     Next
-                  </button>
-               </div>
-            </div>
-         )}
+        <div style={{ height: 8 }} />
       </div>
     </div>
   );
