@@ -9,6 +9,7 @@
 
     <!-- PWA meta tags -->
     <meta name="theme-color" content="#1e3272" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://apis.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://*.cloudfunctions.net wss://*.firebaseio.com https://unpkg.com; frame-src https://*.firebaseapp.com https://accounts.google.com;" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="EduIntellect" />
@@ -28,6 +29,11 @@
     <meta property="og:description" content="AI-powered teacher dashboard for managing students, classes, attendance, grades, and communication." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary" />
+
+    <!-- Google Fonts (non-blocking) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" />
   </head>
 
   <body>

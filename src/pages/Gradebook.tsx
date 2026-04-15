@@ -7,7 +7,8 @@ import {
 import { useAuth } from "../lib/AuthContext";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import * as XLSX from "xlsx";
+// xlsx loaded dynamically to reduce bundle size (~500KB)
+const loadXLSX = () => import("xlsx");
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface ClassData { id: string; name: string; classId: string; [key: string]: any; }
@@ -312,6 +313,7 @@ export default function Gradebook() {
       const pct = totalMax > 0 ? (earned / totalMax) * 100 : 0;
       return [stu.name, ...columns.map(c => localScores[`${(stu.email || stu.id).toLowerCase()}_${c.id}`] || ""), earned, getGrade(pct)];
     });
+    const XLSX = await loadXLSX();
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Gradebook");

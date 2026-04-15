@@ -11,7 +11,7 @@ import {
   Download, Edit2, Check, X
 } from "lucide-react";
 import { toast } from "sonner";
-import * as XLSX from "xlsx";
+const loadXLSX = () => import("xlsx");
 
 const ITEMS_PER_PAGE = 5;
 
@@ -193,6 +193,8 @@ const ClassDetail = () => {
         "Avg Score": s.avg,
         "Status": s.status,
       }));
+      const XLSX = await loadXLSX();
+
       const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Students");

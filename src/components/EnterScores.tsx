@@ -4,7 +4,7 @@ import { collection, query, where, onSnapshot, getDocs, doc, setDoc, serverTimes
 import { useAuth } from "../lib/AuthContext";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import * as XLSX from "xlsx";
+const loadXLSX = () => import("xlsx");
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const T = {
@@ -149,42 +149,41 @@ export default function EnterScores({ test, onBack }: EnterScoresProps) {
   const { avg, avgPct, dist, count: scoredCount } = calcStats();
 
   // ── Import/Export Excel ─────────────────────────────────────────────────
-  const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const wb = XLSX.read(evt.target?.result, { type: "binary" });
-        const json = XLSX.utils.sheet_to_json<any>(wb.Sheets[wb.SheetNames[0]]);
-        let updated = 0;
-        setStudents(prev => {
-          const copy = [...prev];
-          json.forEach(row => {
-            const roll = row["Roll No"] || row["RollNo"] || row["rollNo"];
-            const name = row["Name"] || row["Student Name"];
-            const score = row["Score"] || row["Marks"];
-            if (score !== undefined) {
-              const idx = copy.findIndex(s =>
-                (roll && s.rollNo?.toString() === roll.toString()) ||
-                (name && s.name?.toLowerCase() === name.toString().toLowerCase())
-              );
-              if (idx >= 0) {
-                const p = parseFloat(score);
-                if (!isNaN(p) && p <= maxScore) { copy[idx] = { ...copy[idx], score: p.toString() }; updated++; }
-              }
+    try {
+      const XLSX = await loadXLSX();
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: "array" });
+      const json = XLSX.utils.sheet_to_json<any>(wb.Sheets[wb.SheetNames[0]]);
+      let updated = 0;
+      setStudents(prev => {
+        const copy = [...prev];
+        json.forEach(row => {
+          const roll = row["Roll No"] || row["RollNo"] || row["rollNo"];
+          const name = row["Name"] || row["Student Name"];
+          const score = row["Score"] || row["Marks"];
+          if (score !== undefined) {
+            const idx = copy.findIndex(s =>
+              (roll && s.rollNo?.toString() === roll.toString()) ||
+              (name && s.name?.toLowerCase() === name.toString().toLowerCase())
+            );
+            if (idx >= 0) {
+              const p = parseFloat(score);
+              if (!isNaN(p) && p <= maxScore) { copy[idx] = { ...copy[idx], score: p.toString() }; updated++; }
             }
-          });
-          return copy;
+          }
         });
-        toast.success(`${updated} scores imported from Excel.`);
-      } catch { toast.error("Failed to parse Excel file."); }
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    };
-    reader.readAsBinaryString(file);
+        return copy;
+      });
+      toast.success(`${updated} scores imported from Excel.`);
+    } catch { toast.error("Failed to parse Excel file."); }
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
+    const XLSX = await loadXLSX();
     const data = students.map(s => ({
       "Test Name": test.title, "Class Name": test.className,
       "Roll No": s.rollNo, "Student Name": s.name,

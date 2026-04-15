@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { GraduationCap, Loader2, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
 const Login = () => {
   const { loginWithGoogle, loading, error } = useAuth();
@@ -12,7 +13,7 @@ const Login = () => {
       await loginWithGoogle();
     } catch (err: any) {
       if (err.code !== 'auth/popup-closed-by-user') {
-        alert("Login failed. Please try again.");
+        toast.error("Login failed. Please try again.");
       }
     } finally {
       setIsLoggingIn(false);

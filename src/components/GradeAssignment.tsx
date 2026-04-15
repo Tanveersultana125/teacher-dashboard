@@ -5,7 +5,7 @@ import { db } from "../lib/firebase";
 import { collection, query, where, onSnapshot, doc, setDoc, getDocs, serverTimestamp, updateDoc } from "firebase/firestore";
 import { useAuth } from "../lib/AuthContext";
 import { toast } from "sonner";
-import * as XLSX from 'xlsx';
+const loadXLSX = () => import("xlsx");
 
 interface GradeAssignmentProps {
   assignment: any;

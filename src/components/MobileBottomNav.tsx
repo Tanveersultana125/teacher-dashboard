@@ -100,7 +100,9 @@ const MobileBottomNav = () => {
               background: "none",
               border: "none",
               cursor: "pointer",
-              padding: "2px 8px",
+              padding: "6px 12px",
+              minHeight: 44,
+              minWidth: 44,
               WebkitTapHighlightColor: "transparent",
             }}
           >

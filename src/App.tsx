@@ -1,29 +1,41 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import TeacherLayout from "./components/TeacherLayout";
-import Dashboard from "./pages/Dashboard";
-import MyClasses from "./pages/MyClasses";
-import ClassDetail from "./pages/ClassDetail";
-import Attendance from "./pages/Attendance";
-import Assignments from "./pages/Assignments";
-import TestsExams from "./pages/TestsExams";
-import Students from "./pages/Students";
-import Gradebook from "./pages/Gradebook";
-import ConceptMastery from "./pages/ConceptMastery";
-import RisksAlerts from "./pages/RisksAlerts";
-import ParentNotes from "./pages/ParentNotes";
-import PrincipalNotes from "./pages/PrincipalNotes";
-import Reports from "./pages/Reports";
-import SettingsPage from "./pages/SettingsPage";
-import LessonPlanGenerator from "./pages/LessonPlanGenerator";
-import SummarizeLesson from "./pages/SummarizeLesson";
-import NotFound from "./pages/NotFound";
-import Login from "./pages/Login";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "./lib/AuthContext";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { OfflineBanner } from "./components/OfflineBanner";
 import { GraduationCap, Loader2 } from "lucide-react";
+import TeacherLayout from "./components/TeacherLayout";
+
+// ── Lazy-loaded pages (code splitting) ────────────────────────────────────────
+const Dashboard          = lazy(() => import("./pages/Dashboard"));
+const MyClasses          = lazy(() => import("./pages/MyClasses"));
+const ClassDetail        = lazy(() => import("./pages/ClassDetail"));
+const Attendance         = lazy(() => import("./pages/Attendance"));
+const Assignments        = lazy(() => import("./pages/Assignments"));
+const TestsExams         = lazy(() => import("./pages/TestsExams"));
+const Students           = lazy(() => import("./pages/Students"));
+const Gradebook          = lazy(() => import("./pages/Gradebook"));
+const ConceptMastery     = lazy(() => import("./pages/ConceptMastery"));
+const RisksAlerts        = lazy(() => import("./pages/RisksAlerts"));
+const ParentNotes        = lazy(() => import("./pages/ParentNotes"));
+const PrincipalNotes     = lazy(() => import("./pages/PrincipalNotes"));
+const Reports            = lazy(() => import("./pages/Reports"));
+const SettingsPage       = lazy(() => import("./pages/SettingsPage"));
+const LessonPlanGenerator = lazy(() => import("./pages/LessonPlanGenerator"));
+const SummarizeLesson    = lazy(() => import("./pages/SummarizeLesson"));
+const NotFound           = lazy(() => import("./pages/NotFound"));
+const Login              = lazy(() => import("./pages/Login"));
+
+// ── Page loader ───────────────────────────────────────────────────────────────
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <Loader2 className="w-8 h-8 animate-spin text-[#1e3272]" />
+  </div>
+);
 
 const queryClient = new QueryClient();
 
@@ -45,31 +57,37 @@ const AppRoutes = () => {
   }
 
   if (!user) {
-    return <Login />;
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <Login />
+      </Suspense>
+    );
   }
 
   return (
-    <Routes>
-      <Route element={<TeacherLayout />}>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/my-classes" element={<MyClasses />} />
-        <Route path="/my-classes/:classId" element={<ClassDetail />} />
-        <Route path="/attendance" element={<Attendance />} />
-        <Route path="/assignments" element={<Assignments />} />
-        <Route path="/tests" element={<TestsExams />} />
-        <Route path="/students" element={<Students />} />
-        <Route path="/gradebook" element={<Gradebook />} />
-        <Route path="/concept-mastery" element={<ConceptMastery />} />
-        <Route path="/risks-alerts" element={<RisksAlerts />} />
-        <Route path="/parent-notes" element={<ParentNotes />} />
-        <Route path="/principal-notes" element={<PrincipalNotes />} />
-        <Route path="/reports" element={<Reports />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/lesson-planner" element={<LessonPlanGenerator />} />
-        <Route path="/summarize-lesson" element={<SummarizeLesson />} />
-      </Route>
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        <Route element={<TeacherLayout />}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/my-classes" element={<MyClasses />} />
+          <Route path="/my-classes/:classId" element={<ClassDetail />} />
+          <Route path="/attendance" element={<Attendance />} />
+          <Route path="/assignments" element={<Assignments />} />
+          <Route path="/tests" element={<TestsExams />} />
+          <Route path="/students" element={<Students />} />
+          <Route path="/gradebook" element={<Gradebook />} />
+          <Route path="/concept-mastery" element={<ConceptMastery />} />
+          <Route path="/risks-alerts" element={<RisksAlerts />} />
+          <Route path="/parent-notes" element={<ParentNotes />} />
+          <Route path="/principal-notes" element={<PrincipalNotes />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/lesson-planner" element={<LessonPlanGenerator />} />
+          <Route path="/summarize-lesson" element={<SummarizeLesson />} />
+        </Route>
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Suspense>
   );
 };
 
@@ -80,7 +98,10 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <AppRoutes />
+          <ErrorBoundary>
+            <OfflineBanner />
+            <AppRoutes />
+          </ErrorBoundary>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>

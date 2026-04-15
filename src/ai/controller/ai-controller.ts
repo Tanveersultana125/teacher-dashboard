@@ -102,7 +102,8 @@ export const AIController = {
         const getInsights = httpsCallable(functions, 'getTeacherAIInsights', { timeout: 120000 });
         const result: any = await getInsights({ type: "lesson_summary", payload: data });
 
-        console.log("[Summary] Firebase raw response:", result.data);
+        // response logged in dev only
+        if (import.meta.env.DEV) console.debug("[Summary] response received");
 
         if (!result?.data) return { status: "error", message: "No response from AI service." };
         if (result.data.status === "error") return { status: "error", message: result.data.message || ERROR_MSG };
@@ -122,7 +123,7 @@ export const AIController = {
         const getInsights = httpsCallable(functions, 'getTeacherAIInsights', { timeout: 120000 });
         const result: any = await getInsights({ type: "lesson_plan_generation", payload: data });
 
-        console.log("[LessonPlan] Firebase raw response:", result.data);
+        if (import.meta.env.DEV) console.debug("[LessonPlan] response received");
 
         // Firebase function itself may return { status: "error" } without throwing
         if (!result?.data) {

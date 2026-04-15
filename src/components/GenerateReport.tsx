@@ -27,7 +27,7 @@ import { AIController } from "../ai/controller/ai-controller";
 import { db } from "../lib/firebase";
 import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc } from "firebase/firestore";
 import { useAuth } from "../lib/AuthContext";
-import * as XLSX from 'xlsx';
+const loadXLSX = () => import("xlsx");
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 interface GenerateReportProps {
@@ -340,6 +340,8 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
 
   const handleDownload = () => {
      if (params.format === 'excel') {
+        const XLSX = await loadXLSX();
+
         const ws = XLSX.utils.json_to_sheet(reportResult.fullList || [reportResult]);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Institutional Merit");
