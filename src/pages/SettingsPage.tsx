@@ -1,12 +1,34 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { useAuth } from "../lib/AuthContext";
 import { db } from "../lib/firebase";
 import { doc, updateDoc } from "firebase/firestore";
 import { toast } from "sonner";
-import { 
-  User, Bell, Settings, ShieldCheck, Mail, Phone, 
-  BookOpen, Globe, Layout, Clock, Save, X, Loader2, TrendingUp
-} from "lucide-react";
+
+// ── Design tokens ─────────────────────────────────────────────────────────────
+const T = {
+  hero:  "#08090C",
+  bg:    "#F5F6F9",
+  white: "#ffffff",
+  ink1:  "#08090C",
+  ink2:  "#42475A",
+  ink3:  "#8C92A4",
+  s1:    "#F5F6F9",
+  s2:    "#ECEEF4",
+  bdr:   "#E2E5EE",
+  blue:  "#3B5BDB",
+  blBg:  "#EDF2FF",
+  blBdr: "#BAC8FF",
+  grn:   "#087F5B",
+  glBg:  "#EBFBEE",
+  red:   "#C92A2A",
+  rlBg:  "#FFF5F5",
+  rlBdr: "#FFC9C9",
+  amb:   "#C87014",
+  alBg:  "#FFF9DB",
+  tea:   "#0C8599",
+  tlBg:  "#E3FAFC",
+};
 
 interface NotificationSettings {
   assignments: boolean;
@@ -16,29 +38,41 @@ interface NotificationSettings {
   risks: boolean;
 }
 
+// ── Shared styles ─────────────────────────────────────────────────────────────
+const inputS: React.CSSProperties = {
+  width: "100%", padding: "10px 12px", borderRadius: 11,
+  border: `1px solid ${T.bdr}`, background: T.s1,
+  fontSize: 13, color: T.ink1, fontFamily: "inherit", outline: "none",
+};
+const selectS: React.CSSProperties = {
+  ...inputS, appearance: "none" as const, cursor: "pointer", paddingRight: 30,
+};
+const labelS: React.CSSProperties = {
+  display: "flex", alignItems: "center", gap: 5,
+  fontSize: 9, fontWeight: 500, color: T.ink3,
+  letterSpacing: "0.07em", textTransform: "uppercase" as const,
+  marginBottom: 7,
+};
+const chevDown = (
+  <svg style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" as const }}
+    width="12" height="12" viewBox="0 0 12 12" fill="none" stroke={T.ink3} strokeWidth="1.5" strokeLinecap="round">
+    <polyline points="2,4 6,8 10,4" />
+  </svg>
+);
+
+// ── Component ─────────────────────────────────────────────────────────────────
 const SettingsPage = () => {
-  const { teacherData } = useAuth();
+  const { teacherData, logout } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
-  
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    subject: ""
-  });
+
+  const [formData, setFormData] = useState({ name: "", email: "", phone: "", subject: "" });
 
   const [notifications, setNotifications] = useState<NotificationSettings>({
-    assignments: true,
-    grading: true,
-    attendance: true,
-    messages: true,
-    risks: true
+    assignments: true, grading: true, attendance: true, messages: true, risks: true,
   });
 
   const [preferences, setPreferences] = useState({
-    defaultView: "Grid",
-    gradeScale: "Percentage",
-    dateFormat: "DD/MM/YYYY"
+    defaultView: "Grid", gradeScale: "Percentage", dateFormat: "DD/MM/YYYY", language: "English",
   });
 
   useEffect(() => {
@@ -47,181 +81,354 @@ const SettingsPage = () => {
         name: teacherData.name || "",
         email: teacherData.email || "",
         phone: teacherData.phone || "",
-        subject: teacherData.subject || ""
+        subject: teacherData.subject || "",
       });
-      if (teacherData.notifications) {
-        setNotifications(teacherData.notifications);
-      }
-      if (teacherData.preferences) {
-        setPreferences(teacherData.preferences);
-      }
+      if (teacherData.notifications) setNotifications(teacherData.notifications);
+      if (teacherData.preferences) setPreferences(teacherData.preferences);
     }
   }, [teacherData]);
 
+  // ── Handlers ────────────────────────────────────────────────────────────
   const handleSave = async () => {
     if (!teacherData?.id) return;
     setIsSaving(true);
-
     try {
-      const docRef = doc(db, "teachers", teacherData.id);
-      const updatePayload = {
-        name: formData.name,
-        phone: formData.phone,
-        notifications: notifications,
-        preferences: preferences,
-        updatedAt: new Date().toISOString()
-      };
-
-      await updateDoc(docRef, updatePayload);
-
-      // No need to manually update local state; AuthContext has an onSnapshot listener
-      // that will automatically detect this change and update the teacherData globally.
-
+      await updateDoc(doc(db, "teachers", teacherData.id), {
+        name: formData.name, phone: formData.phone,
+        notifications, preferences,
+        updatedAt: new Date().toISOString(),
+      });
       toast.success("Settings saved.");
-    } catch (error) {
-      console.error("Settings Update Error:", error);
+    } catch {
       toast.error("Failed to save settings.");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const toggleNotification = (key: keyof NotificationSettings) => {
-    setNotifications(prev => ({ ...prev, [key]: !prev[key] }));
+  const handleReset = () => {
+    if (!teacherData) return;
+    setFormData({ name: teacherData.name || "", email: teacherData.email || "", phone: teacherData.phone || "", subject: teacherData.subject || "" });
+    setNotifications({ assignments: true, grading: true, attendance: true, messages: true, risks: true });
+    toast.info("Form reset.");
   };
 
-  return (
-    <div className="space-y-8 text-left pb-12">
+  const toggleNotif = (key: keyof NotificationSettings) =>
+    setNotifications(prev => ({ ...prev, [key]: !prev[key] }));
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div>
-          <h1 className="ds-page-title">Settings</h1>
-          <p className="ds-page-subtitle">Manage your profile, notifications, and preferences.</p>
+  const allNotifsOn = Object.values(notifications).every(Boolean);
+
+  const toggleAllNotifs = () => {
+    const newVal = !allNotifsOn;
+    setNotifications({ assignments: newVal, grading: newVal, attendance: newVal, messages: newVal, risks: newVal });
+  };
+
+  const initials = (() => {
+    const n = formData.name || "T";
+    const p = n.trim().split(" ");
+    return (p.length >= 2 ? p[0][0] + p[1][0] : p[0][0]).toUpperCase();
+  })();
+
+  // ── Render ──────────────────────────────────────────────────────────────
+  return (
+    <div style={{ minHeight: "100vh", background: T.bg }}>
+
+      {/* ═══ DARK HERO ═══════════════════════════════════════════════════ */}
+      <div className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8" style={{ background: T.hero }}>
+        <div style={{ padding: "18px 22px 0" }}>
+          <p style={{ fontSize: 9, fontWeight: 500, color: "rgba(255,255,255,0.28)", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 5 }}>
+            Preferences
+          </p>
+          <h1 style={{ fontSize: 21, fontWeight: 500, color: "#fff", letterSpacing: "-0.4px", lineHeight: 1.1 }}>Settings</h1>
+          <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>
+            Manage your profile, notifications and preferences.
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => window.location.reload()}
-            className="ds-btn-secondary"
-          >
-            <X className="w-4 h-4" /> Reset
+
+        {/* Save + Reset buttons */}
+        <div style={{ display: "flex", gap: 8, padding: "18px 22px 18px" }}>
+          <button onClick={handleReset} style={{
+            padding: "11px 14px", borderRadius: 12,
+            background: "rgba(255,255,255,0.08)",
+            border: "1px solid rgba(255,255,255,0.14)",
+            color: "rgba(255,255,255,0.7)", fontSize: 12, fontWeight: 500,
+            cursor: "pointer", fontFamily: "inherit",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+          }}>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11,5 A5,5 0 1,1 8.5,1.5" /><polyline points="8.5,0 8.5,2 10.5,2" />
+            </svg>
+            Reset
           </button>
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="ds-btn-primary disabled:opacity-50"
-          >
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {isSaving ? "Saving..." : "Save Changes"}
+          <button onClick={handleSave} disabled={isSaving} style={{
+            flex: 1, padding: "11px", borderRadius: 12,
+            background: T.blue, border: "none", color: "#fff",
+            fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            opacity: isSaving ? 0.7 : 1,
+          }}>
+            {isSaving ? (
+              <Loader2 style={{ width: 12, height: 12 }} className="animate-spin" />
+            ) : (
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="1.5,6.5 4.5,10 10.5,2.5" />
+              </svg>
+            )}
+            {isSaving ? "Saving..." : "Save changes"}
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* ═══ BODY ════════════════════════════════════════════════════════ */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 11, paddingTop: 14 }}>
 
-        {/* Profile */}
-        <div className="ds-card p-6 sm:p-8">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-[#1e3272]">
-              <User size={18} />
+        {/* ── PROFILE ──────────────────────────────────────────────────── */}
+        <SectionCard title="Profile" iconBg={T.blBg} iconColor={T.blue}
+          icon={<><circle cx="6.5" cy="4.5" r="2.5" /><path d="M1.5 11.5s1-3 5-3 5 3 5 3" /></>}
+          right={<span style={{ fontSize: 10, color: T.blue, fontWeight: 500, cursor: "pointer" }}>Edit photo</span>}
+        >
+          {/* Avatar row */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: 14, borderBottom: `1px solid ${T.s2}` }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: 17,
+              background: T.blBg, border: `2px solid ${T.blBdr}`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 17, fontWeight: 500, color: T.blue, flexShrink: 0,
+            }}>
+              {initials}
             </div>
-            <h2 className="text-base font-semibold text-slate-800">Profile</h2>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 15, fontWeight: 500, color: T.ink1, margin: 0 }}>{formData.name || "Teacher"}</p>
+              <p style={{ fontSize: 11, color: T.ink3, marginTop: 2 }}>{formData.email}</p>
+            </div>
+            <button style={{
+              padding: "7px 12px", borderRadius: 10,
+              border: `1px solid ${T.bdr}`, background: T.s1,
+              fontSize: 11, fontWeight: 500, color: T.blue,
+              cursor: "pointer", fontFamily: "inherit",
+            }}>
+              Edit
+            </button>
           </div>
-          <div className="space-y-5">
-            <InputField label="Name" icon={User} value={formData.name} onChange={(v: string) => setFormData({...formData, name: v})} />
-            <InputField label="Email" icon={Mail} value={formData.email} disabled desc="Managed by school admin" />
-            <InputField label="Phone" icon={Phone} value={formData.phone} onChange={(v: string) => setFormData({...formData, phone: v})} />
-            <InputField label="Subject" icon={BookOpen} value={formData.subject} disabled desc="Set by school admin" />
+
+          {/* Name */}
+          <FormRow label="Name" icon={<><circle cx="6" cy="4" r="2.5" /><path d="M1.5 10.5s1-3 4.5-3 4.5 3 4.5 3" /></>}>
+            <input style={inputS} value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Your name" />
+          </FormRow>
+
+          {/* Email */}
+          <FormRow label="Email" icon={<><rect x="1" y="2.5" width="10" height="7" rx="1.5" /><polyline points="1,4.5 6,7 11,4.5" /></>}>
+            <input style={{ ...inputS, color: T.ink3, cursor: "not-allowed" }} value={formData.email} disabled />
+            <Hint text="Managed by school admin" />
+          </FormRow>
+
+          {/* Phone */}
+          <FormRow label="Phone" icon={<path d="M2,3 C2,3 3,2 4.5,2.5 L5.5,4.5 C5.5,4.5 5,5 4.5,5.5 C5,6.5 6,7.5 7,8 C7.5,7.5 8,7 8,7 L10,8 C10.5,10 9.5,10 9.5,10 C7.5,11 2,7 2,3Z" />}>
+            <input style={inputS} value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} placeholder="Phone number" />
+          </FormRow>
+
+          {/* Subject */}
+          <FormRow label="Subject" icon={<><rect x="1.5" y="1" width="9" height="10" rx="1.5" /><line x1="3.5" y1="4.5" x2="8.5" y2="4.5" /><line x1="3.5" y1="7" x2="6.5" y2="7" /></>} last>
+            <input style={{ ...inputS, color: T.ink3, cursor: "not-allowed" }} value={formData.subject} disabled />
+            <Hint text="Set by school admin" />
+          </FormRow>
+        </SectionCard>
+
+        {/* ── NOTIFICATIONS ────────────────────────────────────────────── */}
+        <SectionCard title="Notifications" iconBg={T.alBg} iconColor={T.amb}
+          icon={<><path d="M6.5 1.5C4.5 1.5 3 3 3 5v3l-1.5 2H11L9.5 8V5C9.5 3 8 1.5 6.5 1.5z" /><line x1="5.5" y1="11" x2="7.5" y2="11" /></>}
+          right={
+            <span onClick={toggleAllNotifs} style={{ fontSize: 10, color: T.blue, fontWeight: 500, cursor: "pointer" }}>
+              {allNotifsOn ? "Disable all" : "Enable all"}
+            </span>
+          }
+        >
+          {([
+            { key: "assignments" as const, title: "Assignments", sub: "Submission alerts" },
+            { key: "grading" as const,     title: "Grading",     sub: "Deadline reminders" },
+            { key: "attendance" as const,  title: "Attendance",  sub: "Threshold warnings" },
+            { key: "messages" as const,    title: "Messages",    sub: "New parent messages" },
+            { key: "risks" as const,       title: "Risks & alerts", sub: "Performance concerns" },
+          ]).map((item, i, arr) => (
+            <ToggleRow key={item.key} title={item.title} sub={item.sub}
+              active={notifications[item.key]}
+              onClick={() => toggleNotif(item.key)}
+              last={i === arr.length - 1}
+            />
+          ))}
+        </SectionCard>
+
+        {/* ── PREFERENCES ──────────────────────────────────────────────── */}
+        <SectionCard title="Preferences" iconBg={T.tlBg} iconColor={T.tea}
+          icon={<><circle cx="6.5" cy="6.5" r="5" /><circle cx="6.5" cy="6.5" r="2" /><line x1="6.5" y1="1.5" x2="6.5" y2="4.5" /><line x1="6.5" y1="8.5" x2="6.5" y2="11.5" /><line x1="1.5" y1="6.5" x2="4.5" y2="6.5" /><line x1="8.5" y1="6.5" x2="11.5" y2="6.5" /></>}
+        >
+          <SelectRow label="Dashboard view" value={preferences.defaultView} options={["Grid", "List", "Compact"]}
+            onChange={v => setPreferences({ ...preferences, defaultView: v })}
+            icon={<><rect x="1" y="1.5" width="10" height="9.5" rx="1.5" /><line x1="3.5" y1="5" x2="8.5" y2="5" /><line x1="3.5" y1="7.5" x2="6.5" y2="7.5" /></>} />
+          <SelectRow label="Grade metric" value={preferences.gradeScale} options={["Percentage", "Grade (A–F)", "Points"]}
+            onChange={v => setPreferences({ ...preferences, gradeScale: v })}
+            icon={<><polyline points="1.5,9 4.5,5.5 7,7.5 10.5,3.5" /><polyline points="9,3.5 10.5,3.5 10.5,5" /></>} />
+          <SelectRow label="Date format" value={preferences.dateFormat} options={["DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD"]}
+            onChange={v => setPreferences({ ...preferences, dateFormat: v })}
+            icon={<><rect x="1.5" y="2" width="9" height="8.5" rx="1.5" /><line x1="4" y1="1" x2="4" y2="3.5" /><line x1="8" y1="1" x2="8" y2="3.5" /><line x1="1.5" y1="5.5" x2="10.5" y2="5.5" /></>} />
+          <SelectRow label="Language" value={preferences.language} options={["English", "Hindi", "Urdu"]}
+            onChange={v => setPreferences({ ...preferences, language: v })}
+            icon={<><circle cx="6" cy="6" r="4.5" /><circle cx="6" cy="6" r="1.5" /></>} last />
+        </SectionCard>
+
+        {/* ── SECURITY ─────────────────────────────────────────────────── */}
+        <SectionCard title="Security" iconBg={T.blBg} iconColor={T.blue}
+          icon={<><path d="M6.5 1.5L11 3.5V7C11 9.5 6.5 11.5 6.5 11.5S2 9.5 2 7V3.5L6.5 1.5z" /><polyline points="4.5,6.5 6,8 8.5,5" /></>}
+          right={<span style={{ fontSize: 10, fontWeight: 500, background: T.glBg, color: T.grn, padding: "3px 8px", borderRadius: 20 }}>Secured</span>}
+        >
+          {/* Info banner */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: 14, margin: "8px", borderRadius: 13, background: T.s1, border: `1px solid ${T.bdr}` }}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke={T.blue} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <path d="M7 1.5L12 3.5V7C12 10 7 12 7 12S2 10 2 7V3.5L7 1.5z" /><polyline points="5,7 6.5,8.5 9.5,5" />
+            </svg>
+            <div>
+              <p style={{ fontSize: 12, fontWeight: 500, color: T.ink1, margin: 0 }}>Security</p>
+              <p style={{ fontSize: 10, color: T.ink3, marginTop: 2, lineHeight: 1.4 }}>Account credentials are managed by your school administrator. Contact admin to change password.</p>
+            </div>
           </div>
+          <ToggleRow title="Two-factor auth" sub="Extra login protection" active={false} onClick={() => {}} />
+          <ToggleRow title="Login notifications" sub="Alert on new device login" active={true} onClick={() => {}} last />
+        </SectionCard>
+
+        {/* ── DANGER ZONE ──────────────────────────────────────────────── */}
+        <div style={{ background: T.white, border: `1px solid ${T.bdr}`, borderRadius: 18, overflow: "hidden" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "13px 14px", borderBottom: `1px solid ${T.s2}` }}>
+            <div style={{ width: 30, height: 30, borderRadius: 9, background: T.rlBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke={T.red} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6.5 1.5L12 11.5H1L6.5 1.5z" /><line x1="6.5" y1="5" x2="6.5" y2="8" />
+                <circle cx="6.5" cy="9.5" r=".6" fill={T.red} stroke="none" />
+              </svg>
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 500, color: T.red }}>Danger zone</span>
+          </div>
+
+          <DangerRow title="Clear all data" sub="Remove local cache and preferences"
+            onClick={() => { localStorage.clear(); toast.success("Local data cleared."); }} />
+
+          <DangerRow title="Sign out" sub="Log out of your account" last
+            onClick={() => { if (confirm("Sign out?")) logout(); }} />
         </div>
 
-        {/* Notifications */}
-        <div className="ds-card p-6 sm:p-8">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
-              <Bell size={18} />
-            </div>
-            <h2 className="text-base font-semibold text-slate-800">Notifications</h2>
-          </div>
-          <div className="space-y-5">
-            <ToggleSwitch label="Assignments" desc="Submission alerts" active={notifications.assignments} onClick={() => toggleNotification('assignments')} />
-            <ToggleSwitch label="Grading" desc="Deadline reminders" active={notifications.grading} onClick={() => toggleNotification('grading')} />
-            <ToggleSwitch label="Attendance" desc="Threshold warnings" active={notifications.attendance} onClick={() => toggleNotification('attendance')} />
-            <ToggleSwitch label="Messages" desc="New parent messages" active={notifications.messages} onClick={() => toggleNotification('messages')} />
-            <ToggleSwitch label="Risks" desc="Performance concerns" active={notifications.risks} onClick={() => toggleNotification('risks')} />
-          </div>
-        </div>
-
-        {/* Preferences */}
-        <div className="ds-card p-6 sm:p-8">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-              <Settings size={18} />
-            </div>
-            <h2 className="text-base font-semibold text-slate-800">Preferences</h2>
-          </div>
-          <div className="space-y-5">
-            <SelectField label="Dashboard View" icon={Layout} value={preferences.defaultView} options={["Grid", "Compact"]} onChange={(v: string) => setPreferences({...preferences, defaultView: v})} />
-            <SelectField label="Grade Metric" icon={TrendingUp} value={preferences.gradeScale} options={["Percentage", "GPA"]} onChange={(v: string) => setPreferences({...preferences, gradeScale: v})} />
-            <SelectField label="Date Format" icon={Clock} value={preferences.dateFormat} options={["DD/MM/YYYY", "Relative"]} onChange={(v: string) => setPreferences({...preferences, dateFormat: v})} />
-
-            <div className="pt-4 border-t border-slate-100">
-              <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl flex items-start gap-3">
-                <ShieldCheck className="w-4 h-4 text-[#1e3272] shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs font-semibold text-slate-700 mb-0.5">Security</p>
-                  <p className="text-xs text-slate-400">Account credentials are managed by your school administrator.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
+        <div style={{ height: 8 }} />
       </div>
     </div>
   );
 };
 
-const InputField = ({ label, icon: Icon, value, onChange, disabled, desc }: any) => (
-  <div className="text-left">
-    <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
-      <Icon className="w-3.5 h-3.5" /> {label}
-    </label>
-    <input
-      type="text"
-      value={value}
-      onChange={e => onChange?.(e.target.value)}
-      disabled={disabled}
-      className={`ds-input ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-    />
-    {desc && <p className="text-xs text-slate-400 mt-1">{desc}</p>}
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+const SectionCard = ({ title, iconBg, iconColor, icon, right, children }: {
+  title: string; iconBg: string; iconColor: string;
+  icon: React.ReactNode; right?: React.ReactNode;
+  children: React.ReactNode;
+}) => (
+  <div style={{ background: T.white, border: `1px solid ${T.bdr}`, borderRadius: 18, overflow: "hidden" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "13px 14px", borderBottom: `1px solid ${T.s2}` }}>
+      <div style={{ width: 30, height: 30, borderRadius: 9, background: iconBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke={iconColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          {icon}
+        </svg>
+      </div>
+      <span style={{ fontSize: 13, fontWeight: 500, color: T.ink1 }}>{title}</span>
+      {right && <div style={{ marginLeft: "auto" }}>{right}</div>}
+    </div>
+    {children}
   </div>
 );
 
-const SelectField = ({ label, icon: Icon, value, options, onChange }: any) => (
-  <div className="text-left">
-    <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
-      <Icon size={13} /> {label}
-    </label>
-    <select
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      className="ds-select"
-    >
-      {options.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
-    </select>
+const FormRow = ({ label, icon, children, last }: {
+  label: string; icon: React.ReactNode; children: React.ReactNode; last?: boolean;
+}) => (
+  <div style={{ padding: "12px 14px", borderBottom: last ? "none" : `1px solid ${T.s2}` }}>
+    <div style={labelS}>
+      <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke={T.ink3} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">{icon}</svg>
+      {label}
+    </div>
+    {children}
   </div>
 );
 
-const ToggleSwitch = ({ label, desc, active, onClick }: any) => (
-  <div className="flex items-center justify-between cursor-pointer" onClick={onClick}>
+const Hint = ({ text }: { text: string }) => (
+  <p style={{ fontSize: 10, color: T.ink3, marginTop: 5, display: "flex", alignItems: "center", gap: 4 }}>
+    <svg width="10" height="10" viewBox="0 0 11 11" fill="none" stroke={T.ink3} strokeWidth="1.5" strokeLinecap="round" style={{ flexShrink: 0 }}>
+      <circle cx="5.5" cy="5.5" r="4.5" /><line x1="5.5" y1="3.5" x2="5.5" y2="6" />
+      <circle cx="5.5" cy="7.5" r=".6" fill={T.ink3} stroke="none" />
+    </svg>
+    {text}
+  </p>
+);
+
+const ToggleRow = ({ title, sub, active, onClick, last }: {
+  title: string; sub: string; active: boolean; onClick: () => void; last?: boolean;
+}) => (
+  <div onClick={onClick} style={{
+    display: "flex", alignItems: "center", justifyContent: "space-between",
+    padding: "13px 14px", borderBottom: last ? "none" : `1px solid ${T.s2}`,
+    cursor: "pointer",
+  }}>
     <div>
-      <p className="text-sm font-semibold text-slate-800">{label}</p>
-      <p className="text-xs text-slate-400 mt-0.5">{desc}</p>
+      <p style={{ fontSize: 13, fontWeight: 500, color: T.ink1, margin: 0 }}>{title}</p>
+      <p style={{ fontSize: 11, color: T.ink3, marginTop: 2 }}>{sub}</p>
     </div>
-    <div className={`w-11 h-6 rounded-full relative flex-shrink-0 transition-colors duration-150 ${active ? 'bg-[#1e3272]' : 'bg-slate-200'}`}>
-      <div className={`w-4 h-4 bg-white rounded-full absolute top-1 shadow transition-all duration-150 ${active ? 'right-1' : 'left-1'}`} />
+    <div style={{
+      width: 44, height: 26, borderRadius: 13,
+      background: active ? T.blue : T.bdr,
+      position: "relative", transition: "background 200ms",
+      flexShrink: 0,
+    }}>
+      <div style={{
+        position: "absolute", top: 3,
+        left: active ? 21 : 3,
+        width: 20, height: 20, borderRadius: "50%",
+        background: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,0.18)",
+        transition: "left 200ms",
+      }} />
     </div>
+  </div>
+);
+
+const SelectRow = ({ label, icon, value, options, onChange, last }: {
+  label: string; icon: React.ReactNode; value: string;
+  options: string[]; onChange: (v: string) => void; last?: boolean;
+}) => (
+  <div style={{ padding: "12px 14px", borderBottom: last ? "none" : `1px solid ${T.s2}` }}>
+    <div style={labelS}>
+      <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke={T.ink3} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">{icon}</svg>
+      {label}
+    </div>
+    <div style={{ position: "relative", marginTop: 7 }}>
+      <select style={selectS} value={value} onChange={e => onChange(e.target.value)}>
+        {options.map(o => <option key={o}>{o}</option>)}
+      </select>
+      {chevDown}
+    </div>
+  </div>
+);
+
+const DangerRow = ({ title, sub, onClick, last }: {
+  title: string; sub: string; onClick: () => void; last?: boolean;
+}) => (
+  <div style={{
+    display: "flex", alignItems: "center", justifyContent: "space-between",
+    padding: "12px 14px", borderBottom: last ? "none" : `1px solid ${T.s2}`,
+  }}>
+    <div>
+      <p style={{ fontSize: 13, fontWeight: 500, color: T.red, margin: 0 }}>{title}</p>
+      <p style={{ fontSize: 11, color: T.ink3, marginTop: 2 }}>{sub}</p>
+    </div>
+    <button onClick={onClick} style={{
+      padding: "7px 13px", borderRadius: 10,
+      background: T.rlBg, border: `1px solid ${T.rlBdr}`,
+      color: T.red, fontSize: 11, fontWeight: 500,
+      cursor: "pointer", fontFamily: "inherit",
+    }}>
+      {title.includes("Sign") ? "Sign out" : "Clear"}
+    </button>
   </div>
 );
 

@@ -209,27 +209,24 @@ const RisksAlerts = () => {
   const [subjectHealth, setSubjectHealth]   = useState<{ name: string; avg: number }[]>([]);
 
   // ── Firebase listener ───────────────────────────────────────────────────────
+  // Fixed: removed SC (schoolId/branchId) from queries that may not have those
+  // fields — Firestore returns 0 docs if a where() field doesn't exist on docs.
+  // Only teacherId is used for scoping; classId-based queries use classIds only.
   useEffect(() => {
     if (!teacherData?.id) return;
     setLoading(true);
 
-    const schoolId = teacherData.schoolId as string | undefined;
-    const branchId = teacherData.branchId as string | undefined;
-    const SC: any[] = [];
-    if (schoolId) SC.push(where("schoolId", "==", schoolId));
-    if (branchId) SC.push(where("branchId", "==", branchId));
-
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 21);
-    const cutoffStr = cutoff.toLocaleDateString("en-CA");
+    const tid = teacherData.id;
 
     const chunkArr = <X,>(arr: X[], n: number): X[][] =>
       Array.from({ length: Math.ceil(arr.length / n) }, (_, i) => arr.slice(i * n, (i + 1) * n));
 
-    const qClasses = query(collection(db, "classes"), where("teacherId", "==", teacherData.id), ...SC);
+    // Listen on classes — re-compute when classes change
+    const qClasses = query(collection(db, "classes"), where("teacherId", "==", tid));
     const unsubscribe = onSnapshot(qClasses, async (classSnap) => {
       try {
-        const taSnap = await getDocs(query(collection(db, "teaching_assignments"), where("teacherId", "==", teacherData.id), ...SC));
+        // Also pick up teaching_assignments
+        const taSnap = await getDocs(query(collection(db, "teaching_assignments"), where("teacherId", "==", tid)));
         const classIdSet = new Set<string>([
           ...classSnap.docs.map(d => d.id),
           ...taSnap.docs.map(d => d.data().classId).filter(Boolean),
@@ -238,8 +235,10 @@ const RisksAlerts = () => {
 
         if (classIds.length === 0) { setAlerts([]); setLoading(false); return; }
 
+        // Enrollments — query ONLY by classId (no schoolId/branchId — those fields
+        // may not exist on enrollment docs, causing 0 results)
         const enrollSnaps = await Promise.all(
-          chunkArr(classIds, 10).map(ch => getDocs(query(collection(db, "enrollments"), where("classId", "in", ch), ...SC)))
+          chunkArr(classIds, 10).map(ch => getDocs(query(collection(db, "enrollments"), where("classId", "in", ch))))
         );
         const enrolls = enrollSnaps.flatMap(s => s.docs).map(d => ({ enrollId: d.id, ...d.data() })) as any[];
 
@@ -252,30 +251,36 @@ const RisksAlerts = () => {
         });
         const uniqueRoster = Array.from(rosterMap.values());
 
-        const gbSnapPromise = classIds.length > 0
-          ? Promise.all(chunkArr(classIds, 10).map(ch => getDocs(query(collection(db, "gradebook_scores"), where("classId", "in", ch), ...SC))))
-              .then(snaps => ({ docs: snaps.flatMap(s => s.docs) }))
-          : Promise.resolve({ docs: [] } as any);
+        // Gradebook scores — by classId only
+        const gbSnapPromise = Promise.all(
+          chunkArr(classIds, 10).map(ch => getDocs(query(collection(db, "gradebook_scores"), where("classId", "in", ch))))
+        ).then(snaps => ({ docs: snaps.flatMap(s => s.docs) })).catch(() => ({ docs: [] as any[] }));
+
+        // All other queries — only teacherId filter (no SC)
+        // Attendance: removed date filter to avoid composite index requirement;
+        // we filter by date client-side instead.
+        const safeGet = (col: string, ...filters: any[]) =>
+          getDocs(query(collection(db, col), ...filters)).catch(() => ({ docs: [] as any[] }));
 
         const [attSnap, tsSnap, gbSnap, assignSnap, subsSnap, manualSnap, resultsSnap, notesSnap] = await Promise.all([
-          getDocs(query(collection(db, "attendance"),    where("teacherId", "==", teacherData.id), where("date", ">=", cutoffStr), ...SC)),
-          getDocs(query(collection(db, "test_scores"),   where("teacherId", "==", teacherData.id), ...SC)),
+          safeGet("attendance",    where("teacherId", "==", tid)),
+          safeGet("test_scores",   where("teacherId", "==", tid)),
           gbSnapPromise,
-          getDocs(query(collection(db, "assignments"),   where("teacherId", "==", teacherData.id), ...SC)),
-          getDocs(query(collection(db, "submissions"),   where("teacherId", "==", teacherData.id), ...SC)),
-          getDocs(query(collection(db, "risks"),         where("teacherId", "==", teacherData.id), ...SC)),
-          getDocs(query(collection(db, "results"),       where("teacherId", "==", teacherData.id), ...SC)),
-          getDocs(query(collection(db, "parent_notes"),  where("teacherId", "==", teacherData.id), ...SC)),
+          safeGet("assignments",   where("teacherId", "==", tid)),
+          safeGet("submissions",   where("teacherId", "==", tid)),
+          safeGet("risks",         where("teacherId", "==", tid)),
+          safeGet("results",       where("teacherId", "==", tid)),
+          safeGet("parent_notes",  where("teacherId", "==", tid)),
         ]);
 
-        const allAtt     = attSnap.docs.map(d => d.data());
-        const allTS      = tsSnap.docs.map(d => d.data());
-        const allGB      = gbSnap.docs.map((d: any) => d.data());
-        const allResults = resultsSnap.docs.map(d => d.data());
-        const allAssign  = assignSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
-        const allSubs    = subsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
-        const manuals    = manualSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
-        const allNotes   = notesSnap.docs.map(d => d.data());
+        const allAtt     = attSnap.docs.map((d: any) => d.data());
+        const allTS      = tsSnap.docs.map((d: any) => d.data());
+        const allGB      = (gbSnap as any).docs.map((d: any) => d.data());
+        const allResults = resultsSnap.docs.map((d: any) => d.data());
+        const allAssign  = assignSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })) as any[];
+        const allSubs    = subsSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })) as any[];
+        const manuals    = manualSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })) as any[];
+        const allNotes   = notesSnap.docs.map((d: any) => d.data());
 
         setResolvedCount(manuals.filter((r: any) => r.resolved).length);
 
@@ -300,36 +305,50 @@ const RisksAlerts = () => {
         const now = Date.now();
         const threeWeeksAgo = now - 21 * 24 * 60 * 60 * 1000;
 
+        // Build a map of classId → assignments for per-class submission matching
+        const classAssignMap = new Map<string, any[]>();
+        allAssign.forEach((a: any) => {
+          const cid = a.classId || "";
+          if (!classAssignMap.has(cid)) classAssignMap.set(cid, []);
+          classAssignMap.get(cid)!.push(a);
+        });
+
         uniqueRoster.forEach((e: any) => {
           const sId    = e.studentId || e.enrollId;
           const sEmail = e.studentEmail?.toLowerCase();
+          const sName  = (e.studentName || "").toLowerCase();
           const name   = e.studentName || "Student";
 
+          // Improved student filter — also matches by studentName
           const sf = (arr: any[]) => arr.filter(item =>
-            (sId && (item.studentId === sId || item.id?.includes(sId))) ||
-            (sEmail && item.studentEmail?.toLowerCase() === sEmail)
+            (sId && (item.studentId === sId || item.id?.includes?.(sId))) ||
+            (sEmail && item.studentEmail?.toLowerCase() === sEmail) ||
+            (sName && item.studentName?.toLowerCase() === sName)
           );
 
-          // 1. ATTENDANCE
+          // 1. ATTENDANCE — filter by date client-side (avoids composite index)
           const sAtt = sf(allAtt);
           const recentAtt = sAtt.filter((a: any) => {
-            const d = a.date instanceof Timestamp
-              ? a.date.toMillis()
-              : (typeof a.date === "string" ? new Date(a.date).getTime() : 0);
-            return d > threeWeeksAgo;
+            let ts = 0;
+            if (a.date instanceof Timestamp) ts = a.date.toMillis();
+            else if (a.date?.toDate) ts = a.date.toDate().getTime();
+            else if (typeof a.date === "string") ts = new Date(a.date).getTime();
+            else if (typeof a.date === "number") ts = a.date;
+            return ts > threeWeeksAgo;
           });
           if (recentAtt.length >= 2) {
             const absences = recentAtt.filter((a: any) => a.status === "absent").length;
             const lates    = recentAtt.filter((a: any) => a.status === "late").length;
             const rate     = ((recentAtt.length - absences) / recentAtt.length) * 100;
-            if (rate < 85 || absences >= 1) {
+            // Fixed: only flag if 2+ absences OR rate below 75% (was too aggressive at 1 absence)
+            if (rate < 75 || absences >= 2) {
               generated.push({
                 id: `att_${sId}`, studentId: sId, name,
                 initials: getInitials(name), avatarColor: getAvatarColor(name),
-                severity: rate < 60 ? "Critical" : "High Priority",
+                severity: rate < 60 ? "Critical" : rate < 75 ? "High Priority" : "Medium Priority",
                 type: "Attendance",
-                issue: `Attendance dropped to ${rate.toFixed(0)}% — ${absences} absences in last 3 weeks`,
-                details: [`Late arrivals: ${lates}`, `Last 3 weeks window`],
+                issue: `Attendance at ${rate.toFixed(0)}% — ${absences} absence${absences > 1 ? "s" : ""} in last 3 weeks`,
+                details: [`Late arrivals: ${lates}`, `${recentAtt.length} records in window`],
                 cls: e.className || "Class", isSystem: true,
               });
             }
@@ -338,7 +357,7 @@ const RisksAlerts = () => {
           // 2. GRADES
           const sScores = [...sf(allTS), ...sf(allGB), ...sf(allResults)];
           if (sScores.length >= 1) {
-            const sorted    = sScores.sort((a, b) =>
+            const sorted    = [...sScores].sort((a, b) =>
               (a.timestamp?.toMillis?.() || a.date?.toMillis?.() || 0) -
               (b.timestamp?.toMillis?.() || b.date?.toMillis?.() || 0)
             );
@@ -347,37 +366,42 @@ const RisksAlerts = () => {
             const recentAvg = recent3.length > 0 ? recent3.reduce((a, b) => a + b, 0) / recent3.length : 0;
             const pastAvg   = past3.length > 0   ? past3.reduce((a, b) => a + b, 0) / past3.length : recentAvg;
             const drop      = pastAvg - recentAvg;
-            if (recentAvg < 70 || drop > 5) {
+            if (recentAvg < 60 || drop > 10) {
               generated.push({
                 id: `grd_${sId}`, studentId: sId, name,
                 initials: getInitials(name), avatarColor: getAvatarColor(name),
-                severity: drop > 20 || recentAvg < 50 ? "Critical" : "High Priority",
+                severity: drop > 20 || recentAvg < 40 ? "Critical" : "High Priority",
                 type: "Grades",
-                issue: drop > 5
+                issue: drop > 10
                   ? `Grade avg dropped ${drop.toFixed(0)}% — from ${pastAvg.toFixed(0)}% to ${recentAvg.toFixed(0)}%`
                   : `Grade avg at ${recentAvg.toFixed(0)}% — below passing benchmark`,
-                details: [`Trend: ${drop > 0 ? "Declining" : "Stable"}`, `At risk of failing`],
+                details: [`Trend: ${drop > 0 ? "Declining" : "Stable"}`, `Based on ${sScores.length} score${sScores.length > 1 ? "s" : ""}`],
                 cls: e.className || "Class", isSystem: true,
               });
             }
           }
 
-          // 3. SUBMISSIONS
+          // 3. SUBMISSIONS — Fixed: only check assignments for THIS student's class
+          const studentClassId = e.classId || "";
+          const classAssignments = classAssignMap.get(studentClassId) || allAssign;
           const sSubs  = sf(allSubs);
           const subSet = new Set(sSubs.map((s: any) => s.assignmentId));
-          const missed = allAssign.filter((a: any) => {
-            const due = a.dueDate?.toMillis?.() ||
-              (typeof a.dueDate === "string" ? new Date(a.dueDate).getTime() : Number(a.dueDate)) || 0;
+          const missed = classAssignments.filter((a: any) => {
+            let due = 0;
+            if (a.dueDate?.toMillis) due = a.dueDate.toMillis();
+            else if (a.dueDate?.toDate) due = a.dueDate.toDate().getTime();
+            else if (typeof a.dueDate === "string") due = new Date(a.dueDate).getTime();
+            else if (typeof a.dueDate === "number") due = a.dueDate;
             return due > 0 && due < now && !subSet.has(a.id);
           });
-          if (missed.length >= 1) {
+          if (missed.length >= 2) {
             generated.push({
               id: `sub_${sId}`, studentId: sId, name,
               initials: getInitials(name), avatarColor: getAvatarColor(name),
               severity: missed.length >= 4 ? "Critical" : "High Priority",
               type: "Submissions",
               issue: `Missing ${missed.length} assignment${missed.length > 1 ? "s" : ""} — overdue`,
-              details: [`Overdue: ${missed.slice(0, 2).map((m: any) => m.title).join(", ")}`, `Grade impact: -${Math.min(missed.length * 3, 15)}%`],
+              details: [`Overdue: ${missed.slice(0, 2).map((m: any) => m.title || "Assignment").join(", ")}`, `Grade impact: -${Math.min(missed.length * 3, 15)}%`],
               cls: e.className || "Class", isSystem: true,
             });
           }
@@ -385,7 +409,7 @@ const RisksAlerts = () => {
           // 4. BEHAVIOR
           const sNotes    = sf(allNotes);
           const negSignals = sNotes.filter((n: any) => {
-            const text = (n.content || "").toLowerCase();
+            const text = (n.content || n.message || "").toLowerCase();
             return text.includes("aggressive") || text.includes("bully") ||
               text.includes("distraction") || text.includes("refused") ||
               text.includes("sick") || text.includes("trouble");
@@ -424,7 +448,7 @@ const RisksAlerts = () => {
         generated.sort((a, b) => ORDER[a.severity] - ORDER[b.severity]);
         setAlerts(generated);
       } catch (err) {
-        console.error(err);
+        console.error("[RisksAlerts] Error:", err);
         toast.error("Failed to load alerts.");
       } finally {
         setLoading(false);

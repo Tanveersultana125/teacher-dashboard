@@ -41,7 +41,7 @@ const TeacherLayout = () => {
   })();
 
   // Pages where the navbar should be dark to blend with their hero header
-  const darkNavRoutes = ["/", "/my-classes", "/attendance", "/assignments", "/tests", "/students", "/gradebook", "/concept-mastery", "/risks-alerts", "/parent-notes", "/principal-notes", "/lesson-planner", "/summarize-lesson"];
+  const darkNavRoutes = ["/", "/my-classes", "/attendance", "/assignments", "/tests", "/students", "/gradebook", "/concept-mastery", "/risks-alerts", "/parent-notes", "/principal-notes", "/lesson-planner", "/summarize-lesson", "/reports", "/settings"];
   const isDarkNav = darkNavRoutes.includes(basePath);
 
   return (
