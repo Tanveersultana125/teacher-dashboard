@@ -338,7 +338,7 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
      if (params.format === 'excel') {
         const XLSX = await loadXLSX();
 

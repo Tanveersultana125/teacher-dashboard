@@ -308,7 +308,7 @@ export default function Gradebook() {
     setView('main');
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const headers = ["Student", ...columns.map(c => `${c.name} (${c.maxMarks})`), "Total", "Grade"];
     const rows = filtered.map(stu => {
       const earned = columns.reduce((acc, c) => acc + (Number(localScores[`${(stu.email || stu.id).toLowerCase()}_${c.id}`]) || 0), 0);

@@ -182,7 +182,7 @@ const ClassDetail = () => {
     }
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     setExporting(true);
     try {
       const data = students.map(s => ({
