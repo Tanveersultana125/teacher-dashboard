@@ -18,10 +18,10 @@ export default async function handler(req, res) {
   }
 
   const { to, subject, html } = req.body;
-  const apiKey = process.env.VITE_RESEND_API_KEY || process.env.RESEND_API_KEY || "re_KgGiVQA2_Me1JyuWkb2bC2tcUzASqwz8u";
+  const apiKey = process.env.VITE_RESEND_API_KEY || process.env.RESEND_API_KEY;
 
   if (!apiKey) {
-    console.error("[PRODUCTION_EMAIL] Error: Missing Resend API Key");
+    console.error("[PRODUCTION_EMAIL] Error: Missing Resend API Key — set RESEND_API_KEY in Vercel env.");
     return res.status(500).json({ error: 'Email service configuration missing' });
   }
 
@@ -34,7 +34,7 @@ export default async function handler(req, res) {
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        from: 'EduIntellect <invite@edulent.dgion.com>',
+        from: 'Edullent <invite@edulent.dgion.com>',
         to,
         subject,
         html,

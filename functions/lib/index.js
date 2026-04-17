@@ -3,17 +3,22 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getTeacherAIInsights = void 0;
 /* TEACHER DASHBOARD BACKEND - Master Insights Engine */
 const functions = require("firebase-functions");
+const params_1 = require("firebase-functions/params");
 const admin = require("firebase-admin");
 const openai_1 = require("openai");
 admin.initializeApp();
-const openai = new openai_1.default({
-    apiKey: "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"
-});
-exports.getTeacherAIInsights = functions.https.onCall(async (data, context) => {
+const openaiApiKey = params_1.defineSecret("OPENAI_API_KEY");
+exports.getTeacherAIInsights = functions
+    .runWith({ secrets: [openaiApiKey], timeoutSeconds: 60, memory: "512MB" })
+    .https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError("unauthenticated", "Login required.");
+    }
     try {
+        const openai = new openai_1.default({ apiKey: openaiApiKey.value() });
         const { type, payload } = data;
         console.log("Teacher AI Request:", type);
-        let systemPrompt = "You are an expert Educational AI assistant for EduIntellect.";
+        let systemPrompt = "You are an expert Educational AI assistant for Edullent.";
         let userPrompt = `Context: ${JSON.stringify(payload)}`;
         if (type === "assignment_creation") {
             systemPrompt = "You are an AI Assignment Generator.";

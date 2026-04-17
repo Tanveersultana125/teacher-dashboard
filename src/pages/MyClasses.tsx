@@ -141,8 +141,11 @@ const MyClasses = () => {
   return (
     <div className="text-left">
 
+      {/* ═══════════════════ MOBILE VIEW ═══════════════════ */}
+      <div className="md:hidden">
+
       {/* ── Dark Hero ───────────────────────────────────────────── */}
-      <div className="bg-[#08090C] -mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 px-5 sm:px-8 pt-5 pb-8 mb-5">
+      <div className="bg-[#08090C] -mx-4 sm:-mx-6 px-5 sm:px-8 pt-5 pb-8 mb-5">
 
         {/* Semester label */}
         <p className="text-[10px] font-semibold text-white/35 uppercase tracking-widest mb-1.5">
@@ -227,7 +230,7 @@ const MyClasses = () => {
           <p className="text-slate-400 text-xs">Your principal will assign classes to you. Check back soon.</p>
         </div>
       ) : (
-        <div className="space-y-4 md:grid md:grid-cols-2 md:gap-5 md:space-y-0">
+        <div className="space-y-4">
           {filteredClasses.map((cls, idx) => {
             const m        = getMetrics(cls.id);
             const nextTime = startTimesMap.get(cls.id) || cls.startTime || cls.scheduleTime;
@@ -235,7 +238,13 @@ const MyClasses = () => {
             const accent   = CARD_ACCENTS[idx % CARD_ACCENTS.length];
 
             return (
-              <div key={cls.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 flex flex-col">
+              <div
+                key={cls.id}
+                onClick={() => navigate(`/my-classes/${cls.id}`)}
+                role="button"
+                tabIndex={0}
+                className="clickable-card bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 flex flex-col"
+              >
 
                 {/* Gradient accent strip */}
                 <div className={`h-[3px] bg-gradient-to-r ${accent}`} />
@@ -312,13 +321,13 @@ const MyClasses = () => {
                   {/* Action buttons */}
                   <div className="flex gap-2 mt-auto">
                     <button
-                      onClick={() => navigate(`/my-classes/${cls.id}`)}
+                      onClick={(e) => { e.stopPropagation(); navigate(`/my-classes/${cls.id}`); }}
                       className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50 active:scale-[0.97] transition-all duration-150"
                     >
                       View class
                     </button>
                     <button
-                      onClick={() => navigate("/attendance")}
+                      onClick={(e) => { e.stopPropagation(); navigate("/attendance"); }}
                       className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50 active:scale-[0.97] transition-all duration-150 flex items-center justify-center gap-1.5"
                     >
                       <CheckCircle className="w-3.5 h-3.5 text-slate-400" /> Mark
@@ -331,6 +340,127 @@ const MyClasses = () => {
           })}
         </div>
       )}
+
+      </div>{/* ═══════════ END MOBILE VIEW ═══════════ */}
+
+      {/* ═══════════════════ DESKTOP VIEW ═══════════════════ */}
+      <div className="hidden md:block">
+
+        {/* ── Header row ─────────────────────────────────────────── */}
+        <div className="flex items-start justify-between mb-6 gap-4">
+          <div>
+            <h1 className="text-[28px] font-bold text-slate-900 leading-tight tracking-tight">My Classes</h1>
+            <p className="text-sm text-slate-500 mt-1">Manage all your assigned classes and sections.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search classes..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-64 h-10 pl-9 pr-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
+              />
+            </div>
+            <button className="h-10 px-4 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50">
+              Filter
+            </button>
+          </div>
+        </div>
+
+        {/* Filter chips desktop */}
+        <div className="flex items-center gap-2 mb-5">
+          {filterChips.map(({ key, label, Icon }) => (
+            <button
+              key={key}
+              onClick={() => setFilter(key)}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                filter === key
+                  ? "bg-[#1e3272] text-white"
+                  : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Class cards grid (2-col) ───────────────────────────── */}
+        {filteredClasses.length === 0 ? (
+          <div className="py-24 flex flex-col items-center justify-center bg-white border border-dashed border-slate-200 rounded-2xl text-center px-8">
+            <p className="text-slate-500 font-semibold text-sm mb-1">No classes assigned yet</p>
+            <p className="text-slate-400 text-xs">Your principal will assign classes to you.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {filteredClasses.map((cls) => {
+              const m = getMetrics(cls.id);
+              const nextTime = startTimesMap.get(cls.id) || cls.startTime || cls.scheduleTime;
+              const subject = cls.subject || teacherData?.subject || "Subject";
+
+              return (
+                <div
+                  key={cls.id}
+                  onClick={() => navigate(`/my-classes/${cls.id}`)}
+                  role="button"
+                  tabIndex={0}
+                  className="clickable-card bg-white border border-slate-200 rounded-2xl p-5 shadow-sm"
+                >
+
+                  {/* Top row: pastel block + status */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: m.isAttention ? '#FFF4E6' : '#EBFBEE' }}>
+                      <Home className="w-5 h-5" style={{ color: m.isAttention ? '#C87014' : '#087F5B' }} />
+                    </div>
+                    <span className={`text-xs font-semibold px-3 py-1 rounded-full text-white ${m.isAttention ? 'bg-amber-500' : 'bg-emerald-500'}`}>
+                      {m.isAttention ? 'Attention' : 'Active'}
+                    </span>
+                  </div>
+
+                  {/* Title */}
+                  <h3 className="text-xl font-bold text-slate-900 leading-tight mb-1">{cls.name || 'Class'}</h3>
+                  <p className="text-sm text-slate-500 mb-4">{subject} • {m.studentCount} Students</p>
+
+                  {/* Stat rows */}
+                  <div className="space-y-2.5 mb-5 pb-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600">Attendance Rate</span>
+                      <span className={`text-sm font-bold ${m.atndRaw >= 85 ? 'text-emerald-600' : m.atndRaw >= 0 ? 'text-amber-600' : 'text-slate-400'}`}>{m.atndDisplay}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600">Avg. Performance</span>
+                      <span className={`text-sm font-bold ${m.perfRaw >= 60 ? 'text-emerald-600' : m.perfRaw >= 0 ? 'text-rose-600' : 'text-slate-400'}`}>{m.perfDisplay}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600">Next Class</span>
+                      <span className="text-sm font-bold text-blue-600">{nextTime ? `Today, ${nextTime}` : '—'}</span>
+                    </div>
+                  </div>
+
+                  {/* Buttons */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); navigate(`/my-classes/${cls.id}`); }}
+                      className="py-2.5 rounded-lg bg-[#1e3272] text-white text-sm font-semibold hover:bg-[#162552] transition-colors"
+                    >
+                      View Class
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); navigate('/attendance'); }}
+                      className="py-2.5 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                    >
+                      Attendance
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+      </div>{/* ═══════════ END DESKTOP VIEW ═══════════ */}
 
     </div>
   );

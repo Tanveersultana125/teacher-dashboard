@@ -1,21 +1,28 @@
 /* TEACHER DASHBOARD BACKEND - Master Insights Engine */
 import * as functions from "firebase-functions";
+import { defineSecret } from "firebase-functions/params";
 import * as admin from "firebase-admin";
 import OpenAI from "openai";
 
 admin.initializeApp();
 
-const openai = new OpenAI({ 
-    apiKey: "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" 
-});
+// Key stored in Firebase Secret Manager. Set via:
+//   firebase secrets:set OPENAI_API_KEY
+const openaiApiKey = defineSecret("OPENAI_API_KEY");
 
-export const getTeacherAIInsights = functions.https.onCall(async (data: any, context) => {
+export const getTeacherAIInsights = functions
+  .runWith({ secrets: [openaiApiKey], timeoutSeconds: 60, memory: "512MB" })
+  .https.onCall(async (data: any, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError("unauthenticated", "Login required.");
+    }
     try {
+        const openai = new OpenAI({ apiKey: openaiApiKey.value() });
         const { type, payload } = data;
 
         console.log("Teacher AI Request:", type);
 
-        let systemPrompt = "You are an expert Educational AI assistant for EduIntellect.";
+        let systemPrompt = "You are an expert Educational AI assistant for Edullent.";
         let userPrompt = `Context: ${JSON.stringify(payload)}`;
 
         if (type === "assignment_creation") {

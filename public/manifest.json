@@ -1,6 +1,6 @@
 {
-  "name": "EduIntellect — Teacher Dashboard",
-  "short_name": "EduIntellect",
+  "name": "Edullent — Teacher Dashboard",
+  "short_name": "Edullent",
   "description": "AI-powered teacher dashboard for managing students, classes, attendance, grades, and communication.",
   "start_url": "/",
   "display": "standalone",

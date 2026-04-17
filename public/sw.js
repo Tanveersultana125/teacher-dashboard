@@ -1,5 +1,5 @@
-// EduIntellect Service Worker — Cache-first for static, network-first for API
-const CACHE_NAME = "eduintellect-v1";
+// Edullent Service Worker — Cache-first for static, network-first for API
+const CACHE_NAME = "edullent-v1";
 const STATIC_ASSETS = ["/", "/favicon.ico", "/icons/icon.svg"];
 
 // Install — pre-cache shell

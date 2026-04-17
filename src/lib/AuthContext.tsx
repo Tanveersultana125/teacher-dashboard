@@ -8,6 +8,7 @@ import {
 } from 'firebase/auth';
 import { auth, db } from './firebase';
 import { collection, query, where, getDocs, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { syncClaimsAndRefreshToken } from './syncClaims';
 
 interface AuthContextType {
   user: User | null;
@@ -37,6 +38,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (currentUser && currentUser.email) {
         try {
+          // Sync custom claims first so subsequent reads pass through Firestore rules.
+          await syncClaimsAndRefreshToken(currentUser);
+
           const email = currentUser.email.toLowerCase();
           const q = query(collection(db, "teachers"), where("email", "==", email));
 
@@ -54,10 +58,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
 
           // Pick the best matching teacher doc when the same email exists across multiple schools.
-          // Priority: Active/Invited > other statuses, then most recently activated.
-          // This prevents "first match wins" from loading a deactivated or stale school record.
+          // Priority order:
+          //   1. isPrimarySchool flag (explicit user/principal choice)
+          //   2. Status: Active > Invited > other
+          //   3. Most recently activated (timestamp tiebreak)
           const sortedDocs = [...snap.docs].sort((a, b) => {
             const aD = a.data(), bD = b.data();
+            const primary = (Number(!!bD.isPrimarySchool)) - (Number(!!aD.isPrimarySchool));
+            if (primary !== 0) return primary;
             const score = (d: any) =>
               ["Active", "active"].includes(d.status) ? 2 :
               ["Invited", "invited"].includes(d.status) ? 1 : 0;

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { db } from "../lib/firebase";
 import {
   collection, query, where, onSnapshot, addDoc,
@@ -56,6 +57,7 @@ const getInitials = (name: string) => {
 // ── Main component ────────────────────────────────────────────────────────────
 const ParentNotes = () => {
   const { teacherData } = useAuth();
+  const navigate = useNavigate();
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [allNotes, setAllNotes]               = useState<any[]>([]);
   const [roster, setRoster]                   = useState<any[]>([]);
@@ -221,11 +223,14 @@ const ParentNotes = () => {
   // ═══════════════════════════════════════════════════════════════════════════
   function ListView() {
     return (
-      <div style={{ minHeight: "100vh", background: T.bg, paddingBottom: 0 }}>
+      <div style={{ minHeight: "100vh", paddingBottom: 0 }}>
+
+        {/* ═══════════════════ MOBILE VIEW ═══════════════════ */}
+        <div className="md:hidden" style={{ background: T.bg }}>
 
         {/* ── Dark hero ───────────────────────────────────────────────────── */}
         <div
-          className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8"
+          className="-mx-4 sm:-mx-6"
           style={{ background: T.hero, padding: "0 22px 24px" }}
         >
           <div style={{ paddingTop: 20 }}>
@@ -253,9 +258,9 @@ const ParentNotes = () => {
 
           {/* 3-stat row */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-            <StatCard label="Messages" value={stats.total}         color={T.blue} icon="msg" />
-            <StatCard label="Replies"  value={stats.parentReplies} color={T.amb}  icon="mail" />
-            <StatCard label="Students" value={stats.students}      color={T.grn}  icon="person" />
+            <StatCard label="Messages" value={stats.total}         color={T.blue} icon="msg"    onClick={() => searchRef.current?.focus()} />
+            <StatCard label="Replies"  value={stats.parentReplies} color={T.amb}  icon="mail"   onClick={() => searchRef.current?.focus()} />
+            <StatCard label="Students" value={stats.students}      color={T.grn}  icon="person" onClick={() => navigate("/students")} />
           </div>
 
           {/* Search */}
@@ -413,6 +418,191 @@ const ParentNotes = () => {
             New message to parent
           </button>
         </div>
+
+        </div>{/* ═══════════ END MOBILE VIEW ═══════════ */}
+
+        {/* ═══════════════════ DESKTOP VIEW ═══════════════════ */}
+        <div className="hidden md:block">
+
+          {/* Header */}
+          <div className="flex items-start justify-between mb-6 gap-4">
+            <div>
+              <h1 className="text-[28px] font-bold text-slate-900 leading-tight tracking-tight">Parent Notes</h1>
+              <p className="text-sm text-slate-500 mt-1">Communicate with parents and track conversations.</p>
+            </div>
+            <button
+              onClick={() => { searchRef.current?.focus(); }}
+              className="h-11 px-5 rounded-lg bg-[#1e3272] text-white text-sm font-semibold hover:bg-[#162552] flex items-center gap-2 shadow-sm"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
+                <line x1="7" y1="2" x2="7" y2="12" /><line x1="2" y1="7" x2="12" y2="7" />
+              </svg>
+              New Message
+            </button>
+          </div>
+
+          {/* 4 stat cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div
+              onClick={() => searchRef.current?.focus()}
+              role="button"
+              tabIndex={0}
+              className="clickable-card bg-white border border-slate-200 rounded-2xl p-5 shadow-sm"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: T.blBg }}>
+                  <svg width="18" height="18" viewBox="0 0 14 14" fill="none" stroke={T.blue} strokeWidth="1.5" strokeLinecap="round"><path d="M2,3 L12,3 L12,10 L4,10 L2,12 Z"/></svg>
+                </div>
+                <div>
+                  <p className="text-[28px] font-bold text-slate-900 leading-none">{stats.total}</p>
+                  <p className="text-xs text-slate-500 mt-1.5">Total Messages</p>
+                </div>
+              </div>
+            </div>
+            <div
+              onClick={() => searchRef.current?.focus()}
+              role="button"
+              tabIndex={0}
+              className="clickable-card bg-white border border-slate-200 rounded-2xl p-5 shadow-sm"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: T.alBg }}>
+                  <svg width="18" height="18" viewBox="0 0 14 14" fill="none" stroke={T.amb} strokeWidth="1.5" strokeLinecap="round"><circle cx="7" cy="7" r="5"/><polyline points="7,4 7,7 9,8"/></svg>
+                </div>
+                <div>
+                  <p className="text-[28px] font-bold text-slate-900 leading-none">{noReplyCount}</p>
+                  <p className="text-xs text-slate-500 mt-1.5">Pending Replies</p>
+                </div>
+              </div>
+            </div>
+            <div
+              onClick={() => searchRef.current?.focus()}
+              role="button"
+              tabIndex={0}
+              className="clickable-card bg-white border border-slate-200 rounded-2xl p-5 shadow-sm"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: T.glBg }}>
+                  <svg width="18" height="18" viewBox="0 0 14 14" fill="none" stroke={T.grn} strokeWidth="1.5" strokeLinecap="round"><polyline points="2,7 6,11 12,3"/></svg>
+                </div>
+                <div>
+                  <p className="text-[28px] font-bold text-slate-900 leading-none">{stats.parentReplies}</p>
+                  <p className="text-xs text-slate-500 mt-1.5">Resolved</p>
+                </div>
+              </div>
+            </div>
+            <div
+              onClick={() => navigate("/students")}
+              role="button"
+              tabIndex={0}
+              className="clickable-card bg-white border border-slate-200 rounded-2xl p-5 shadow-sm"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: T.rlBg }}>
+                  <svg width="18" height="18" viewBox="0 0 14 14" fill="none" stroke={T.red} strokeWidth="1.5" strokeLinecap="round"><path d="M2 3.5C2 2.7 2.7 2 3.5 2h7C11.3 2 12 2.7 12 3.5v5c0 .8-.7 1.5-1.5 1.5H5L2 12V3.5z"/></svg>
+                </div>
+                <div>
+                  <p className="text-[28px] font-bold text-slate-900 leading-none">{stats.students}</p>
+                  <p className="text-xs text-slate-500 mt-1.5">Parents</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 2-col: templates | conversation list */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+            {/* Quick templates */}
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-100">
+                <h2 className="text-base font-semibold text-slate-900">Quick Templates</h2>
+              </div>
+              <div className="p-4 space-y-2">
+                {[
+                  { title: 'Grade Concern', desc: 'Inform parent about declining grades' },
+                  { title: 'Good Performance', desc: 'Share positive progress update' },
+                  { title: 'Attendance Issue', desc: 'Report frequent absences' },
+                  { title: 'Missing Assignments', desc: 'Notify about pending work' },
+                  { title: 'Meeting Request', desc: 'Schedule parent-teacher meeting' },
+                ].map(tpl => (
+                  <button
+                    key={tpl.title}
+                    onClick={() => { searchRef.current?.focus(); toast.info(`Template: ${tpl.title}`); }}
+                    className="w-full text-left px-3 py-3 rounded-lg border border-slate-100 hover:bg-slate-50 hover:border-slate-200"
+                  >
+                    <p className="text-sm font-semibold text-slate-900">{tpl.title}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{tpl.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Conversations */}
+            <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                <h2 className="text-base font-semibold text-slate-900">All Messages</h2>
+                <div className="relative">
+                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                    <circle cx="6" cy="6" r="4"/><line x1="9" y1="9" x2="12.5" y2="12.5"/>
+                  </svg>
+                  <input
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="Search..."
+                    className="w-48 h-9 pl-9 pr-3 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:bg-white focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="py-12 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-blue-600" /></div>
+              ) : filteredRoster.length === 0 ? (
+                <p className="text-sm text-slate-400 text-center py-12">No students found</p>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {filteredRoster.map(s => {
+                    const key = (s.studentId || s.studentEmail)?.toLowerCase();
+                    const last = lastMessages.get(key);
+                    const unread = unreadCounts.get(key) || 0;
+                    const av = avStyle(s.studentName || 'S');
+                    const clsName = s.className || s.assignedClass || '';
+                    return (
+                      <div
+                        key={s.id}
+                        onClick={() => setSelectedStudent(s)}
+                        className={`flex items-start gap-4 px-5 py-4 cursor-pointer hover:bg-slate-50 ${unread > 0 ? 'bg-blue-50/50' : ''}`}
+                      >
+                        <div
+                          className="w-11 h-11 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                          style={{ background: av.color }}
+                        >
+                          {getInitials(s.studentName || 'S')}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <p className="text-sm font-bold text-slate-900 truncate">{s.studentName}'s Parents</p>
+                            {unread > 0 && (
+                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 flex-shrink-0">
+                                Pending Reply
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-500 mb-1">
+                            {clsName} {last?.createdAt ? `• ${new Date(last.createdAt.toMillis?.() || last.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}
+                          </p>
+                          {last && (
+                            <p className="text-sm text-slate-700 line-clamp-2">{last.content}</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+        </div>{/* ═══════════ END DESKTOP VIEW ═══════════ */}
 
       </div>
     );
@@ -676,8 +866,14 @@ const HeroChip = ({ icon, value, label }: { icon: string; value: number; label: 
   </div>
 );
 
-const StatCard = ({ label, value, color, icon }: { label: string; value: number; color: string; icon: string }) => (
-  <div style={{ background: T.white, border: `1px solid ${T.bdr}`, borderRadius: 13, padding: "11px 10px" }}>
+const StatCard = ({ label, value, color, icon, onClick }: { label: string; value: number; color: string; icon: string; onClick?: () => void }) => (
+  <div
+    onClick={onClick}
+    role={onClick ? "button" : undefined}
+    tabIndex={onClick ? 0 : undefined}
+    className={onClick ? "clickable-card" : undefined}
+    style={{ background: T.white, border: `1px solid ${T.bdr}`, borderRadius: 13, padding: "11px 10px" }}>
+
     <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 5 }}>
       <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         {icon === "msg"    && <path d="M1,8 L11,8 L9,5 L11,2 L1,2 L3,5 Z" />}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import MarkAttendance from "@/components/MarkAttendance";
 import { db } from "../lib/firebase";
 import { collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
@@ -88,8 +89,14 @@ const IBox = ({ bg, children }: { bg: string; children: React.ReactNode }) => (
     {children}
   </div>
 );
-const MetricCard = ({ iconBg, icon, badgeText, badgeBg, badgeColor, value, valueColor, label, barBg, barFill, barPct }: any) => (
-  <div style={{ background: T.s0, border: `1px solid ${T.bdr}`, borderRadius: 16, padding: 13 }}>
+const MetricCard = ({ iconBg, icon, badgeText, badgeBg, badgeColor, value, valueColor, label, barBg, barFill, barPct, onClick }: any) => (
+  <div
+    onClick={onClick}
+    role={onClick ? "button" : undefined}
+    tabIndex={onClick ? 0 : undefined}
+    className={onClick ? "clickable-card" : undefined}
+    style={{ background: T.s0, border: `1px solid ${T.bdr}`, borderRadius: 16, padding: 13 }}
+  >
     <div className="flex items-start justify-between mb-2">
       <div style={{ width: 30, height: 30, background: iconBg, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {icon}
@@ -107,6 +114,7 @@ const MetricCard = ({ iconBg, icon, badgeText, badgeBg, badgeColor, value, value
 // ── Main component ────────────────────────────────────────────────────────────
 const Attendance = () => {
   const { teacherData } = useAuth();
+  const navigate = useNavigate();
 
   const [marking, setMarking]               = useState(false);
   const [markingClassId, setMarkingClassId] = useState<string>("");
@@ -256,8 +264,11 @@ const Attendance = () => {
   return (
     <div style={{ fontFamily: 'inherit' }} className="text-left pb-8">
 
+      {/* ═══════════════════ MOBILE VIEW ═══════════════════ */}
+      <div className="md:hidden">
+
       {/* ── Dark Hero ──────────────────────────────────────────────────────────── */}
-      <div style={{ background: T.ink0 }} className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 px-[22px] pb-7">
+      <div style={{ background: T.ink0 }} className="-mx-4 sm:-mx-6 px-[22px] pb-7">
         <div className="pt-2 mb-5">
           <h1 style={{ fontSize: 22, fontWeight: 500, color: '#fff', letterSpacing: '-0.4px', lineHeight: 1.2, marginBottom: 4 }}>
             Attendance
@@ -287,24 +298,28 @@ const Attendance = () => {
           badgeText="+6.1%" badgeBg={T.greenL} badgeColor={T.green}
           value={stats.rateStr} valueColor={T.blue} label="Overall rate"
           barBg={T.blueL} barFill={T.blue} barPct={Math.min(stats.rateNum, 100)}
+          onClick={() => navigate('/reports')}
         />
         <MetricCard
           iconBg={T.greenL} icon={<IcoUserCheck color={T.green} />}
           badgeText="Today" badgeBg={T.blueL} badgeColor={T.blue}
           value={stats.presentToday} valueColor={T.green2} label="Present today"
           barBg={T.greenL} barFill={T.green2} barPct={stats.presentToday > 0 ? 100 : 0}
+          onClick={() => navigate('/students')}
         />
         <MetricCard
           iconBg={T.redL} icon={<IcoUserX color={T.red} />}
           badgeText={stats.absentToday > 0 ? "Check" : "Secure"} badgeBg={T.greenL} badgeColor={T.green}
           value={stats.absentToday} valueColor={T.ink0} label="Absent today"
           barBg={T.redL} barFill={T.red} barPct={stats.absentToday > 0 ? 100 : 0}
+          onClick={() => navigate('/risks-alerts')}
         />
         <MetricCard
           iconBg={T.amberL} icon={<IcoClock color={T.amber} />}
           badgeText={stats.lateToday > 0 ? "Follow up" : "All clear"} badgeBg={T.greenL} badgeColor={T.green}
           value={stats.lateToday} valueColor={T.ink0} label="Late today"
           barBg={T.amberL} barFill={T.amber} barPct={stats.lateToday > 0 ? 100 : 0}
+          onClick={() => navigate('/risks-alerts')}
         />
       </div>
 
@@ -513,6 +528,221 @@ const Attendance = () => {
           </div>
         ))}
       </div>
+
+      </div>{/* ═══════════ END MOBILE VIEW ═══════════ */}
+
+      {/* ═══════════════════ DESKTOP VIEW ═══════════════════ */}
+      <div className="hidden md:block">
+
+        {/* ── Header row ─────────────────────────────────────────── */}
+        <div className="flex items-start justify-between mb-6 gap-4">
+          <div>
+            <h1 className="text-[28px] font-bold text-slate-900 leading-tight tracking-tight">Attendance</h1>
+            <p className="text-sm text-slate-500 mt-1">Track and manage student attendance across all classes.</p>
+          </div>
+          <button
+            onClick={() => { setMarkingClassId(selectedClassId); setMarking(true); }}
+            className="h-11 px-5 rounded-lg bg-[#1e3272] text-white text-sm font-semibold hover:bg-[#162552] flex items-center gap-2 shadow-sm transition-colors"
+          >
+            Mark Today's Attendance
+          </button>
+        </div>
+
+        {/* ── 4-col Stat cards ───────────────────────────────────── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div
+            onClick={() => navigate('/reports')}
+            role="button"
+            tabIndex={0}
+            className="clickable-card bg-white border border-slate-200 rounded-2xl p-5 shadow-sm"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: T.greenL }}>
+                <IcoBarChart color={T.green} />
+              </div>
+              <div>
+                <p className="text-[28px] font-bold text-slate-900 leading-none">{stats.rateStr}</p>
+                <p className="text-xs text-slate-500 mt-1.5">Overall Rate</p>
+              </div>
+            </div>
+          </div>
+          <div
+            onClick={() => navigate('/students')}
+            role="button"
+            tabIndex={0}
+            className="clickable-card bg-white border border-slate-200 rounded-2xl p-5 shadow-sm"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: T.blueL }}>
+                <IcoUserCheck color={T.blue} />
+              </div>
+              <div>
+                <p className="text-[28px] font-bold text-slate-900 leading-none">{stats.presentToday}</p>
+                <p className="text-xs text-slate-500 mt-1.5">Present Today</p>
+              </div>
+            </div>
+          </div>
+          <div
+            onClick={() => navigate('/risks-alerts')}
+            role="button"
+            tabIndex={0}
+            className="clickable-card bg-white border border-slate-200 rounded-2xl p-5 shadow-sm"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: T.redL }}>
+                <IcoUserX color={T.red} />
+              </div>
+              <div>
+                <p className="text-[28px] font-bold text-slate-900 leading-none">{stats.absentToday}</p>
+                <p className="text-xs text-slate-500 mt-1.5">Absent Today</p>
+              </div>
+            </div>
+          </div>
+          <div
+            onClick={() => navigate('/risks-alerts')}
+            role="button"
+            tabIndex={0}
+            className="clickable-card bg-white border border-slate-200 rounded-2xl p-5 shadow-sm"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: T.amberL }}>
+                <IcoClock color={T.amber} />
+              </div>
+              <div>
+                <p className="text-[28px] font-bold text-slate-900 leading-none">{stats.lateToday}</p>
+                <p className="text-xs text-slate-500 mt-1.5">Late Today</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Class tabs ─────────────────────────────────────────── */}
+        {classes.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-5">
+            {classes.map(cls => (
+              <button
+                key={cls.id}
+                onClick={() => setSelectedClassId(cls.id)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  selectedClassId === cls.id
+                    ? 'bg-[#1e3272] text-white'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                {cls.name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* ── Weekly Attendance Overview (horizontal day strip) ─── */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm mb-5">
+          <div className="mb-4">
+            <h2 className="text-base font-semibold text-slate-900">Weekly Attendance Overview</h2>
+            {activeClass && weeklyDays.length > 0 && (
+              <p className="text-xs text-slate-500 mt-1">
+                {activeClass.name} • {weeklyDays[0]?.dateLabel} – {weeklyDays[weeklyDays.length - 1]?.dateLabel}, {new Date().getFullYear()}
+              </p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-4 lg:grid-cols-8 gap-3">
+            {weeklyDays.map((day, i) => {
+              const isPending = day.isToday && !day.hasData && !day.isWeekend;
+              return (
+                <div
+                  key={i}
+                  className={`rounded-xl p-3 ${isPending ? 'border-2' : 'border'}`}
+                  style={{
+                    borderColor: isPending ? T.amber : T.bdr,
+                    background: isPending ? '#FFFBEB' : '#fff',
+                    opacity: day.isFuture || day.isWeekend ? 0.5 : 1,
+                  }}
+                >
+                  <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: T.ink2 }}>{day.label}</p>
+                  <p className="text-base font-bold mt-0.5" style={{ color: T.ink0 }}>{day.dateLabel}</p>
+                  {day.hasData ? (
+                    <>
+                      <div className="flex items-center justify-between text-[11px] mt-2">
+                        <span style={{ color: T.ink2 }}>Present</span>
+                        <span className="font-bold" style={{ color: T.green2 }}>{day.present}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] mt-1">
+                        <span style={{ color: T.ink2 }}>Absent</span>
+                        <span className="font-bold" style={{ color: T.red }}>{day.absent}</span>
+                      </div>
+                      <p className="text-sm font-bold mt-2" style={{ color: parseFloat(day.rate!) >= 85 ? T.green : T.amber }}>
+                        {day.rate}
+                      </p>
+                    </>
+                  ) : isPending ? (
+                    <>
+                      <div className="flex items-center justify-between text-[11px] mt-2">
+                        <span style={{ color: T.ink2 }}>Present</span>
+                        <span style={{ color: T.ink2 }}>—</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] mt-1">
+                        <span style={{ color: T.ink2 }}>Absent</span>
+                        <span style={{ color: T.ink2 }}>—</span>
+                      </div>
+                      <button
+                        onClick={() => { setMarkingClassId(selectedClassId); setMarking(true); }}
+                        className="mt-2 w-full py-1.5 rounded-md text-[11px] font-semibold text-white"
+                        style={{ background: T.blue }}
+                      >
+                        Mark Now
+                      </button>
+                    </>
+                  ) : (
+                    <p className="text-[11px] mt-2" style={{ color: T.ink2 }}>
+                      {day.isWeekend ? 'Weekend' : day.isFuture ? 'Upcoming' : day.isForgotten ? 'Not marked' : '—'}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── Attendance Concerns ────────────────────────────────── */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-semibold text-slate-900">Attendance Concerns</h2>
+            <button className="text-xs font-medium text-blue-600 hover:text-blue-700">View All</button>
+          </div>
+
+          {concerns.length === 0 ? (
+            <div className="py-10 text-center">
+              <div className="inline-flex w-12 h-12 rounded-xl items-center justify-center mb-2" style={{ background: T.greenL }}>
+                <IcoCheck color={T.green} size={18} />
+              </div>
+              <p className="text-sm" style={{ color: T.ink2 }}>All students have good attendance</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {concerns.map((s, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl"
+                  style={{ background: s.badge.bg }}
+                >
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-[12px] font-semibold flex-shrink-0"
+                    style={{ background: s.av.color, color: '#fff' }}
+                  >
+                    {s.initials}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-semibold truncate" style={{ color: T.ink0 }}>{s.name}</p>
+                    <p className="text-[11px] truncate mt-0.5" style={{ color: s.badge.color }}>{s.issue}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+      </div>{/* ═══════════ END DESKTOP VIEW ═══════════ */}
 
     </div>
   );

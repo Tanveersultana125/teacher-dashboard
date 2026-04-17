@@ -27,7 +27,7 @@ const Login = () => {
           <div className="w-20 h-20 bg-[#1e3272] rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-900/20 rotate-3 hover:rotate-0 transition-transform duration-500">
             <GraduationCap className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-4xl font-black text-[#1e294b] tracking-tight mb-2">EduIntellect</h1>
+          <h1 className="text-4xl font-black text-[#1e294b] tracking-tight mb-2">Edullent</h1>
           <p className="text-[#64748b] font-bold uppercase tracking-[0.2em] text-xs">Teacher Dashboard</p>
         </div>
 

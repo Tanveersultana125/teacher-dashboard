@@ -177,7 +177,7 @@ const Reports = () => {
         </p>
         <div style={{ display: "flex", gap: 7, marginTop: 13, flexWrap: "wrap" }}>
           <span style={{ padding: "5px 10px", borderRadius: 20, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.07)", fontSize: 10, color: "rgba(255,255,255,0.45)", fontWeight: 500 }}>
-            {teacherData?.schoolName || "EduIntellect Main"}
+            {teacherData?.schoolName || "Edullent Main"}
           </span>
           <span style={{ padding: "5px 10px", borderRadius: 20, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.07)", fontSize: 10, color: "rgba(255,255,255,0.45)", fontWeight: 500 }}>
             {REPORTS.length} report types

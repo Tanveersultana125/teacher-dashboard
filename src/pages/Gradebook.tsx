@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { db } from "../lib/firebase";
 import {
   collection, query, onSnapshot, where,
@@ -93,6 +94,7 @@ const IcoSearch = () => (
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Gradebook() {
   const { teacherData } = useAuth();
+  const navigate = useNavigate();
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [loading, setLoading] = useState(true);
@@ -570,10 +572,13 @@ export default function Gradebook() {
 
   // ── Render: Main View ──────────────────────────────────────────────────────
   return (
-    <div style={{ fontFamily: 'inherit', minHeight: '100vh', background: T.s1 }} className="text-left pb-24">
+    <div style={{ fontFamily: 'inherit', minHeight: '100vh' }} className="text-left pb-24">
+
+      {/* ═══════════════════ MOBILE VIEW ═══════════════════ */}
+      <div className="md:hidden" style={{ background: T.s1 }}>
 
       {/* Dark hero */}
-      <div style={{ background: T.ink0 }} className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 px-[22px] pb-6">
+      <div style={{ background: T.ink0 }} className="-mx-4 sm:-mx-6 px-[22px] pb-6">
         <div style={{ fontSize: 9, fontWeight: 500, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 5, paddingTop: 16 }}>
           Academic records
         </div>
@@ -910,21 +915,31 @@ export default function Gradebook() {
               label: 'Class avg',
               color: classAvgPct >= 75 ? T.green2 : classAvgPct >= 50 ? T.amber : T.red,
               pct: classAvgPct,
+              route: '/concept-mastery',
             },
             {
               val: String(gradeDist.A),
               label: 'Excellent',
               color: T.green2,
               pct: filtered.length > 0 ? (gradeDist.A / filtered.length) * 100 : 0,
+              route: '/concept-mastery',
             },
             {
               val: String(gradeDist.F),
               label: 'At risk',
               color: T.red,
               pct: filtered.length > 0 ? (gradeDist.F / filtered.length) * 100 : 0,
+              route: '/risks-alerts',
             },
           ].map((s, i) => (
-            <div key={i} style={{ background: T.s0, border: `1px solid ${T.bdr}`, borderRadius: 13, padding: 11 }}>
+            <div
+              key={i}
+              onClick={() => navigate(s.route)}
+              role="button"
+              tabIndex={0}
+              className="clickable-card"
+              style={{ background: T.s0, border: `1px solid ${T.bdr}`, borderRadius: 13, padding: 11 }}
+            >
               <div style={{ fontSize: 17, fontWeight: 500, letterSpacing: '-0.4px', lineHeight: 1, color: s.color }}>
                 {s.val}
               </div>
@@ -992,6 +1007,140 @@ export default function Gradebook() {
         <input type="file" ref={fileInputRef} className="hidden" accept=".xlsx,.xls" />
 
       </div>
+
+      </div>{/* ═══════════ END MOBILE VIEW ═══════════ */}
+
+      {/* ═══════════════════ DESKTOP VIEW ═══════════════════ */}
+      <div className="hidden md:block">
+
+        {/* Header row */}
+        <div className="flex items-start justify-between mb-6 gap-4">
+          <div>
+            <h1 className="text-[28px] font-bold text-slate-900 leading-tight tracking-tight">Gradebook</h1>
+            <p className="text-sm text-slate-500 mt-1">
+              {selectedClass ? `Complete academic record for ${selectedClass.name}` : 'Select a class to view gradebook'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <select
+              value={selectedClassId}
+              onChange={e => setSelectedClassId(e.target.value)}
+              className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 outline-none cursor-pointer"
+            >
+              {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <button
+              onClick={handleExport}
+              className="h-10 px-4 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Export
+            </button>
+            {hasUnsaved && (
+              <button onClick={handleSave} className="h-10 px-4 rounded-lg bg-[#1e3272] text-white text-sm font-semibold hover:bg-[#162552]">
+                Save Changes
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Table card */}
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide sticky left-0 bg-slate-50 z-10">Student</th>
+                  {columns.map(col => (
+                    <th key={col.id} className="text-center px-4 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide whitespace-nowrap">
+                      {col.name}
+                    </th>
+                  ))}
+                  <th className="text-center px-4 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide bg-blue-50">Total</th>
+                  <th className="text-center px-4 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide bg-blue-50">Grade</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filtered.length === 0 || columns.length === 0 ? (
+                  <tr>
+                    <td colSpan={columns.length + 3} className="py-16 text-center text-sm text-slate-400">
+                      {columns.length === 0 ? 'No columns yet — add one in mobile view' : 'No students enrolled'}
+                    </td>
+                  </tr>
+                ) : (
+                  filtered.map(stu => {
+                    const key = (stu.email || stu.id).toLowerCase();
+                    const earned = columns.reduce((acc, c) => acc + (Number(localScores[`${key}_${c.id}`]) || 0), 0);
+                    const pct = totalMax > 0 ? (earned / totalMax) * 100 : 0;
+                    const grade = simpleGrade(pct);
+                    const av = avStyle(stu.name);
+                    return (
+                      <tr key={stu.id} className="hover:bg-slate-50">
+                        <td className="px-5 py-3 whitespace-nowrap sticky left-0 bg-white hover:bg-slate-50">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0"
+                              style={{ background: av.color, color: '#fff' }}
+                            >
+                              {getInitials(stu.name)}
+                            </div>
+                            <span className="text-sm font-semibold text-slate-900">{stu.name}</span>
+                          </div>
+                        </td>
+                        {columns.map(col => {
+                          const scoreKey = `${key}_${col.id}`;
+                          const val = localScores[scoreKey];
+                          return (
+                            <td key={col.id} className="px-4 py-3 text-center">
+                              <input
+                                type="number"
+                                value={val ?? ''}
+                                onChange={e => setLocalScores(p => ({ ...p, [scoreKey]: e.target.value }))}
+                                min="0"
+                                max={col.maxMarks}
+                                className="w-16 h-8 px-2 text-center text-sm border border-slate-200 rounded-md outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                              />
+                            </td>
+                          );
+                        })}
+                        <td className="px-4 py-3 text-center text-sm font-bold text-slate-900 bg-blue-50/50">{earned}</td>
+                        <td className="px-4 py-3 text-center bg-blue-50/50">
+                          <span className="text-sm font-bold" style={{ color: grade.color }}>{grade.label}</span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+                {filtered.length > 0 && columns.length > 0 && (
+                  <tr className="bg-slate-50 font-semibold">
+                    <td className="px-5 py-3 text-sm text-slate-900 sticky left-0 bg-slate-50">Class Avg</td>
+                    {colAvgs.map((a, i) => (
+                      <td key={i} className="px-4 py-3 text-center text-sm text-slate-700">{a.toFixed(1)}</td>
+                    ))}
+                    <td className="px-4 py-3 text-center text-sm text-slate-900 bg-blue-100">{totalAvgEarned.toFixed(1)}</td>
+                    <td className="px-4 py-3 text-center text-sm bg-blue-100" style={{ color: avgGradeLabel.color }}>{avgGradeLabel.label}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Legend footer */}
+          <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex flex-wrap gap-4">
+            {[
+              { dot: T.green2, lbl: 'Excellent (90%+)' },
+              { dot: T.blue, lbl: 'Good (70–89%)' },
+              { dot: T.amber, lbl: 'Average (50–69%)' },
+              { dot: T.red, lbl: 'At risk (<50%)' },
+            ].map((l, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full" style={{ background: l.dot }} />
+                <span className="text-xs text-slate-600">{l.lbl}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </div>{/* ═══════════ END DESKTOP VIEW ═══════════ */}
 
     </div>
   );

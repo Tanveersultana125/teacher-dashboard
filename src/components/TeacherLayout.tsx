@@ -20,6 +20,7 @@ const ROUTE_TITLES: Record<string, string> = {
   "/principal-notes":   "Principal Notes",
   "/lesson-planner":    "AI Lesson Planner",
   "/summarize-lesson":  "Summarize Lesson",
+  "/syllabus":          "Syllabus",
   "/reports":           "Reports",
   "/settings":          "Settings",
 };
@@ -31,7 +32,7 @@ const TeacherLayout = () => {
 
   // Derive page title — strip dynamic segments like /my-classes/:id
   const basePath = "/" + location.pathname.split("/")[1];
-  const pageTitle = ROUTE_TITLES[basePath] || "EduIntellect";
+  const pageTitle = ROUTE_TITLES[basePath] || "Edullent";
 
   // Teacher initials for mobile avatar
   const initials = (() => {
@@ -41,7 +42,7 @@ const TeacherLayout = () => {
   })();
 
   // Pages where the navbar should be dark to blend with their hero header
-  const darkNavRoutes = ["/", "/my-classes", "/attendance", "/assignments", "/tests", "/students", "/gradebook", "/concept-mastery", "/risks-alerts", "/parent-notes", "/principal-notes", "/lesson-planner", "/summarize-lesson", "/reports", "/settings"];
+  const darkNavRoutes = ["/", "/my-classes", "/attendance", "/assignments", "/tests", "/students", "/gradebook", "/concept-mastery", "/syllabus", "/risks-alerts", "/parent-notes", "/principal-notes", "/lesson-planner", "/summarize-lesson", "/reports", "/settings"];
   const isDarkNav = darkNavRoutes.includes(basePath);
 
   return (

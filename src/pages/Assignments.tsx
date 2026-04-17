@@ -329,12 +329,15 @@ const Assignments = () => {
   const filterChips: FilterKey[] = ["All", "To grade", "Submitted", "Draft"];
 
   return (
-    <div style={{ background: T.s1, fontFamily: 'inherit' }} className="min-h-screen pb-28 md:pb-0 text-left">
+    <div style={{ fontFamily: 'inherit' }} className="min-h-screen pb-28 md:pb-0 text-left">
+
+      {/* ═══════════════════ MOBILE VIEW ═══════════════════ */}
+      <div className="md:hidden" style={{ background: T.s1 }}>
 
       {/* ── Dark Hero ───────────────────────────────────────────────────────── */}
       <div
         style={{ background: T.ink0 }}
-        className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 px-[22px] pb-6"
+        className="-mx-4 sm:-mx-6 px-[22px] pb-6"
       >
         <h1 style={{ fontSize: 22, fontWeight: 500, color: '#fff', letterSpacing: '-0.4px', marginBottom: 3 }}>
           Assignments
@@ -474,10 +477,17 @@ const Assignments = () => {
               const pastDue = isDuePast(a.deadline);
 
               return (
-                <div key={a.id} style={{
-                  background: T.s0, border: `1px solid ${T.bdr}`,
-                  borderRadius: 18, overflow: 'hidden',
-                }}>
+                <div
+                  key={a.id}
+                  onClick={() => { setSelectedAssignment(a); setView("grade"); }}
+                  role="button"
+                  tabIndex={0}
+                  className="clickable-card"
+                  style={{
+                    background: T.s0, border: `1px solid ${T.bdr}`,
+                    borderRadius: 18, overflow: 'hidden',
+                  }}
+                >
                   {/* Colored accent strip */}
                   <div style={{ height: 4, background: accent }} />
 
@@ -531,7 +541,7 @@ const Assignments = () => {
                     {/* Actions */}
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', borderTop: `1px solid ${T.s2}`, paddingTop: 12 }}>
                       <button
-                        onClick={() => { setSelectedAssignment(a); setView("grade"); }}
+                        onClick={(e) => { e.stopPropagation(); setSelectedAssignment(a); setView("grade"); }}
                         style={{
                           flex: 1, padding: 10, borderRadius: 11, background: T.blue,
                           border: 'none', color: '#fff', fontSize: 12, fontWeight: 500,
@@ -542,7 +552,7 @@ const Assignments = () => {
                         <IcoGradeCheck /> Grade submissions
                       </button>
                       <button
-                        onClick={() => handleDelete(a.id, a.title)}
+                        onClick={(e) => { e.stopPropagation(); handleDelete(a.id, a.title); }}
                         style={{
                           width: 36, height: 36, borderRadius: 10,
                           border: `1px solid ${T.bdr}`, background: T.s1,
@@ -580,6 +590,180 @@ const Assignments = () => {
           </div>
         )}
       </div>
+
+      </div>{/* ═══════════ END MOBILE VIEW ═══════════ */}
+
+      {/* ═══════════════════ DESKTOP VIEW ═══════════════════ */}
+      <div className="hidden md:block">
+
+        {/* ── Header row ─────────────────────────────────────────── */}
+        <div className="flex items-start justify-between mb-6 gap-4">
+          <div>
+            <h1 className="text-[28px] font-bold text-slate-900 leading-tight tracking-tight">Assignments</h1>
+            <p className="text-sm text-slate-500 mt-1">Create, manage, and grade student assignments.</p>
+          </div>
+          <button
+            onClick={() => setView("create")}
+            className="h-11 px-5 rounded-lg bg-[#1e3272] text-white text-sm font-semibold hover:bg-[#162552] flex items-center gap-2 shadow-sm"
+          >
+            <IcoPlus /> Create Assignment
+          </button>
+        </div>
+
+        {/* ── 4-col Stat cards ───────────────────────────────────── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: T.blueL }}>
+                <IcoDoc color={T.blue} />
+              </div>
+              <div>
+                <p className="text-[28px] font-bold text-slate-900 leading-none">{stats.totalActive}</p>
+                <p className="text-xs text-slate-500 mt-1.5">Total Active</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: T.amberL }}>
+                <IcoCal color={T.amber} />
+              </div>
+              <div>
+                <p className="text-[28px] font-bold text-slate-900 leading-none">{stats.dueThisWeek}</p>
+                <p className="text-xs text-slate-500 mt-1.5">Due This Week</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: T.redL }}>
+                <IcoAlert color={T.red} />
+              </div>
+              <div>
+                <p className="text-[28px] font-bold text-slate-900 leading-none">{stats.pendingGrading}</p>
+                <p className="text-xs text-slate-500 mt-1.5">Pending Grading</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: T.greenL }}>
+                <IcoCheck2 color={T.green} />
+              </div>
+              <div>
+                <p className="text-[28px] font-bold text-slate-900 leading-none">{stats.avgSubmission}%</p>
+                <p className="text-xs text-slate-500 mt-1.5">Avg. Submission</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Search + filter chips row ──────────────────────────── */}
+        <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
+            {filterChips.map(key => (
+              <button
+                key={key}
+                onClick={() => setFilter(key)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  filter === key
+                    ? 'bg-[#1e3272] text-white'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                {key}
+              </button>
+            ))}
+          </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search assignments..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-64 h-10 pl-9 pr-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
+            />
+          </div>
+        </div>
+
+        {/* ── Assignments table ──────────────────────────────────── */}
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+          {loading ? (
+            <div className="py-16 flex justify-center">
+              <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="py-20 text-center">
+              <p className="text-sm text-slate-500 font-semibold mb-1">
+                {filter === 'All' ? 'No assignments yet' : `No "${filter}" assignments`}
+              </p>
+              <p className="text-xs text-slate-400">Create your first assignment to get started.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide">Assignment</th>
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide">Class</th>
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide">Due Date</th>
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide">Submissions</th>
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide">Status</th>
+                    <th className="text-right px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filtered.map(a => {
+                    const badge = statusBadge(a.status);
+                    const dueLabel = timeRemaining(a.deadline);
+                    return (
+                      <tr
+                        key={a.id}
+                        onClick={() => { setSelectedAssignment(a); setView("grade"); }}
+                        className="hover:bg-slate-50 transition-colors cursor-pointer"
+                      >
+                        <td className="px-5 py-4">
+                          <p className="text-sm font-semibold text-slate-900">{a.title}</p>
+                          {a.description && <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{a.description}</p>}
+                        </td>
+                        <td className="px-5 py-4 text-sm text-slate-700">{a.className || '—'}</td>
+                        <td className={`px-5 py-4 text-sm ${isDuePast(a.deadline) ? 'text-rose-600 font-semibold' : 'text-slate-700'}`}>
+                          {dueLabel}
+                        </td>
+                        <td className="px-5 py-4 text-sm text-slate-700 font-medium">{a.subCount}/{a.expected}</td>
+                        <td className="px-5 py-4">
+                          <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full" style={{ background: badge.bg, color: badge.color }}>
+                            {badge.text}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setSelectedAssignment(a); setView("grade"); }}
+                              className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline"
+                            >
+                              Grade
+                            </button>
+                            <span className="text-slate-300">|</span>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDelete(a.id, a.title); }}
+                              className="text-xs font-semibold text-rose-600 hover:text-rose-700 hover:underline"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+      </div>{/* ═══════════ END DESKTOP VIEW ═══════════ */}
 
       {/* ── Mobile bottom tab bar ────────────────────────────────────────────── */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-40" style={{

@@ -27,6 +27,7 @@ const Reports            = lazy(() => import("./pages/Reports"));
 const SettingsPage       = lazy(() => import("./pages/SettingsPage"));
 const LessonPlanGenerator = lazy(() => import("./pages/LessonPlanGenerator"));
 const SummarizeLesson    = lazy(() => import("./pages/SummarizeLesson"));
+const Syllabus           = lazy(() => import("./pages/Syllabus"));
 const NotFound           = lazy(() => import("./pages/NotFound"));
 const Login              = lazy(() => import("./pages/Login"));
 
@@ -84,6 +85,7 @@ const AppRoutes = () => {
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/lesson-planner" element={<LessonPlanGenerator />} />
           <Route path="/summarize-lesson" element={<SummarizeLesson />} />
+          <Route path="/syllabus" element={<Syllabus />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>

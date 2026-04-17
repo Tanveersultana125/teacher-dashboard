@@ -308,12 +308,18 @@ const ClassDetail = () => {
       {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Total Students", value: stats.totalStudents, color: "bg-blue-100" },
-          { label: "Attendance", value: stats.attendanceRate, color: "bg-emerald-100" },
-          { label: "Avg. Score", value: stats.avgScore, color: "bg-blue-100" },
-          { label: "At Risk", value: stats.atRiskCount, color: "bg-rose-100" },
+          { label: "Total Students", value: stats.totalStudents, color: "bg-blue-100", route: "/students" },
+          { label: "Attendance", value: stats.attendanceRate, color: "bg-emerald-100", route: "/attendance" },
+          { label: "Avg. Score", value: stats.avgScore, color: "bg-blue-100", route: "/gradebook" },
+          { label: "At Risk", value: stats.atRiskCount, color: "bg-rose-100", route: "/risks-alerts" },
         ].map(card => (
-          <div key={card.label} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm flex items-center gap-4">
+          <div
+            key={card.label}
+            onClick={() => navigate(card.route)}
+            role="button"
+            tabIndex={0}
+            className="clickable-card bg-white border border-slate-100 rounded-2xl p-5 shadow-sm flex items-center gap-4"
+          >
             <div className={`w-12 h-12 rounded-xl flex-shrink-0 ${card.color}`} />
             <div>
               <p className="text-2xl font-bold text-slate-800 leading-none mb-1">{card.value}</p>
@@ -371,7 +377,11 @@ const ClassDetail = () => {
                   </tr>
                 ) : (
                   paginated.map(s => (
-                    <tr key={s.id} className="hover:bg-slate-50 transition-colors group">
+                    <tr
+                      key={s.id}
+                      onClick={() => navigate(`/students?studentId=${s.studentId || s.id}`)}
+                      className="hover:bg-slate-50 transition-colors group cursor-pointer"
+                    >
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
                           <span className="text-xs font-semibold text-slate-400 mb-1">{s.initials}</span>
@@ -381,24 +391,24 @@ const ClassDetail = () => {
                       </td>
                       <td className="px-6 py-4 text-center">
                         {editingRoll === s.id ? (
-                          <div className="flex items-center justify-center gap-1">
+                          <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
                             <input
                               className="w-16 h-7 text-center text-xs border border-slate-200 rounded-lg outline-none"
                               value={tempRoll}
                               onChange={e => setTempRoll(e.target.value)}
                               autoFocus
                             />
-                            <button onClick={() => handleUpdateRoll(s.id)} disabled={isUpdating} className="text-emerald-500 hover:text-emerald-600">
+                            <button onClick={(e) => { e.stopPropagation(); handleUpdateRoll(s.id); }} disabled={isUpdating} className="text-emerald-500 hover:text-emerald-600">
                               {isUpdating ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
                             </button>
-                            <button onClick={() => setEditingRoll(null)} className="text-slate-300 hover:text-slate-500">
+                            <button onClick={(e) => { e.stopPropagation(); setEditingRoll(null); }} className="text-slate-300 hover:text-slate-500">
                               <X size={12} />
                             </button>
                           </div>
                         ) : (
                           <div
                             className="flex items-center justify-center gap-1 cursor-pointer group/roll"
-                            onClick={() => { setEditingRoll(s.id); setTempRoll(s.rollNo || ""); }}
+                            onClick={(e) => { e.stopPropagation(); setEditingRoll(s.id); setTempRoll(s.rollNo || ""); }}
                           >
                             <span className="text-sm font-medium text-slate-700">{s.rollNo || "—"}</span>
                             <Edit2 size={10} className="text-slate-300 opacity-0 group-hover/roll:opacity-100" />
@@ -409,7 +419,7 @@ const ClassDetail = () => {
                       <td className="px-6 py-4 text-center text-sm font-medium text-slate-700">{s.avg}</td>
                       <td className="px-6 py-4 text-center">
                         <button
-                          onClick={() => handleToggleStatus(s.id, s.status)}
+                          onClick={(e) => { e.stopPropagation(); handleToggleStatus(s.id, s.status); }}
                           className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${statusStyle(s.status)}`}
                         >
                           {s.status}
@@ -417,7 +427,7 @@ const ClassDetail = () => {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <button
-                          onClick={() => navigate(`/students`)}
+                          onClick={(e) => { e.stopPropagation(); navigate(`/students?studentId=${s.studentId || s.id}`); }}
                           className="text-sm font-semibold text-[#1e3272] hover:underline"
                         >
                           View Profile

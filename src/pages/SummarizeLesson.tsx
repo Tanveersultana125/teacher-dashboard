@@ -150,7 +150,7 @@ const SummarizeLesson = () => {
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <rect x="1" y="1" width="8" height="8" rx="1.5" /><line x1="3" y1="4" x2="7" y2="4" /><line x1="3" y1="6" x2="5.5" y2="6" />
             </svg>
-            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>{teacherData?.schoolName || "EduIntellect"} engine</span>
+            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>{teacherData?.schoolName || "Edullent"} engine</span>
           </div>
         </div>
       )}

@@ -234,7 +234,7 @@ const LessonPlanGenerator = () => {
                 <rect x="1" y="1" width="8" height="8" rx="1.5" /><line x1="3.5" y1="4" x2="6.5" y2="4" /><line x1="3.5" y1="6" x2="5.5" y2="6" />
               </svg>
               <span style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", fontWeight: 500 }}>
-                {teacherData?.schoolName || "EduIntellect"} engine
+                {teacherData?.schoolName || "Edullent"} engine
               </span>
             </div>
           </div>

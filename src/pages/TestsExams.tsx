@@ -270,12 +270,15 @@ export default function TestsExams() {
   ];
 
   return (
-    <div style={{ background: T.s1, fontFamily: 'inherit' }} className="min-h-screen pb-28 md:pb-0 text-left">
+    <div style={{ fontFamily: 'inherit' }} className="min-h-screen pb-28 md:pb-0 text-left">
+
+      {/* ═══════════════════ MOBILE VIEW ═══════════════════ */}
+      <div className="md:hidden" style={{ background: T.s1 }}>
 
       {/* ── Dark Hero ──────────────────────────────────────────────────────── */}
       <div
         style={{ background: T.ink0 }}
-        className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 px-[22px] pb-5"
+        className="-mx-4 sm:-mx-6 px-[22px] pb-5"
       >
         <p style={{ fontSize: 10, fontWeight: 500, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 5 }}>
           Tests &amp; Exams
@@ -400,7 +403,14 @@ export default function TestsExams() {
                 : { bg: T.s2, color: T.ink2, text: daysLabel(test.testDate) };
 
               return (
-                <div key={test.id} style={{ padding: '13px 14px', borderBottom: idx < filtered.length - 1 ? `1px solid ${T.s2}` : 'none' }}>
+                <div
+                  key={test.id}
+                  onClick={() => { setSelectedTest(test); setView("enter-scores"); }}
+                  role="button"
+                  tabIndex={0}
+                  className="cursor-pointer hover:bg-slate-50 transition-colors"
+                  style={{ padding: '13px 14px', borderBottom: idx < filtered.length - 1 ? `1px solid ${T.s2}` : 'none' }}
+                >
 
                   {/* Top row: icon + name + badge */}
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -453,7 +463,7 @@ export default function TestsExams() {
                   {/* Actions */}
                   <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
                     <button
-                      onClick={() => { setSelectedTest(test); setView("enter-scores"); }}
+                      onClick={(e) => { e.stopPropagation(); setSelectedTest(test); setView("enter-scores"); }}
                       style={{
                         flex: 1, padding: '9px 12px', borderRadius: 10,
                         background: T.blueL, border: `1px solid ${T.blueB}`,
@@ -520,6 +530,188 @@ export default function TestsExams() {
 
       </div>
 
+      </div>{/* ═══════════ END MOBILE VIEW ═══════════ */}
+
+      {/* ═══════════════════ DESKTOP VIEW ═══════════════════ */}
+      <div className="hidden md:block">
+
+        {/* ── Header row ─────────────────────────────────────────── */}
+        <div className="flex items-start justify-between mb-6 gap-4">
+          <div>
+            <h1 className="text-[28px] font-bold text-slate-900 leading-tight tracking-tight">Tests &amp; Exams</h1>
+            <p className="text-sm text-slate-500 mt-1">Manage tests, enter scores, and analyze performance.</p>
+          </div>
+          <button
+            onClick={() => setView("create")}
+            className="h-11 px-5 rounded-lg bg-[#1e3272] text-white text-sm font-semibold hover:bg-[#162552] flex items-center gap-2 shadow-sm"
+          >
+            <IcoPlus /> Create Test
+          </button>
+        </div>
+
+        {/* ── 4-col Stat cards ───────────────────────────────────── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: T.amberL }}>
+                <IcoClock color={T.amber} />
+              </div>
+              <div>
+                <p className="text-[28px] font-bold text-slate-900 leading-none">{stats.upcoming}</p>
+                <p className="text-xs text-slate-500 mt-1.5">Upcoming</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: T.blueL }}>
+                <IcoCheck2 color={T.blue} />
+              </div>
+              <div>
+                <p className="text-[28px] font-bold text-slate-900 leading-none">{stats.completed}</p>
+                <p className="text-xs text-slate-500 mt-1.5">Completed</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: T.redL }}>
+                <IcoDoc color={T.red} />
+              </div>
+              <div>
+                <p className="text-[28px] font-bold text-slate-900 leading-none">{stats.pendingScores}</p>
+                <p className="text-xs text-slate-500 mt-1.5">Pending Scores</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: T.greenL }}>
+                <IcoTrend color={T.green} />
+              </div>
+              <div>
+                <p className="text-[28px] font-bold text-slate-900 leading-none">
+                  {stats.classAvg !== null ? `${stats.classAvg.toFixed(1)}%` : '—'}
+                </p>
+                <p className="text-xs text-slate-500 mt-1.5">Class Avg</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── 2-col: Upcoming Tests | Performance Overview ──────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+          {/* Upcoming tests (2 cols) */}
+          <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <h2 className="text-base font-semibold text-slate-900">Upcoming Tests</h2>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  className="w-48 h-9 pl-9 pr-3 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:bg-white focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+            </div>
+            <div className="p-5 space-y-3">
+              {loading ? (
+                <div className="py-10 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-blue-600" /></div>
+              ) : filtered.length === 0 ? (
+                <div className="py-10 text-center text-sm text-slate-400">No tests yet — create your first one!</div>
+              ) : (
+                filtered.map(test => {
+                  const isPast = test.testDate && new Date(test.testDate).getTime() < Date.now();
+                  const daysText = daysLabel(test.testDate);
+                  const isUrgent = test.testDate && !isPast && new Date(test.testDate).getTime() - Date.now() < 3 * 86400000;
+                  return (
+                    <div
+                      key={test.id}
+                      onClick={() => { setSelectedTest(test); setView('enter-scores'); }}
+                      role="button"
+                      tabIndex={0}
+                      className={`clickable-card border-l-4 rounded-xl p-4 ${isUrgent ? 'bg-amber-50 border-amber-400' : 'bg-slate-50 border-slate-200'}`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-semibold text-slate-900">{test.title || test.subject || 'Untitled Test'}</h3>
+                          <p className="text-xs text-slate-500 mt-0.5">{test.className || 'Class'} • {test.studentsCount} students</p>
+                        </div>
+                        <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${isUrgent ? 'bg-amber-500 text-white' : isPast ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
+                          {daysText}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-4 text-xs text-slate-500 mb-3">
+                        {test.testDate && (
+                          <span>{new Date(test.testDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        )}
+                        {test.duration && <span>{test.duration} minutes</span>}
+                        {test.marks && <span>{test.marks} marks</span>}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setSelectedTest(test); setView('enter-scores'); }}
+                          className="px-4 py-1.5 rounded-lg bg-[#1e3272] text-white text-xs font-semibold hover:bg-[#162552]"
+                        >
+                          {isPast ? 'View Scores' : 'Enter Scores'}
+                        </button>
+                        <button className="px-4 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50">Edit</button>
+                        <button className="px-4 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50">Print</button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Performance Overview */}
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100">
+              <h2 className="text-base font-semibold text-slate-900">Performance Overview</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Last 5 tests</p>
+            </div>
+            <div className="p-5 space-y-4">
+              {classPerf.length === 0 && topicPerf.length === 0 ? (
+                <p className="py-8 text-center text-sm text-slate-400">No score data yet.</p>
+              ) : (
+                <>
+                  {classPerf.map((c, i) => (
+                    <div key={i}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-sm font-medium text-slate-700">{c.name}</span>
+                        <span className="text-sm font-bold" style={{ color: perfColor(c.avg!) }}>{c.avg!.toFixed(1)}%</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                        <div className="h-full rounded-full transition-all" style={{ background: perfColor(c.avg!), width: `${Math.min(100, c.avg!)}%` }} />
+                      </div>
+                    </div>
+                  ))}
+
+                  {topicPerf.length > 0 && (
+                    <div className="pt-4 border-t border-slate-100">
+                      <h3 className="text-sm font-semibold text-slate-900 mb-3">Topic Performance</h3>
+                      <div className="space-y-2">
+                        {topicPerf.map((t, i) => (
+                          <div key={i} className="flex items-center justify-between text-sm">
+                            <span className="text-slate-600 truncate pr-2">{t.name}</span>
+                            <span className="font-bold" style={{ color: perfColor(t.avg) }}>{t.avg.toFixed(0)}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+        </div>
+
+      </div>{/* ═══════════ END DESKTOP VIEW ═══════════ */}
 
     </div>
   );

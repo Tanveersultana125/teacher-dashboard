@@ -220,10 +220,13 @@ export default function Students() {
   const activePath = location.pathname;
 
   return (
-    <div style={{ background: T.s1, fontFamily: 'inherit' }} className="min-h-screen pb-28 md:pb-0 text-left">
+    <div style={{ fontFamily: 'inherit' }} className="min-h-screen pb-28 md:pb-0 text-left">
+
+      {/* ═══════════════════ MOBILE VIEW ═══════════════════ */}
+      <div className="md:hidden" style={{ background: T.s1 }}>
 
       {/* ── Dark Hero ──────────────────────────────────────────────────────── */}
-      <div style={{ background: T.ink0 }} className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 px-[22px] pb-5">
+      <div style={{ background: T.ink0 }} className="-mx-4 sm:-mx-6 px-[22px] pb-5">
         <p style={{ fontSize: 9, fontWeight: 500, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 4 }}>
           All students
         </p>
@@ -328,7 +331,14 @@ export default function Students() {
               const scoreColor = scoreBarColor(stu.avgScorePct);
               const initials = getInitials(stu.name || '');
               return (
-                <div key={stu.id} style={{ background: T.s0, border: `1px solid ${T.bdr}`, borderRadius: 16, overflow: 'hidden' }}>
+                <div
+                  key={stu.id}
+                  onClick={() => setSelectedStudent(stu)}
+                  role="button"
+                  tabIndex={0}
+                  className="clickable-card"
+                  style={{ background: T.s0, border: `1px solid ${T.bdr}`, borderRadius: 16, overflow: 'hidden' }}
+                >
                   {/* Colored band */}
                   <div style={{ height: 3, background: band }} />
                   <div style={{ padding: 13 }}>
@@ -350,7 +360,7 @@ export default function Students() {
                           {stu.statusTag}
                         </span>
                         <button
-                          onClick={() => handleDelete(stu)}
+                          onClick={(e) => { e.stopPropagation(); handleDelete(stu); }}
                           style={{ width: 26, height: 26, borderRadius: 7, background: T.s1, border: `1px solid ${T.bdr}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                         >
                           <IcoTrash />
@@ -378,7 +388,7 @@ export default function Students() {
 
                     {/* View profile button */}
                     <button
-                      onClick={() => setSelectedStudent(stu)}
+                      onClick={(e) => { e.stopPropagation(); setSelectedStudent(stu); }}
                       style={{ width: '100%', padding: 9, borderRadius: 10, background: T.ink0, border: 'none', color: '#fff', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}
                     >
                       <IcoEye /> View profile
@@ -390,6 +400,117 @@ export default function Students() {
           </div>
         )}
       </div>
+
+      </div>{/* ═══════════ END MOBILE VIEW ═══════════ */}
+
+      {/* ═══════════════════ DESKTOP VIEW ═══════════════════ */}
+      <div className="hidden md:block">
+
+        {/* ── Header row ─────────────────────────────────────────── */}
+        <div className="flex items-start justify-between mb-6 gap-4">
+          <div>
+            <h1 className="text-[28px] font-bold text-slate-900 leading-tight tracking-tight">Students</h1>
+            <p className="text-sm text-slate-500 mt-1">View and manage all your students across classes.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <circle cx="6" cy="6" r="4"/><line x1="9" y1="9" x2="12.5" y2="12.5"/>
+              </svg>
+              <input
+                type="text"
+                placeholder="Search by name or roll..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="w-64 h-10 pl-9 pr-3 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
+            <select
+              value={filterStatus}
+              onChange={e => setFilterStatus(e.target.value)}
+              className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 outline-none cursor-pointer"
+            >
+              <option value="All">All status</option>
+              <option value="Good">Good</option>
+              <option value="Attention">Attention</option>
+              <option value="At Risk">At Risk</option>
+            </select>
+            <select
+              value={filterClass}
+              onChange={e => setFilterClass(e.target.value)}
+              className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 outline-none cursor-pointer"
+            >
+              <option value="All">All classes</option>
+              {uniqueClasses.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+        </div>
+
+        {/* ── Student card grid (4-col) ──────────────────────────── */}
+        {loading ? (
+          <div className="py-16 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-blue-600" /></div>
+        ) : filtered.length === 0 ? (
+          <div className="py-16 bg-white border border-slate-200 rounded-2xl text-center">
+            <p className="text-sm text-slate-500">
+              {search || filterStatus !== 'All' || filterClass !== 'All' ? 'No students match your filters.' : 'No students enrolled yet.'}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {filtered.map(stu => {
+              const av = avStyle(stu.name || '');
+              const badge = statusBadge(stu.statusTag);
+              const initials = getInitials(stu.name || '');
+              return (
+                <div
+                  key={stu.id}
+                  onClick={() => setSelectedStudent(stu)}
+                  role="button"
+                  tabIndex={0}
+                  className="clickable-card bg-white border border-slate-200 rounded-2xl p-5 shadow-sm"
+                >
+
+                  {/* Top: avatar + badge */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div
+                      className="w-14 h-14 rounded-xl flex items-center justify-center text-base font-bold"
+                      style={{ background: av.fg, color: '#fff' }}
+                    >
+                      {initials}
+                    </div>
+                    <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full" style={{ background: badge.bg, color: badge.color }}>
+                      {stu.statusTag}
+                    </span>
+                  </div>
+
+                  <h3 className="text-base font-bold text-slate-900 leading-tight">{stu.name}</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Class {stu.className} • Roll: {stu.rollNo}</p>
+
+                  {/* Stats */}
+                  <div className="space-y-1.5 mt-4">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-500">Attendance</span>
+                      <span className={`font-bold ${stu.attendancePct >= 85 ? 'text-emerald-600' : 'text-amber-600'}`}>{stu.attendancePct.toFixed(0)}%</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-500">Avg. Score</span>
+                      <span className="font-bold" style={{ color: scoreBarColor(stu.avgScorePct) }}>{stu.avgScorePct > 0 ? `${stu.avgScorePct.toFixed(1)}%` : '—'}</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setSelectedStudent(stu); }}
+                    className="mt-4 w-full py-2.5 rounded-lg bg-[#1e3272] text-white text-xs font-semibold hover:bg-[#162552]"
+                  >
+                    View Profile
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+      </div>{/* ═══════════ END DESKTOP VIEW ═══════════ */}
 
       {/* ── Mobile bottom tab bar ─────────────────────────────────────────── */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-40" style={{ background: T.s0, borderTop: `1px solid ${T.bdr}`, padding: '8px 16px 16px', display: 'flex', justifyContent: 'space-between' }}>

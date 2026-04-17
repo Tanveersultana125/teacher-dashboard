@@ -5,6 +5,7 @@ import {
   doc, updateDoc, where, Timestamp,
 } from "firebase/firestore";
 import { Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/AuthContext";
 import { toast } from "sonner";
 
@@ -199,6 +200,7 @@ const TabIcon = ({ type, active }: { type: string; active: boolean }) => {
 // ── Main component ────────────────────────────────────────────────────────────
 const RisksAlerts = () => {
   const { teacherData } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading]               = useState(true);
   const [alerts, setAlerts]                 = useState<Alert[]>([]);
   const [resolvedCount, setResolvedCount]   = useState(0);
@@ -559,11 +561,14 @@ const RisksAlerts = () => {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: "100vh", background: T.bg, paddingBottom: 0 }}>
+    <div style={{ minHeight: "100vh", paddingBottom: 0 }}>
+
+      {/* ═══════════════════ MOBILE VIEW ═══════════════════ */}
+      <div className="md:hidden" style={{ background: T.bg }}>
 
       {/* ── Dark hero ───────────────────────────────────────────────────────── */}
       <div
-        className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8"
+        className="-mx-4 sm:-mx-6"
         style={{ background: T.hero, padding: "0 22px 28px" }}
       >
         <div style={{ paddingTop: 20 }}>
@@ -714,6 +719,10 @@ const RisksAlerts = () => {
                 return (
                   <div
                     key={a.id}
+                    onClick={() => navigate(`/students?studentId=${a.studentId || ''}`)}
+                    role="button"
+                    tabIndex={0}
+                    className="cursor-pointer hover:bg-slate-50 transition-colors"
                     style={{
                       display: "flex", alignItems: "flex-start", gap: 10,
                       padding: "12px 14px",
@@ -982,6 +991,184 @@ const RisksAlerts = () => {
           </div>
         </div>
       )}
+
+      </div>{/* ═══════════ END MOBILE VIEW ═══════════ */}
+
+      {/* ═══════════════════ DESKTOP VIEW ═══════════════════ */}
+      <div className="hidden md:block">
+
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-[28px] font-bold text-slate-900 leading-tight tracking-tight">Risks &amp; Alerts</h1>
+          <p className="text-sm text-slate-500 mt-1">Monitor and respond to student concerns.</p>
+        </div>
+
+        {/* 4 stat cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div
+            onClick={() => navigate("/students")}
+            role="button"
+            tabIndex={0}
+            className="clickable-card rounded-2xl p-5 shadow-sm border"
+            style={{ background: T.rlBg, borderColor: T.rlBdr }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-white">
+                <TriAlertIco c={T.red} />
+              </div>
+              <div>
+                <p className="text-[30px] font-bold leading-none" style={{ color: T.red }}>{criticalCount}</p>
+                <p className="text-xs font-semibold mt-1.5" style={{ color: T.red }}>Critical</p>
+              </div>
+            </div>
+          </div>
+          <div
+            onClick={() => navigate("/students")}
+            role="button"
+            tabIndex={0}
+            className="clickable-card rounded-2xl p-5 shadow-sm border"
+            style={{ background: T.alBg, borderColor: T.alBdr }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-white">
+                <CircleInfoIco c={T.amb} />
+              </div>
+              <div>
+                <p className="text-[30px] font-bold leading-none" style={{ color: T.amb }}>{highCount}</p>
+                <p className="text-xs font-semibold mt-1.5" style={{ color: T.amb }}>High Priority</p>
+              </div>
+            </div>
+          </div>
+          <div
+            onClick={() => navigate("/students")}
+            role="button"
+            tabIndex={0}
+            className="clickable-card rounded-2xl p-5 shadow-sm border"
+            style={{ background: T.blBg, borderColor: T.blBdr }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-white">
+                <CircleInfoIco c={T.blue} />
+              </div>
+              <div>
+                <p className="text-[30px] font-bold leading-none" style={{ color: T.blue }}>{mediumCount}</p>
+                <p className="text-xs font-semibold mt-1.5" style={{ color: T.blue }}>Medium Priority</p>
+              </div>
+            </div>
+          </div>
+          <div
+            onClick={() => navigate("/gradebook")}
+            role="button"
+            tabIndex={0}
+            className="clickable-card rounded-2xl p-5 shadow-sm border"
+            style={{ background: T.glBg, borderColor: T.glBdr }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-white">
+                <CheckIco c={T.grn2} />
+              </div>
+              <div>
+                <p className="text-[30px] font-bold leading-none" style={{ color: T.grn2 }}>{resolvedCount}</p>
+                <p className="text-xs font-semibold mt-1.5" style={{ color: T.grn2 }}>Resolved This Week</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center gap-1 px-5 pt-4 border-b border-slate-100">
+            {filterTabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors ${
+                  activeTab === tab.id ? 'border-[#1e3272] text-[#1e3272]' : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Alert rows */}
+          <div className="p-5 space-y-3">
+            {filteredAlerts.length === 0 ? (
+              <div className="py-12 text-center">
+                <p className="text-sm font-semibold text-slate-600">
+                  {activeTab === 'All' ? 'All students on track' : activeTab === 'Attendance' ? 'No attendance concerns' : 'No grade concerns'}
+                </p>
+                <p className="text-xs text-slate-400 mt-1">No active alerts.</p>
+              </div>
+            ) : (
+              filteredAlerts.map(a => {
+                const sev = SEV[a.severity];
+                return (
+                  <div
+                    key={a.id}
+                    className="rounded-xl border-l-4 p-4 flex items-start gap-4"
+                    style={{ background: sev.bg, borderLeftColor: sev.color, borderColor: sev.bdr, borderStyle: 'solid', borderWidth: '1px 1px 1px 4px' }}
+                  >
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                      style={{ background: avBg(a.name) }}
+                    >
+                      {a.initials || getInitials(a.name)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <p className="text-sm font-bold text-slate-900">{a.name}</p>
+                        <span
+                          className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                          style={{ background: sev.color, color: '#fff' }}
+                        >
+                          {a.severity}
+                        </span>
+                        <span className="text-xs text-slate-500">{a.cls}</span>
+                      </div>
+                      <p className="text-sm text-slate-700">{a.issue}</p>
+                      {a.details.length > 0 && (
+                        <div className="flex items-center gap-4 mt-1 flex-wrap">
+                          {a.details.map((d, i) => (
+                            <span key={i} className="text-xs text-slate-500">{d}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {a.severity === 'Critical' ? (
+                        <button
+                          onClick={() => toast.info('Opening parent contact')}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
+                          style={{ background: T.red }}
+                        >
+                          Contact Parent
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => toast.info('Opening action')}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
+                          style={{ background: sev.color }}
+                        >
+                          {a.type === 'Attendance' ? 'Send Reminder' : a.type === 'Grades' ? 'Schedule Meeting' : 'Talk to Student'}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleResolve(a)}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
+                      >
+                        Mark Resolved
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+      </div>{/* ═══════════ END DESKTOP VIEW ═══════════ */}
+
     </div>
   );
 };

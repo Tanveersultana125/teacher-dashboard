@@ -321,10 +321,13 @@ const ConceptMastery = () => {
 
   // ── Main view ─────────────────────────────────────────────────────────────
   return (
-    <div style={{ fontFamily: 'inherit', minHeight: '100vh', background: T.s1 }} className="text-left pb-24">
+    <div style={{ fontFamily: 'inherit', minHeight: '100vh' }} className="text-left pb-24">
+
+      {/* ═══════════════════ MOBILE VIEW ═══════════════════ */}
+      <div className="md:hidden" style={{ background: T.s1 }}>
 
       {/* ── Dark hero ─────────────────────────────────────────────────────── */}
-      <div style={{ background: T.ink0 }} className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 px-[22px] pb-6">
+      <div style={{ background: T.ink0 }} className="-mx-4 sm:-mx-6 px-[22px] pb-6">
         <div style={{ fontSize: 9, fontWeight: 500, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 5, paddingTop: 16 }}>
           Concept mastery
         </div>
@@ -559,6 +562,154 @@ const ConceptMastery = () => {
         )}
 
       </div>
+
+      </div>{/* ═══════════ END MOBILE VIEW ═══════════ */}
+
+      {/* ═══════════════════ DESKTOP VIEW ═══════════════════ */}
+      <div className="hidden md:block">
+
+        {/* Header */}
+        <div className="flex items-start justify-between mb-5 gap-4">
+          <div>
+            <h1 className="text-[28px] font-bold text-slate-900 leading-tight tracking-tight">Concept Mastery</h1>
+            <p className="text-sm text-slate-500 mt-1">Track student understanding across mathematical concepts.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <select
+              value={selectedClassId}
+              onChange={e => setSelectedClassId(e.target.value)}
+              className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 outline-none cursor-pointer"
+            >
+              {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <div className="relative">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <circle cx="6" cy="6" r="4"/><line x1="9" y1="9" x2="12.5" y2="12.5"/>
+              </svg>
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search student..."
+                className="w-56 h-10 pl-9 pr-3 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
+            <button
+              onClick={exportCSV}
+              disabled={masteryData.length === 0}
+              className="h-10 px-4 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Export
+            </button>
+          </div>
+        </div>
+
+        {/* Legend */}
+        <div className="flex flex-wrap items-center gap-5 mb-4 px-1">
+          {[
+            { dot: T.green2, lbl: 'Mastered (80%+)' },
+            { dot: T.amber,  lbl: 'Developing (50–79%)' },
+            { dot: T.red,    lbl: 'Weak (<50%)' },
+            { dot: T.ink2,   lbl: 'Not Assessed' },
+          ].map((l, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-sm" style={{ background: l.dot }} />
+              <span className="text-xs font-medium text-slate-600">{l.lbl}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Concept table */}
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+          {loading ? (
+            <div className="py-16 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-blue-600" /></div>
+          ) : dynamicHeaders.length === 0 ? (
+            <div className="p-8 text-center">
+              <p className="text-sm font-semibold text-slate-700">No concepts tracked yet</p>
+              <p className="text-xs text-slate-500 mt-1">Add concept scores from the Tests &amp; Exams section to see mastery data here.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide sticky left-0 bg-slate-50">Student</th>
+                    {dynamicHeaders.map(h => (
+                      <th key={h} className="text-center px-3 py-3 text-xs font-semibold text-slate-600 whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan={dynamicHeaders.length + 1} className="py-10 text-center text-sm text-slate-400">No students match your search.</td>
+                    </tr>
+                  ) : (
+                    filtered.map(stu => {
+                      const av = avStyle(stu.studentName);
+                      return (
+                        <tr key={stu.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => setSelectedStudent(stu)}>
+                          <td className="px-5 py-3 sticky left-0 bg-white whitespace-nowrap">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0" style={{ background: av.color, color: '#fff' }}>
+                                {getInitials(stu.studentName)}
+                              </div>
+                              <span className="text-sm font-semibold text-slate-900">{stu.studentName}</span>
+                            </div>
+                          </td>
+                          {stu.concepts.map((pct: number, i: number) => {
+                            const status = getMasteryStatus(pct || null);
+                            return (
+                              <td key={i} className="px-3 py-3 text-center text-sm font-semibold" style={{ color: status.color }}>
+                                {pct > 0 ? `${pct}%` : '—'}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })
+                  )}
+                  {filtered.length > 0 && (
+                    <tr className="bg-slate-50 font-semibold">
+                      <td className="px-5 py-3 text-sm text-slate-900 sticky left-0 bg-slate-50">Class Avg</td>
+                      {classAverages.map((avg, i) => {
+                        const status = getMasteryStatus(avg);
+                        return (
+                          <td key={i} className="px-3 py-3 text-center text-sm" style={{ color: status.color }}>
+                            {avg > 0 ? `${avg}%` : '—'}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Weak concepts card */}
+        {classAverages.length > 0 && (
+          <div className="mt-5 bg-rose-50 border border-rose-200 rounded-2xl p-5">
+            <h3 className="text-sm font-bold text-slate-900 mb-3">Weak Concepts Requiring Attention</h3>
+            <div className="flex flex-wrap gap-2">
+              {dynamicHeaders
+                .map((h, i) => ({ name: h, avg: classAverages[i] }))
+                .filter(c => c.avg > 0 && c.avg < 75)
+                .sort((a, b) => a.avg - b.avg)
+                .slice(0, 5)
+                .map(c => (
+                  <span key={c.name} className="px-3 py-1.5 rounded-lg bg-white border border-rose-200 text-xs font-semibold text-rose-700">
+                    {c.name} (Class Avg: {c.avg}%)
+                  </span>
+                ))}
+              {dynamicHeaders.map((h, i) => ({ name: h, avg: classAverages[i] })).filter(c => c.avg > 0 && c.avg < 75).length === 0 && (
+                <span className="text-xs text-slate-500">All concepts are above 75% — great class!</span>
+              )}
+            </div>
+          </div>
+        )}
+
+      </div>{/* ═══════════ END DESKTOP VIEW ═══════════ */}
 
     </div>
   );
