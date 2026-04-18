@@ -296,8 +296,7 @@ export default function TestsExams() {
 
       {/* ── Dark Hero ──────────────────────────────────────────────────────── */}
       <div
-        style={{ background: T.ink0 }}
-        className="-mx-4 sm:-mx-6 px-[22px] pb-5"
+        className="-mx-4 sm:-mx-6 px-[22px] pb-5 bg-[#162E93] md:bg-[#08090C]"
       >
         <p style={{ fontSize: 10, fontWeight: 500, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 5 }}>
           Tests &amp; Exams

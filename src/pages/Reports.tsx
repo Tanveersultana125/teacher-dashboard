@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
 import GenerateReport from "@/components/GenerateReport";
 import { useAuth } from "../lib/AuthContext";
 import { db } from "../lib/firebase";
@@ -100,12 +99,22 @@ const REPORT_ICONS: Record<string, any> = {
 const FILTERS = ["All", "PDF only", "Excel only"];
 
 // ── Component ─────────────────────────────────────────────────────────────────
+// Map report status → dot color (real, not always-green)
+const statusDotColor = (status: string, T_: typeof T): string => {
+  const s = (status || "").toLowerCase();
+  if (s.includes("error") || s.includes("fail"))                              return T_.red;
+  if (s.includes("sync") || s.includes("broadcast") || s.includes("report"))  return T_.grn2;
+  if (s.includes("draft"))                                                    return T_.amb;
+  return T_.ink3;
+};
+
 const Reports = () => {
   const { teacherData } = useAuth();
   const [filter, setFilter]               = useState("All");
   const [isGenerateOpen, setIsGenerateOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<any>(null);
   const [history, setHistory]             = useState<any[]>([]);
+  const [showAllHistory, setShowAllHistory] = useState(false);
 
   // ── Firebase: report history ────────────────────────────────────────────
   useEffect(() => {
@@ -119,21 +128,26 @@ const Reports = () => {
         seen.add(d.id); return true;
       });
       combined.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
-      setHistory(combined.slice(0, 10));
+      setHistory(combined);
     };
+    if (!teacherData.schoolId) return;
+    const schoolId = teacherData.schoolId;
     const unsub1 = onSnapshot(
-      query(collection(db, "reports"), where("teacherId", "==", teacherData.id)),
+      query(
+        collection(db, "reports"),
+        where("schoolId", "==", schoolId),
+        where("teacherId", "==", teacherData.id),
+      ),
       snap => { snap1 = snap.docs.map(d => ({ id: d.id, ...d.data() as any })); merge(); }
     );
-    const unsub2 = teacherData.schoolId
-      ? onSnapshot(
-          query(collection(db, "reports"),
-            where("schoolId", "==", teacherData.schoolId),
-            where("publishedToTeacher", "==", true)
-          ),
-          snap => { snap2 = snap.docs.map(d => ({ id: d.id, ...d.data() as any })); merge(); }
-        )
-      : () => {};
+    const unsub2 = onSnapshot(
+      query(
+        collection(db, "reports"),
+        where("schoolId", "==", schoolId),
+        where("publishedToTeacher", "==", true),
+      ),
+      snap => { snap2 = snap.docs.map(d => ({ id: d.id, ...d.data() as any })); merge(); }
+    );
     return () => { unsub1(); unsub2(); };
   }, [teacherData?.id, teacherData?.schoolId]);
 
@@ -153,6 +167,28 @@ const Reports = () => {
     setIsGenerateOpen(true);
   };
 
+  // Download a single history item as JSON (the report's stored snapshot)
+  const handleDownloadHistory = (h: any) => {
+    const payload = {
+      id: h.id,
+      title: h.title,
+      type: h.type,
+      className: h.className,
+      grade: h.grade,
+      format: h.format,
+      status: h.status,
+      createdAt: h.createdAt?.toDate?.().toISOString() || null,
+      data: h.data || null,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url;
+    a.download = `${(h.title || "report").replace(/\s+/g, "_")}_${h.id}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // ── Filtered reports ────────────────────────────────────────────────────
   const filtered = REPORTS.filter(r => {
     if (filter === "PDF only") return r.formats.includes("PDF");
@@ -165,7 +201,7 @@ const Reports = () => {
     <div style={{ minHeight: "100vh", background: T.bg }}>
 
       {/* ═══ DARK HERO ═══════════════════════════════════════════════════ */}
-      <div className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8" style={{ background: T.hero, padding: "18px 22px 22px" }}>
+      <div className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 bg-[#162E93] md:bg-[#08090C]" style={{ padding: "18px 22px 22px" }}>
         <p style={{ fontSize: 9, fontWeight: 500, color: "rgba(255,255,255,0.28)", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 5 }}>
           Academic documents
         </p>
@@ -254,22 +290,7 @@ const Reports = () => {
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="1.5" strokeLinecap="round">
                     <polyline points="6,2 6,8" /><polyline points="3.5,5.5 6,8.5 8.5,5.5" /><line x1="1.5" y1="10.5" x2="10.5" y2="10.5" />
                   </svg>
-                  Generate
-                </button>
-                <button
-                  onClick={() => handleOpenGenerate(r)}
-                  style={{
-                    flex: 1, padding: 10, borderRadius: 11,
-                    background: T.s1, border: `1px solid ${T.bdr}`,
-                    color: T.ink2, fontSize: 12, fontWeight: 500,
-                    cursor: "pointer", fontFamily: "inherit",
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-                  }}
-                >
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke={T.ink3} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="6" cy="6" r="2.5" /><path d="M1,6 C1,6 3,2 6,2 C9,2 11,6 11,6 C11,6 9,10 6,10 C3,10 1,6 1,6Z" />
-                  </svg>
-                  Preview
+                  Generate Report
                 </button>
               </div>
             </div>
@@ -280,19 +301,26 @@ const Reports = () => {
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginTop: 6 }}>
           <div>
             <p style={{ fontSize: 16, fontWeight: 500, color: T.ink1, letterSpacing: "-0.3px" }}>Intelligence output history</p>
-            <p style={{ fontSize: 9, fontWeight: 500, color: T.ink3, letterSpacing: "0.07em", textTransform: "uppercase", marginTop: 2 }}>Audit trail of generated documents</p>
+            <p style={{ fontSize: 9, fontWeight: 500, color: T.ink3, letterSpacing: "0.07em", textTransform: "uppercase", marginTop: 2 }}>
+              {history.length === 0 ? "Audit trail of generated documents" : `${history.length} report${history.length !== 1 ? "s" : ""} on record`}
+            </p>
           </div>
-          <button style={{
-            display: "flex", alignItems: "center", gap: 4,
-            fontSize: 11, color: T.blue, fontWeight: 500,
-            background: "none", border: "none", cursor: "pointer",
-            marginTop: 4, fontFamily: "inherit",
-          }}>
-            View full audit
-            <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke={T.blue} strokeWidth="1.5" strokeLinecap="round">
-              <polyline points="2,9 9,2" /><polyline points="5,2 9,2 9,6" />
-            </svg>
-          </button>
+          {history.length > 10 && (
+            <button
+              onClick={() => setShowAllHistory(v => !v)}
+              style={{
+                display: "flex", alignItems: "center", gap: 4,
+                fontSize: 11, color: T.blue, fontWeight: 500,
+                background: "none", border: "none", cursor: "pointer",
+                marginTop: 4, fontFamily: "inherit",
+              }}
+            >
+              {showAllHistory ? "Show less" : "View full audit"}
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke={T.blue} strokeWidth="1.5" strokeLinecap="round">
+                <polyline points="2,9 9,2" /><polyline points="5,2 9,2 9,6" />
+              </svg>
+            </button>
+          )}
         </div>
 
         {/* History list */}
@@ -310,13 +338,14 @@ const Reports = () => {
               </p>
             </div>
           ) : (
-            history.map((h, idx) => {
+            (showAllHistory ? history : history.slice(0, 10)).map((h, idx, arr) => {
               const col = h.type === "at_risk" ? T.red : h.type === "attendance_summary" ? T.amb : h.type === "individual_progress" ? T.tea : T.blue;
+              const dotCol = statusDotColor(h.status, T);
               return (
                 <div key={h.id} style={{
                   display: "flex", alignItems: "flex-start", gap: 10,
                   padding: "12px 13px",
-                  borderBottom: idx < history.length - 1 ? `1px solid ${T.s2}` : "none",
+                  borderBottom: idx < arr.length - 1 ? `1px solid ${T.s2}` : "none",
                 }}>
                   {/* Icon */}
                   <div style={{
@@ -335,7 +364,7 @@ const Reports = () => {
                       {h.title || "Report"} — {h.grade || h.className || "N/A"}
                     </p>
                     <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 4 }}>
-                      <div style={{ width: 5, height: 5, borderRadius: "50%", background: T.grn2 }} />
+                      <div style={{ width: 5, height: 5, borderRadius: "50%", background: dotCol }} />
                       <span style={{ fontSize: 10, color: T.ink3 }}>
                         {h.status || "Draft"} · {(h.format || "PDF").toUpperCase()} Format
                       </span>
@@ -345,17 +374,21 @@ const Reports = () => {
                     </p>
                   </div>
 
-                  {/* Download btn */}
-                  <div style={{
-                    width: 26, height: 26, borderRadius: 8,
-                    background: T.s1, border: `1px solid ${T.bdr}`,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    flexShrink: 0, cursor: "pointer",
-                  }}>
+                  {/* Download btn — exports stored report JSON */}
+                  <button
+                    onClick={() => handleDownloadHistory(h)}
+                    title="Download report snapshot"
+                    style={{
+                      width: 26, height: 26, borderRadius: 8,
+                      background: T.s1, border: `1px solid ${T.bdr}`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      flexShrink: 0, cursor: "pointer", padding: 0,
+                    }}
+                  >
                     <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke={T.ink3} strokeWidth="1.5" strokeLinecap="round">
                       <polyline points="5.5,2 5.5,8" /><polyline points="3,5.5 5.5,8.5 8,5.5" />
                     </svg>
-                  </div>
+                  </button>
                 </div>
               );
             })

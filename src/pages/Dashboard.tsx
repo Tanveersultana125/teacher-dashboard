@@ -139,9 +139,10 @@ const Dashboard = () => {
 
   // Real-time unread parent messages
   useEffect(() => {
-    if (!teacherData?.id) return;
+    if (!teacherData?.id || !teacherData?.schoolId) return;
     const q = query(
       collection(db, "parent_notes"),
+      where("schoolId", "==", teacherData.schoolId),
       where("teacherId", "==", teacherData.id),
       where("from", "==", "parent")
     );
@@ -153,7 +154,7 @@ const Dashboard = () => {
         .slice(0, 10);
       setUnreadNotes(unread);
     });
-  }, [teacherData?.id]);
+  }, [teacherData?.id, teacherData?.schoolId]);
 
   // Close notification panel on outside click
   useEffect(() => {
@@ -167,33 +168,33 @@ const Dashboard = () => {
 
   // Real-time attendance rate (last 30 days)
   useEffect(() => {
-    if (!teacherData?.id) return;
-    const schoolId = teacherData.schoolId as string | undefined;
+    if (!teacherData?.id || !teacherData?.schoolId) return;
+    const schoolId = teacherData.schoolId as string;
     const branchId = teacherData.branchId as string | undefined;
-    const SC: any[] = [];
-    if (schoolId) SC.push(where("schoolId", "==", schoolId));
+    const SC: any[] = [where("schoolId", "==", schoolId)];
     if (branchId) SC.push(where("branchId", "==", branchId));
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 30);
     const cutoffStr = cutoff.toLocaleDateString("en-CA");
-    const q = query(collection(db, "attendance"), where("teacherId", "==", teacherData.id), where("date", ">=", cutoffStr), ...SC);
+    const q = query(collection(db, "attendance"), ...SC, where("teacherId", "==", teacherData.id), where("date", ">=", cutoffStr));
     return onSnapshot(q, (snap) => {
       const att = snap.docs.map((d: any) => d.data());
       const pres = att.filter((a: any) => a.status === 'present' || a.status === 'late').length;
       setStats(prev => ({ ...prev, avgAttendance: att.length > 0 ? Number(((pres / att.length) * 100).toFixed(1)) : 0 }));
     });
-  }, [teacherData?.id]);
+  }, [teacherData?.id, teacherData?.schoolId]);
 
   // Main data harvest
   useEffect(() => {
-    if (!teacherData?.id) return;
+    if (!teacherData?.id || !teacherData?.schoolId) return;
     setLoading(true);
     const tId = teacherData.id;
     const tEmail = teacherData.email?.toLowerCase();
-    const schoolId = teacherData.schoolId as string | undefined;
+    const schoolId = teacherData.schoolId as string;
     const branchId = teacherData.branchId as string | undefined;
-    const SC: any[] = [];
-    if (schoolId) SC.push(where("schoolId", "==", schoolId));
+    // SC is spread into EVERY tenant query below — schoolId is mandatory
+    // under claims-based rules; branchId is optional per-deployment scope.
+    const SC: any[] = [where("schoolId", "==", schoolId)];
     if (branchId) SC.push(where("branchId", "==", branchId));
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 30);
@@ -295,7 +296,7 @@ const Dashboard = () => {
       finally { setLoading(false); }
     };
     harvest();
-  }, [teacherData?.id, teacherData?.email]);
+  }, [teacherData?.id, teacherData?.email, teacherData?.schoolId, teacherData?.branchId]);
 
   if (loading) return (
     <div className="h-screen flex items-center justify-center" style={{ background: T.surface1 }}>
@@ -352,8 +353,7 @@ const Dashboard = () => {
 
       {/* ── Hero (dark, full-bleed) ─────────────────────────────────────────── */}
       <div
-        style={{ background: T.ink0 }}
-        className="-mx-4 sm:-mx-6 px-[22px] pb-7"
+        className="-mx-4 sm:-mx-6 px-[22px] pb-7 bg-[#162E93] md:bg-[#08090C]"
       >
         {/* Welcome row */}
         <div className="flex items-start justify-between pt-2">

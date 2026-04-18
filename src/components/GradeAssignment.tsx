@@ -21,27 +21,26 @@ const GradeAssignment = ({ assignment, onBack }: GradeAssignmentProps) => {
   const [analyzingStudentId, setAnalyzingStudentId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!assignment?.id || !teacherData?.id) return;
-    
+    if (!assignment?.id || !teacherData?.id || !teacherData?.schoolId) return;
+
     const fetchEverything = async () => {
         setLoading(true);
-        const schoolId = teacherData?.schoolId as string | undefined;
+        const schoolId = teacherData.schoolId as string;
         const branchId = teacherData?.branchId as string | undefined;
-        const SC: any[] = [];
-        if (schoolId) SC.push(where("schoolId", "==", schoolId));
+        const SC: any[] = [where("schoolId", "==", schoolId)];
         if (branchId) SC.push(where("branchId", "==", branchId));
 
         try {
             // 1. Get Enrollments (Class Roster) — scoped by school
             const enrolQ = query(
                 collection(db, "enrollments"),
+                ...SC,
                 where("classId", "==", assignment.classId),
-                ...SC
             );
             const rosterSnap = await getDocs(enrolQ);
 
             // 2. Get existing results — scoped by school
-            const qGrades = query(collection(db, "results"), where("assignmentId", "==", assignment.id), ...SC);
+            const qGrades = query(collection(db, "results"), ...SC, where("assignmentId", "==", assignment.id));
             const gradeSnap = await getDocs(qGrades);
             const gradeMap = new Map();
             gradeSnap.docs.forEach(d => gradeMap.set(d.data().studentId, d.data()));
@@ -50,7 +49,7 @@ const GradeAssignment = ({ assignment, onBack }: GradeAssignmentProps) => {
             const subMap = new Map();
 
             // Query by homeworkId (the assignment's actual doc ID) — this is what parent saves
-            const qSubsByHomework = query(collection(db, "submissions"), where("homeworkId", "==", assignment.id), ...SC);
+            const qSubsByHomework = query(collection(db, "submissions"), ...SC, where("homeworkId", "==", assignment.id));
             const subSnapByHomework = await getDocs(qSubsByHomework);
             subSnapByHomework.docs.forEach(d => {
                 const data = d.data();
@@ -59,7 +58,7 @@ const GradeAssignment = ({ assignment, onBack }: GradeAssignmentProps) => {
             });
 
             // Also query by assignmentId as fallback (for older records)
-            const qSubsByAssign = query(collection(db, "submissions"), where("assignmentId", "==", assignment.id), ...SC);
+            const qSubsByAssign = query(collection(db, "submissions"), ...SC, where("assignmentId", "==", assignment.id));
             const subSnapByAssign = await getDocs(qSubsByAssign);
             subSnapByAssign.docs.forEach(d => {
                 const data = d.data();

@@ -73,11 +73,10 @@ const ConceptMastery = () => {
 
   // ── 1. Fetch Teacher's Active Assignments ─────────────────────────────────
   useEffect(() => {
-    if (!teacherData?.id) return;
-    const schoolId = teacherData.schoolId as string | undefined;
+    if (!teacherData?.id || !teacherData?.schoolId) return;
+    const schoolId = teacherData.schoolId as string;
     const branchId = teacherData.branchId as string | undefined;
-    const SC: any[] = [];
-    if (schoolId) SC.push(where("schoolId", "==", schoolId));
+    const SC: any[] = [where("schoolId", "==", schoolId)];
     if (branchId) SC.push(where("branchId", "==", branchId));
 
     let unsub: (() => void) | null = null;
@@ -128,10 +127,10 @@ const ConceptMastery = () => {
     const selAssignment = classes.find(c => c.id === selectedClassId);
     const targetClassId = selAssignment?.classId || selectedClassId;
 
-    const schoolId = teacherData.schoolId as string | undefined;
+    if (!teacherData.schoolId) return;
+    const schoolId = teacherData.schoolId as string;
     const branchId = teacherData.branchId as string | undefined;
-    const SC: any[] = [];
-    if (schoolId) SC.push(where("schoolId", "==", schoolId));
+    const SC: any[] = [where("schoolId", "==", schoolId)];
     if (branchId) SC.push(where("branchId", "==", branchId));
 
     let gbCols: any[] = [];
@@ -214,15 +213,15 @@ const ConceptMastery = () => {
     };
 
     const unsub1 = onSnapshot(
-      query(collection(db, "gradebook_columns"), where("classId", "==", targetClassId), ...SC),
+      query(collection(db, "gradebook_columns"), ...SC, where("classId", "==", targetClassId)),
       (snap) => { gbCols = snap.docs.map(d => ({ id: d.id, ...d.data() } as any)); scheduleCompute(); }
     );
     const unsub2 = onSnapshot(
-      query(collection(db, "tests_registry"), where("classId", "==", targetClassId), ...SC),
+      query(collection(db, "tests_registry"), ...SC, where("classId", "==", targetClassId)),
       (snap) => { classTests = snap.docs.map(d => ({ id: d.id, ...d.data() } as any)); scheduleCompute(); }
     );
     const unsub3 = onSnapshot(
-      query(collection(db, "enrollments"), where("classId", "==", targetClassId), ...SC),
+      query(collection(db, "enrollments"), ...SC, where("classId", "==", targetClassId)),
       (snap) => {
         roster = snap.docs.map((d, idx) => {
           const e = d.data();
@@ -240,15 +239,15 @@ const ConceptMastery = () => {
       }
     );
     const unsub4 = onSnapshot(
-      query(collection(db, "test_scores"), where("classId", "==", targetClassId), ...SC),
+      query(collection(db, "test_scores"), ...SC, where("classId", "==", targetClassId)),
       (snap) => { s1 = snap.docs.map(d => d.data()); scheduleCompute(); }
     );
     const unsub5 = onSnapshot(
-      query(collection(db, "gradebook_scores"), where("classId", "==", targetClassId), ...SC),
+      query(collection(db, "gradebook_scores"), ...SC, where("classId", "==", targetClassId)),
       (snap) => { s2 = snap.docs.map(d => d.data()); scheduleCompute(); }
     );
     const unsub6 = onSnapshot(
-      query(collection(db, "results"), where("classId", "==", targetClassId), ...SC),
+      query(collection(db, "results"), ...SC, where("classId", "==", targetClassId)),
       (snap) => { s3 = snap.docs.map(d => d.data()); scheduleCompute(); }
     );
 
@@ -256,7 +255,7 @@ const ConceptMastery = () => {
       if (computeTimer) clearTimeout(computeTimer);
       unsub1(); unsub2(); unsub3(); unsub4(); unsub5(); unsub6();
     };
-  }, [teacherData?.id, selectedClassId, classes]);
+  }, [teacherData?.id, teacherData?.schoolId, selectedClassId, classes]);
 
   // ── Export ────────────────────────────────────────────────────────────────
   const exportCSV = () => {
@@ -327,7 +326,7 @@ const ConceptMastery = () => {
       <div className="md:hidden" style={{ background: T.s1 }}>
 
       {/* ── Dark hero ─────────────────────────────────────────────────────── */}
-      <div style={{ background: T.ink0 }} className="-mx-4 sm:-mx-6 px-[22px] pb-6">
+      <div className="-mx-4 sm:-mx-6 px-[22px] pb-6 bg-[#162E93] md:bg-[#08090C]">
         <div style={{ fontSize: 9, fontWeight: 500, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 5, paddingTop: 16 }}>
           Concept mastery
         </div>
@@ -572,7 +571,7 @@ const ConceptMastery = () => {
         <div className="flex items-start justify-between mb-5 gap-4">
           <div>
             <h1 className="text-[28px] font-bold text-slate-900 leading-tight tracking-tight">Concept Mastery</h1>
-            <p className="text-sm text-slate-500 mt-1">Track student understanding across mathematical concepts.</p>
+            <p className="text-sm text-slate-500 mt-1">Track student understanding across assessed concepts.</p>
           </div>
           <div className="flex items-center gap-2">
             <select
@@ -645,15 +644,15 @@ const ConceptMastery = () => {
                     </tr>
                   ) : (
                     filtered.map(stu => {
-                      const av = avStyle(stu.studentName);
+                      const av = avStyle(stu.name || "");
                       return (
                         <tr key={stu.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => setSelectedStudent(stu)}>
                           <td className="px-5 py-3 sticky left-0 bg-white whitespace-nowrap">
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0" style={{ background: av.color, color: '#fff' }}>
-                                {getInitials(stu.studentName)}
+                                {getInitials(stu.name || "")}
                               </div>
-                              <span className="text-sm font-semibold text-slate-900">{stu.studentName}</span>
+                              <span className="text-sm font-semibold text-slate-900">{stu.name || "—"}</span>
                             </div>
                           </td>
                           {stu.concepts.map((pct: number, i: number) => {

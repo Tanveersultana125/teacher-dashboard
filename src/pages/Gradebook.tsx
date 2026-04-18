@@ -122,11 +122,10 @@ export default function Gradebook() {
 
   // 1. Fetch Classes (scoped by school — no full collection scan)
   useEffect(() => {
-    if (!teacherData?.id) return;
-    const schoolId = teacherData.schoolId as string | undefined;
+    if (!teacherData?.id || !teacherData?.schoolId) return;
+    const schoolId = teacherData.schoolId as string;
     const branchId = teacherData.branchId as string | undefined;
-    const SC: any[] = [];
-    if (schoolId) SC.push(where("schoolId", "==", schoolId));
+    const SC: any[] = [where("schoolId", "==", schoolId)];
     if (branchId) SC.push(where("branchId", "==", branchId));
 
     let unsub: (() => void) | null = null;
@@ -173,14 +172,14 @@ export default function Gradebook() {
     const selAssignment = classes.find(c => c.id === selectedClassId);
     const targetClassId = selAssignment?.classId || selectedClassId;
 
-    const schoolId = teacherData.schoolId as string | undefined;
+    if (!teacherData.schoolId) return;
+    const schoolId = teacherData.schoolId as string;
     const branchId = teacherData.branchId as string | undefined;
-    const SC: any[] = [];
-    if (schoolId) SC.push(where("schoolId", "==", schoolId));
+    const SC: any[] = [where("schoolId", "==", schoolId)];
     if (branchId) SC.push(where("branchId", "==", branchId));
 
     const u1 = onSnapshot(
-      query(collection(db, "enrollments"), where("classId", "==", targetClassId), ...SC),
+      query(collection(db, "enrollments"), ...SC, where("classId", "==", targetClassId)),
       (snap) => {
         const studs = snap.docs.map(d => {
           const e = d.data();
@@ -201,7 +200,7 @@ export default function Gradebook() {
     );
 
     const u2 = onSnapshot(
-      query(collection(db, "gradebook_columns"), where("assignmentId", "==", selectedClassId), ...SC),
+      query(collection(db, "gradebook_columns"), ...SC, where("assignmentId", "==", selectedClassId)),
       (snap) => {
         setColumns(
           snap.docs.map(d => ({ id: d.id, ...d.data() } as CustomColumn))
@@ -211,7 +210,7 @@ export default function Gradebook() {
     );
 
     const u3 = onSnapshot(
-      query(collection(db, "gradebook_scores"), where("assignmentId", "==", selectedClassId), ...SC),
+      query(collection(db, "gradebook_scores"), ...SC, where("assignmentId", "==", selectedClassId)),
       (snap) => {
         const fetched: any = {};
         snap.docs.forEach(d => {
@@ -364,7 +363,7 @@ export default function Gradebook() {
       <div style={{ fontFamily: 'inherit', minHeight: '100vh', background: T.s1 }} className="text-left pb-24">
 
         {/* Dark hero */}
-        <div style={{ background: T.ink0 }} className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 px-[22px] pb-6">
+        <div className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 px-[22px] pb-6 bg-[#162E93] md:bg-[#08090C]">
           <button
             onClick={() => setView('main')}
             style={{
@@ -578,7 +577,7 @@ export default function Gradebook() {
       <div className="md:hidden" style={{ background: T.s1 }}>
 
       {/* Dark hero */}
-      <div style={{ background: T.ink0 }} className="-mx-4 sm:-mx-6 px-[22px] pb-6">
+      <div className="-mx-4 sm:-mx-6 px-[22px] pb-6 bg-[#162E93] md:bg-[#08090C]">
         <div style={{ fontSize: 9, fontWeight: 500, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 5, paddingTop: 16 }}>
           Academic records
         </div>

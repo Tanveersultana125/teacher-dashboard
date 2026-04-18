@@ -29,6 +29,7 @@ import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, update
 import { useAuth } from "../lib/AuthContext";
 const loadXLSX = () => import("xlsx");
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import StudentProfile from "./StudentProfile";
 
 interface GenerateReportProps {
   isOpen: boolean;
@@ -49,7 +50,6 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
     classId: "",
     grade: "",
     studentId: "",
-    dateRange: "this-term",
     format: "pdf"
   });
 
@@ -62,15 +62,16 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
   }, [isOpen]);
 
   useEffect(() => {
-    if (!teacherData?.id || !isOpen) return;
+    if (!teacherData?.id || !teacherData?.schoolId || !isOpen) return;
+    const schoolId = teacherData.schoolId;
     const fetchInstitutionalData = async () => {
        try {
-         const q1 = query(collection(db, "teaching_assignments"), where("teacherId", "==", teacherData.id));
-         const q2 = query(collection(db, "classes"), where("teacherId", "==", teacherData.id));
-         
+         const q1 = query(collection(db, "teaching_assignments"), where("schoolId", "==", schoolId), where("teacherId", "==", teacherData.id));
+         const q2 = query(collection(db, "classes"), where("schoolId", "==", schoolId), where("teacherId", "==", teacherData.id));
+
          const [asgnSnap, clsSnap] = await Promise.all([getDocs(q1), getDocs(q2)]);
          const combined = [...asgnSnap.docs.map(d => ({id: d.id, ...d.data()})), ...clsSnap.docs.map(d => ({id: d.id, ...d.data()}))];
-         
+
          const map = new Map();
          combined.forEach((c:any) => {
             const id = c.classId || c.id;
@@ -78,7 +79,7 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
          });
          setClasses(Array.from(map.values()));
 
-         const qEnrol = query(collection(db, "enrollments"), where("teacherId", "==", teacherData.id));
+         const qEnrol = query(collection(db, "enrollments"), where("schoolId", "==", schoolId), where("teacherId", "==", teacherData.id));
          const enrolSnap = await getDocs(qEnrol);
          setRoster(enrolSnap.docs.map(d => ({ id: d.id, ...d.data() })));
        } catch (error) {
@@ -86,28 +87,28 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
        }
     };
     fetchInstitutionalData();
-  }, [teacherData?.id, isOpen]);
+  }, [teacherData?.id, teacherData?.schoolId, isOpen]);
 
   const handleGenerate = async () => {
     if (!params.classId) return toast.error("Please identify a class subdivision.");
     if (report?.id === "individual_progress" && !params.studentId) return toast.error("Please select a target student.");
-    
+    if (!teacherData?.schoolId || !teacherData?.id) return toast.error("School identity missing — please re-login.");
+
     setIsGenerating(true);
     setReportResult(null);
 
     try {
+       const schoolId = teacherData.schoolId as string;
        const selectedClass = classes.find(c => c.classId === params.classId || c.id === params.classId);
        const targetClassId = selectedClass?.classId || params.classId;
        let filteredRoster = roster.filter(s => s.classId === targetClassId);
 
-       if (filteredRoster.length === 0) throw new Error("No students detected in this subdivision registry.");
-
-       // HIGH-FIDELITY BATCH FETCH
+       if (filteredRoster.length === 0) throw new Error("No students enrolled in this class yet.");
        const [allAtt, allScores, allResults, allNotes] = await Promise.all([
-          getDocs(query(collection(db, "attendance"), where("classId", "==", targetClassId))),
-          getDocs(query(collection(db, "gradebook_scores"), where("classId", "==", targetClassId))),
-          getDocs(query(collection(db, "results"), where("classId", "==", targetClassId))),
-          getDocs(query(collection(db, "parent_notes"), where("teacherId", "==", teacherData.id)))
+          getDocs(query(collection(db, "attendance"), where("schoolId", "==", schoolId), where("classId", "==", targetClassId))),
+          getDocs(query(collection(db, "gradebook_scores"), where("schoolId", "==", schoolId), where("classId", "==", targetClassId))),
+          getDocs(query(collection(db, "results"), where("schoolId", "==", schoolId), where("classId", "==", targetClassId))),
+          getDocs(query(collection(db, "parent_notes"), where("schoolId", "==", schoolId), where("teacherId", "==", teacherData.id)))
        ]);
 
        const attDocs = allAtt.docs.map(d => d.data());
@@ -118,7 +119,7 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
        const enrichedPerformance = filteredRoster.map((student: any) => {
           const sId = student.studentId;
           const sEmail = student.studentEmail?.toLowerCase();
-          const filterByStudent = (arr: any[]) => arr.filter(item => 
+          const filterByStudent = (arr: any[]) => arr.filter(item =>
              (sId && (item.studentId === sId || item.id?.includes(sId))) || (sEmail && item.studentEmail?.toLowerCase() === sEmail)
           );
 
@@ -126,12 +127,14 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
           const sGrades = [...filterByStudent(gradeDocs), ...filterByStudent(resultDocs)];
           const sNotes = filterByStudent(noteDocs);
 
-          const present = sAtt.filter(a => a.status === 'present' || a.status === 'late').length;
-          const atndRate = sAtt.length > 0 ? (present / sAtt.length) * 100 : 92;
+          const hasAtt    = sAtt.length > 0;
+          const present   = sAtt.filter(a => a.status === 'present' || a.status === 'late').length;
+          const atndRate  = hasAtt ? (present / sAtt.length) * 100 : 0;
 
           const getPct = (sc: any) => Number(sc.percentage || (sc.mark/sc.maxMarks*100) || (sc.score || 0));
           const scores = sGrades.map(getPct).filter(v => v >= 0);
-          const avgScore = scores.length > 0 ? (scores.reduce((a,b)=>a+b,0) / scores.length) : 75;
+          const hasScores = scores.length > 0;
+          const avgScore  = hasScores ? (scores.reduce((a,b)=>a+b,0) / scores.length) : 0;
 
           const hasNegNote = sNotes.some((n:any) => {
              const text = (n.content || "").toLowerCase();
@@ -145,13 +148,22 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
              email: student.studentEmail,
              score: Math.round(avgScore),
              attendance: Math.round(atndRate),
+             hasAtt,
+             hasScores,
              hasNegNote,
-             standing: avgScore > 85 ? "Excellence" : (avgScore > 65 ? "Stable" : "Critical")
+             standing: !hasScores ? "No Data" : avgScore > 85 ? "Excellence" : avgScore > 65 ? "Stable" : "Critical",
           };
        });
 
-       const classAvg = Math.round(enrichedPerformance.reduce((acc, s) => acc + s.score, 0) / enrichedPerformance.length);
-       const classAtnd = Math.round(enrichedPerformance.reduce((acc, s) => acc + s.attendance, 0) / enrichedPerformance.length);
+       // Class-level averages: only count students who actually have data
+       const studentsWithScores = enrichedPerformance.filter(s => s.hasScores);
+       const studentsWithAtt    = enrichedPerformance.filter(s => s.hasAtt);
+       const classAvg  = studentsWithScores.length > 0
+          ? Math.round(studentsWithScores.reduce((acc, s) => acc + s.score, 0) / studentsWithScores.length)
+          : 0;
+       const classAtnd = studentsWithAtt.length > 0
+          ? Math.round(studentsWithAtt.reduce((acc, s) => acc + s.attendance, 0) / studentsWithAtt.length)
+          : 0;
 
        let resultData: any = {};
        const contextStr = enrichedPerformance.map(s => `${s.name}: ${s.score}% (${s.attendance}% ATND)`).join(", ");
@@ -169,10 +181,20 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
               isClassReport: true,
               subject: selectedClass?.subject || "Subject",
               className: selectedClass?.name,
-              aiRemarks: aiResponse?.data?.report_content || `Class engagement remains stable at ${classAvg}%.`,
-              chartData: enrichedPerformance.map(s => ({ name: s.name.split(' ')[0], score: s.score, atnd: s.attendance })),
-              summary: { avg: `${classAvg}%`, attendance: `${classAtnd}%`, mastery: classAvg > 80 ? "Distinction" : "Standard" },
-              fullList: enrichedPerformance
+              aiRemarks: aiResponse?.data?.report_content
+                 || (studentsWithScores.length > 0
+                    ? `Class engagement remains stable at ${classAvg}%.`
+                    : `No test scores recorded yet for this class — report will populate once grades are entered.`),
+              chartData: studentsWithScores.map(s => ({ name: s.name.split(' ')[0], score: s.score, atnd: s.attendance })),
+              summary: {
+                 avg:        studentsWithScores.length > 0 ? `${classAvg}%`  : "N/A",
+                 attendance: studentsWithAtt.length    > 0 ? `${classAtnd}%` : "N/A",
+                 mastery:    studentsWithScores.length === 0 ? "No Data" : classAvg > 80 ? "Distinction" : "Standard"
+              },
+              fullList: enrichedPerformance,
+              studentsWithScoresCount: studentsWithScores.length,
+              studentsWithAttCount: studentsWithAtt.length,
+              totalStudents: enrichedPerformance.length,
           };
        } else if (report.id === "individual_progress") {
           const sel = enrichedPerformance.find(s => (s.studentId === params.studentId || s.email?.toLowerCase() === params.studentId?.toLowerCase())) || enrichedPerformance[0];
@@ -180,10 +202,10 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
 
           // Extra fetches for rich individual card
           const [extraStudentSnap, feesSnap, incidentSnap, pfSnap] = await Promise.all([
-             getDocs(query(collection(db, "students"), where("studentId", "==", sel.studentId))).catch(() => ({ docs: [] as any[] })),
-             getDocs(query(collection(db, "fees"), where("studentId", "==", sel.studentId))).catch(() => ({ docs: [] as any[] })),
-             getDocs(query(collection(db, "incidents"), where("studentId", "==", sel.studentId))).catch(() => ({ docs: [] as any[] })),
-             getDocs(query(collection(db, "performance_feedback"), where("studentId", "==", sel.studentId))).catch(() => ({ docs: [] as any[] })),
+             getDocs(query(collection(db, "students"), where("schoolId", "==", schoolId), where("studentId", "==", sel.studentId))).catch(() => ({ docs: [] as any[] })),
+             getDocs(query(collection(db, "fees"), where("schoolId", "==", schoolId), where("studentId", "==", sel.studentId))).catch(() => ({ docs: [] as any[] })),
+             getDocs(query(collection(db, "incidents"), where("schoolId", "==", schoolId), where("studentId", "==", sel.studentId))).catch(() => ({ docs: [] as any[] })),
+             getDocs(query(collection(db, "performance_feedback"), where("schoolId", "==", schoolId), where("studentId", "==", sel.studentId))).catch(() => ({ docs: [] as any[] })),
           ]);
 
           const studentDoc = (extraStudentSnap.docs as any[])[0]?.data() || {};
@@ -226,16 +248,48 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
              content: (n.content || "").substring(0, 50),
           }));
 
-          const predictedScore = Math.min(100, Math.round(sel.score + Math.max(0, (100 - sel.score) * 0.05)));
-          const riskLevel = sel.score >= 75 && sel.attendance >= 80 ? "LOW" : sel.score >= 60 ? "MODERATE" : "HIGH";
+          // AI remark only mentions numbers we actually have
+          const remarkParts: string[] = [];
+          if (sel.hasScores) remarkParts.push(`score of ${sel.score}%`);
+          if (sel.hasAtt)    remarkParts.push(`attendance of ${sel.attendance}%`);
+          const defaultRemark = remarkParts.length > 0
+             ? `${sel.name} currently has ${remarkParts.join(" and ")}.`
+             : `No academic or attendance data recorded for ${sel.name} yet — report will populate once data is entered.`;
+
+          // Risk level honest: only compute when we have data
+          const riskLevel = (!sel.hasScores && !sel.hasAtt)
+             ? "NO DATA"
+             : sel.hasScores && sel.hasAtt && sel.score >= 75 && sel.attendance >= 80
+                ? "LOW"
+                : sel.hasScores && sel.score >= 60
+                   ? "MODERATE"
+                   : "HIGH";
+
+          // Prediction only when we have a baseline
+          const predictedScore = sel.hasScores
+             ? Math.min(100, Math.round(sel.score + Math.max(0, (100 - sel.score) * 0.05)))
+             : null;
 
           resultData = {
              isIndividual: true,
+             profileStudent: {
+                id: sel.studentId,
+                studentId: sel.studentId,
+                email: sel.email,
+                studentEmail: sel.email,
+                name: sel.name,
+                studentName: sel.name,
+                rollNo: sel.rollNo || studentDoc.rollNo || "",
+                className: selectedClass?.name || "",
+                classId: selectedClass?.classId || params.classId,
+             },
              student_name: sel.name,
              score: sel.score,
              atnd: sel.attendance,
+             hasScores: sel.hasScores,
+             hasAtt:    sel.hasAtt,
              standing: sel.standing,
-             ai_remark: aiResponse?.data?.report_content || `${sel.name} demonstrates consistent academic effort with a score of ${sel.score}% and attendance of ${sel.attendance}%.`,
+             ai_remark: aiResponse?.data?.report_content || defaultRemark,
              gender, age,
              grade: studentDoc.grade || studentDoc.class || selectedClass?.grade || "—",
              rollNo: sel.rollNo || studentDoc.rollNo || studentDoc.studentId?.substring(0, 8) || "—",
@@ -251,23 +305,43 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
              isClassReport: true,
              isAttendance: true,
              className: selectedClass?.name,
-             summary: { avg: `${classAvg}%`, attendance: `${classAtnd}%`, mastery: classAtnd > 90 ? "Excellent" : "Standard" },
+             summary: {
+                avg:        studentsWithScores.length > 0 ? `${classAvg}%`  : "N/A",
+                attendance: studentsWithAtt.length    > 0 ? `${classAtnd}%` : "N/A",
+                mastery:    studentsWithAtt.length === 0 ? "No Data" : classAtnd > 90 ? "Excellent" : "Standard",
+             },
              fullList: enrichedPerformance,
-             lowAttendance: enrichedPerformance.filter(s => s.attendance < 80).map(s => ({ name: s.name, rate: s.attendance })),
-             aiRemarks: `Attendance is sitting at ${classAtnd}%.`
+             lowAttendance: enrichedPerformance
+                .filter(s => s.hasAtt && s.attendance < 80)
+                .map(s => ({ name: s.name, rate: s.attendance })),
+             aiRemarks: studentsWithAtt.length > 0
+                ? `Attendance is sitting at ${classAtnd}%.`
+                : `No attendance records yet for this class — summary will populate once attendance is marked.`,
+             studentsWithAttCount: studentsWithAtt.length,
+             totalStudents: enrichedPerformance.length,
           };
        } else {
-          const atRisk = enrichedPerformance.filter(s => s.score < 60 || s.attendance < 75 || s.hasNegNote);
+          // at-risk: only flag students for reasons supported by actual data
+          const atRisk = enrichedPerformance.filter(s =>
+             (s.hasScores && s.score < 60) ||
+             (s.hasAtt    && s.attendance < 75) ||
+             s.hasNegNote
+          );
           resultData = {
              isClassReport: true,
              isAtRisk: true,
              className: selectedClass?.name,
              atRiskList: atRisk,
-             aiRemarks: `Intervention Protocol: ${atRisk.length} scholars marked for audit.`
+             aiRemarks: atRisk.length > 0
+                ? `Intervention Protocol: ${atRisk.length} scholar${atRisk.length !== 1 ? "s" : ""} flagged based on scores, attendance, or teacher notes.`
+                : `No at-risk students detected in this class.`,
+             studentsWithDataCount: enrichedPerformance.filter(s => s.hasScores || s.hasAtt).length,
+             totalStudents: enrichedPerformance.length,
           };
        }
 
-       const firestorePayload = {
+       const firestorePayload: any = {
+          schoolId,
           teacherId: teacherData.id || "unknown",
           teacherName: teacherData.name || "Faculty",
           studentId: params.studentId || "all",
@@ -282,6 +356,7 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
           format: params.format || "pdf",
           data: JSON.parse(JSON.stringify(resultData)) // Deep-strip all undefineds
        };
+       if (teacherData.branchId) firestorePayload.branchId = teacherData.branchId;
 
        const docRef = await addDoc(collection(db, "reports"), firestorePayload);
 
@@ -290,7 +365,11 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
        setReportResult(resultData);
        toast.success("Intelligence Harvest Complete!");
     } catch (e: any) {
-       toast.error(e.message || "Harvesting failure.");
+       console.error("Report generation failure:", e);
+       const msg = e?.code === "permission-denied"
+         ? "Permission denied — check your school access."
+         : e?.message || "Harvesting failure.";
+       toast.error(msg);
     } finally {
        setIsGenerating(false);
     }
@@ -311,21 +390,24 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
        });
 
        if (isToPrincipal) {
-          await addDoc(collection(db, "principal_reports"), {
+          if (!teacherData?.schoolId) throw new Error("School identity missing — cannot route to principal.");
+          const prPayload: any = {
              teacherId: teacherData.id || "unknown",
              teacherName: teacherData.name || "Faculty",
-             schoolId: teacherData.schoolId || "MAIN_NODE",
+             schoolId: teacherData.schoolId,
              reportId: currentReportId,
              reportType: (report.id || "general").toUpperCase(),
              title: `${report.title || "Report"} - ${reportResult.className || "Class"}`,
              content: reportResult.aiRemarks || reportResult.ai_remark || "Intelligence Manifest Attached.",
-             metrics: { 
-                avgScore: reportResult.summary?.avg || reportResult.score || 0, 
+             metrics: {
+                avgScore: reportResult.summary?.avg || reportResult.score || 0,
                 attendanceRate: reportResult.summary?.attendance || reportResult.atnd || 0,
                 flaggedCount: reportResult.atRiskList?.length || reportResult.lowAttendance?.length || 0
              },
              createdAt: serverTimestamp()
-          });
+          };
+          if (teacherData.branchId) prPayload.branchId = teacherData.branchId;
+          await addDoc(collection(db, "principal_reports"), prPayload);
        }
 
        setIsSent(true);
@@ -506,149 +588,11 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
                        <p className="text-xl font-bold text-white leading-relaxed italic relative z-10 print:text-slate-800">"{reportResult.aiRemarks}"</p>
                     </div>
                  </div>
-               ) : (
-                 <>
-                   <style>{`@media print { @page { size: A4 landscape; margin: 8mm; } }`}</style>
-                   {/* ── Landscape Individual Report Card ── */}
-                   <div className="grid grid-cols-[1fr_210px_1fr] gap-3 print:gap-2">
-
-                     {/* LEFT COLUMN */}
-                     <div className="flex flex-col gap-3">
-                       <ReportPanel title="Academic Performance" color="blue">
-                         <div className="flex items-baseline gap-2 mb-1">
-                           <span className="text-3xl font-black text-[#1e3272]">{reportResult.score}%</span>
-                           <span className="text-[10px] font-bold text-slate-400 uppercase">Score</span>
-                         </div>
-                         <div className="flex gap-2 flex-wrap mb-2">
-                           <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${reportResult.standing === "Excellence" ? "bg-emerald-100 text-emerald-600" : reportResult.standing === "Critical" ? "bg-rose-100 text-rose-600" : "bg-blue-100 text-blue-600"}`}>
-                             {reportResult.standing}
-                           </span>
-                           {reportResult.subject && reportResult.subject !== "—" && (
-                             <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-slate-100 text-slate-500">{reportResult.subject}</span>
-                           )}
-                         </div>
-                         <p className="text-[10px] text-slate-500 leading-relaxed line-clamp-3">{reportResult.ai_remark}</p>
-                       </ReportPanel>
-
-                       <ReportPanel title="Attendance" color="emerald">
-                         <div className="flex items-baseline gap-1 mb-1">
-                           <span className="text-3xl font-black text-emerald-600">{reportResult.atnd}%</span>
-                           <span className="text-[10px] font-bold text-slate-400">Present</span>
-                         </div>
-                         <span className={`px-2 py-0.5 rounded-md text-[9px] font-black inline-block ${reportResult.atnd >= 80 ? "bg-emerald-100 text-emerald-600" : "bg-rose-100 text-rose-600"}`}>
-                           {reportResult.atnd >= 90 ? "Excellent" : reportResult.atnd >= 80 ? "Good" : reportResult.atnd >= 70 ? "Below Target" : "Critical"}
-                         </span>
-                       </ReportPanel>
-
-                       <ReportPanel title="Fee Status" color="amber">
-                         {reportResult.totalFee > 0 ? (
-                           <>
-                             <div className="text-sm font-black text-rose-500">Due: ₹{reportResult.pendingFee?.toLocaleString()}</div>
-                             <div className="text-[10px] text-slate-400 mt-1">Paid: ₹{reportResult.paidFee?.toLocaleString()} / ₹{reportResult.totalFee?.toLocaleString()}</div>
-                             {reportResult.lastPayDate !== "—" && (
-                               <div className="text-[10px] text-slate-400">Last payment: {reportResult.lastPayDate}</div>
-                             )}
-                           </>
-                         ) : (
-                           <div className="text-[10px] text-slate-300 italic">No fee records found</div>
-                         )}
-                       </ReportPanel>
-
-                       <ReportPanel title="Skills & Activities" color="purple">
-                         {reportResult.skills?.length > 0 ? (
-                           <div className="space-y-1">
-                             {reportResult.skills.slice(0, 4).map((s: string, i: number) => (
-                               <div key={i} className="flex items-center gap-1.5 text-[10px] font-bold text-slate-600">
-                                 <span className="w-1.5 h-1.5 bg-purple-400 rounded-full shrink-0" />{s}
-                               </div>
-                             ))}
-                           </div>
-                         ) : (
-                           <div className="text-[10px] text-slate-300 italic">No extracurricular data</div>
-                         )}
-                       </ReportPanel>
-                     </div>
-
-                     {/* CENTER — Student Card */}
-                     <div className="flex flex-col items-center rounded-2xl border border-[#1e3272]/10 bg-gradient-to-b from-[#1e3272]/5 to-white px-3 py-4 gap-2">
-                       <div className="text-center">
-                         <h2 className="text-sm font-black text-[#1e294b] tracking-tight leading-snug">{reportResult.student_name}</h2>
-                         <div className="text-[9px] text-slate-400 font-bold mt-1 leading-relaxed space-y-0.5">
-                           {reportResult.age !== "—" && <div>Age: {reportResult.age}</div>}
-                           <div>Grade: {reportResult.grade}</div>
-                           <div>ID: {reportResult.rollNo}</div>
-                           <div className="truncate max-w-[190px]">Class: {reportResult.className}</div>
-                         </div>
-                       </div>
-                       <img
-                         src={reportResult.gender === "female" ? "/3dmodelgirl.jpg" : "/3dmodelboy.jpg"}
-                         alt="Student"
-                         className="w-full max-w-[170px] h-[190px] object-cover object-top rounded-xl"
-                       />
-                       <div className="text-center w-full">
-                         <div className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Risk Level</div>
-                         <span className={`text-[11px] font-black px-3 py-0.5 rounded-full ${reportResult.riskLevel === "LOW" ? "bg-emerald-100 text-emerald-600" : reportResult.riskLevel === "HIGH" ? "bg-rose-100 text-rose-600" : "bg-amber-100 text-amber-600"}`}>
-                           {reportResult.riskLevel}
-                         </span>
-                       </div>
-                     </div>
-
-                     {/* RIGHT COLUMN */}
-                     <div className="flex flex-col gap-3">
-                       <ReportPanel title="Behavior Record" color="rose">
-                         <div className="space-y-2">
-                           {[
-                             { label: "Warnings",        val: reportResult.warnings ?? 0,         col: "text-rose-500"    },
-                             { label: "Detentions",       val: reportResult.detentions ?? 0,        col: "text-amber-500"  },
-                             { label: "Positive Remarks", val: reportResult.positiveRemarks ?? 0,   col: "text-emerald-500"},
-                           ].map(r => (
-                             <div key={r.label} className="flex items-center justify-between">
-                               <span className="text-[10px] font-bold text-slate-500">{r.label}</span>
-                               <span className={`text-sm font-black ${r.col}`}>{r.val}</span>
-                             </div>
-                           ))}
-                         </div>
-                       </ReportPanel>
-
-                       <ReportPanel title="AI Analysis" color="blue">
-                         <div>
-                           <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Predicted Score</div>
-                           <div className="text-2xl font-black text-[#1e3272]">{reportResult.predictedScore}%</div>
-                         </div>
-                         <div className="flex items-center gap-2 mt-1">
-                           <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Risk:</span>
-                           <span className={`text-[10px] font-black ${reportResult.riskLevel === "LOW" ? "text-emerald-500" : reportResult.riskLevel === "HIGH" ? "text-rose-500" : "text-amber-500"}`}>
-                             {reportResult.riskLevel}
-                           </span>
-                         </div>
-                       </ReportPanel>
-
-                       <ReportPanel title="Parent Contacts" color="teal">
-                         {reportResult.parentContacts?.length > 0 ? (
-                           <div className="space-y-1.5">
-                             {reportResult.parentContacts.map((c: any, i: number) => (
-                               <div key={i} className="flex items-center gap-1.5">
-                                 <span className="text-[9px] font-black text-teal-500 shrink-0">{c.label}</span>
-                                 {c.date && <span className="text-[9px] text-slate-400">{c.date}</span>}
-                               </div>
-                             ))}
-                           </div>
-                         ) : (
-                           <div className="text-[10px] text-slate-300 italic">No contact records</div>
-                         )}
-                       </ReportPanel>
-
-                       <ReportPanel title="Teacher's Notes" color="emerald">
-                         {reportResult.teacherNote ? (
-                           <p className="text-[10px] text-slate-600 leading-relaxed line-clamp-4">{reportResult.teacherNote}</p>
-                         ) : (
-                           <div className="text-[10px] text-slate-300 italic">No notes recorded yet</div>
-                         )}
-                       </ReportPanel>
-                     </div>
-                   </div>
-                 </>
-               )}
+               ) : reportResult.isIndividual && reportResult.profileStudent ? (
+                 <div className="bg-slate-50 rounded-[2rem] p-6 border border-slate-100 shadow-sm -mx-4 print:mx-0 print:p-2 print:bg-white print:border-0 print:shadow-none">
+                   <StudentProfile embedded student={reportResult.profileStudent} />
+                 </div>
+               ) : null}
 
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:hidden">
                   {(report.id === "at_risk" || report.id === "attendance_summary") ? (

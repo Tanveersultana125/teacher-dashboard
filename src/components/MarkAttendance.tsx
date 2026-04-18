@@ -107,34 +107,32 @@ const MarkAttendance = ({ onBack, initialClassId }: Props) => {
 
   // Fetch classes
   useEffect(() => {
-    if (!teacherData?.id) return;
-    const SC: any[] = [];
-    if (teacherData.schoolId) SC.push(where("schoolId", "==", teacherData.schoolId));
+    if (!teacherData?.id || !teacherData?.schoolId) return;
+    const SC: any[] = [where("schoolId", "==", teacherData.schoolId)];
     if (teacherData.branchId) SC.push(where("branchId", "==", teacherData.branchId));
     return onSnapshot(
-      query(collection(db, "classes"), where("teacherId", "==", teacherData.id), ...SC),
+      query(collection(db, "classes"), ...SC, where("teacherId", "==", teacherData.id)),
       (snap) => {
         const cls = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         setClasses(cls);
         if (!selectedClassId && cls.length > 0) setSelectedClassId(cls[0].id);
       }
     );
-  }, [teacherData?.id]);
+  }, [teacherData?.id, teacherData?.schoolId]);
 
   // Fetch roster + today's attendance
   useEffect(() => {
-    if (!selectedClassId || !teacherData?.id) return;
+    if (!selectedClassId || !teacherData?.id || !teacherData?.schoolId) return;
     setLoading(true); setCurrentPage(1);
-    const SC: any[] = [];
-    if (teacherData.schoolId) SC.push(where("schoolId", "==", teacherData.schoolId));
+    const SC: any[] = [where("schoolId", "==", teacherData.schoolId)];
     if (teacherData.branchId) SC.push(where("branchId", "==", teacherData.branchId));
 
     return onSnapshot(
-      query(collection(db, "enrollments"), where("classId", "==", selectedClassId), ...SC),
+      query(collection(db, "enrollments"), ...SC, where("classId", "==", selectedClassId)),
       async (snap) => {
         try {
           const logsSnap = await getDocs(
-            query(collection(db, "attendance"), where("classId", "==", selectedClassId), where("date", "==", todayStr()), ...SC)
+            query(collection(db, "attendance"), ...SC, where("classId", "==", selectedClassId), where("date", "==", todayStr()))
           );
           const logs = logsSnap.docs.map(d => d.data());
           const roster: Student[] = snap.docs.map(d => {
@@ -180,13 +178,13 @@ const MarkAttendance = ({ onBack, initialClassId }: Props) => {
   };
 
   const copyFromYesterday = async () => {
+    if (!teacherData.schoolId) return;
     setLoading(true);
     try {
-      const SC: any[] = [];
-      if (teacherData.schoolId) SC.push(where("schoolId", "==", teacherData.schoolId));
+      const SC: any[] = [where("schoolId", "==", teacherData.schoolId)];
       if (teacherData.branchId) SC.push(where("branchId", "==", teacherData.branchId));
       const snap = await getDocs(
-        query(collection(db, "attendance"), where("classId", "==", selectedClassId), where("teacherId", "==", teacherData.id), limit(200), ...SC)
+        query(collection(db, "attendance"), ...SC, where("classId", "==", selectedClassId), where("teacherId", "==", teacherData.id), limit(200))
       );
       const today = todayStr();
       const prevLogs = snap.docs.map(d => d.data()).filter((l: any) => l.date !== today).sort((a: any, b: any) => b.date.localeCompare(a.date));
@@ -209,11 +207,11 @@ const MarkAttendance = ({ onBack, initialClassId }: Props) => {
     const today = todayStr();
     const selClass = classes.find(c => c.id === selectedClassId);
     try {
-      const SC: any[] = [];
-      if (teacherData.schoolId) SC.push(where("schoolId", "==", teacherData.schoolId));
+      if (!teacherData.schoolId) return;
+      const SC: any[] = [where("schoolId", "==", teacherData.schoolId)];
       if (teacherData.branchId) SC.push(where("branchId", "==", teacherData.branchId));
       let assignmentId = "legacy";
-      const aSnap = await getDocs(query(collection(db, "teaching_assignments"), where("teacherId", "==", teacherData.id), where("classId", "==", selectedClassId), ...SC));
+      const aSnap = await getDocs(query(collection(db, "teaching_assignments"), ...SC, where("teacherId", "==", teacherData.id), where("classId", "==", selectedClassId)));
       if (!aSnap.empty) {
         const activeDoc = aSnap.docs.find(d => { const s = d.data().status; return !s || s.toLowerCase() === "active"; });
         if (activeDoc) assignmentId = activeDoc.id;
@@ -250,7 +248,7 @@ const MarkAttendance = ({ onBack, initialClassId }: Props) => {
     <div style={{ fontFamily: 'inherit' }} className="text-left pb-8">
 
       {/* ── Dark Hero (back + save + class info) ─────────────────────────────── */}
-      <div style={{ background: T.ink0 }} className="-mx-4 -mt-4 sm:-mx-6 sm:-mt-6 md:-mx-8 md:-mt-8 px-[22px] pb-7">
+      <div className="-mx-4 -mt-4 sm:-mx-6 sm:-mt-6 md:-mx-8 md:-mt-8 px-[22px] pb-7 bg-[#162E93] md:bg-[#08090C]">
 
         {/* Nav row: Back | title | Save */}
         <div className="flex items-center justify-between pt-3 mb-5">

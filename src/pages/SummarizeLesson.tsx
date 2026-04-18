@@ -130,7 +130,7 @@ const SummarizeLesson = () => {
 
       {/* ═══ DARK HERO (form view only) ══════════════════════════════════ */}
       {!showResult && (
-        <div className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8" style={{ background: T.hero, padding: "18px 22px 22px" }}>
+        <div className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 bg-[#162E93] md:bg-[#08090C]" style={{ padding: "18px 22px 22px" }}>
           {/* AI badge */}
           <div style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 20, background: "rgba(103,65,217,0.25)", border: "1px solid rgba(103,65,217,0.4)", marginBottom: 10 }}>
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke={T.plBdr} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">

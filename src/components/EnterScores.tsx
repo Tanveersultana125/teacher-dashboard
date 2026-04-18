@@ -77,12 +77,21 @@ export default function EnterScores({ test, onBack }: EnterScoresProps) {
 
   // ── Firebase: fetch roster + existing scores ────────────────────────────
   useEffect(() => {
-    if (!test?.classId || !teacherData?.id) return;
+    if (!test?.classId || !teacherData?.id || !teacherData?.schoolId) return;
+    const schoolId = teacherData.schoolId;
 
-    const qRoster = query(collection(db, "enrollments"), where("classId", "==", test.classId));
+    const qRoster = query(
+      collection(db, "enrollments"),
+      where("schoolId", "==", schoolId),
+      where("classId", "==", test.classId),
+    );
 
     const unsub = onSnapshot(qRoster, async (snap) => {
-      const qScores = query(collection(db, "test_scores"), where("testId", "==", test.id));
+      const qScores = query(
+        collection(db, "test_scores"),
+        where("schoolId", "==", schoolId),
+        where("testId", "==", test.id),
+      );
       const scoresSnap = await getDocs(qScores);
       const existingScores = scoresSnap.docs.map(d => d.data());
 
@@ -244,7 +253,7 @@ export default function EnterScores({ test, onBack }: EnterScoresProps) {
     <div style={{ minHeight: "100vh", background: T.bg }}>
 
       {/* ═══ DARK HERO ═══════════════════════════════════════════════════ */}
-      <div className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8" style={{ background: T.hero }}>
+      <div className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 bg-[#162E93] md:bg-[#08090C]">
         <div style={{ padding: "10px 22px 0" }}>
           {/* Back */}
           <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", marginBottom: 10, padding: 0 }}>

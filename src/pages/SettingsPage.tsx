@@ -134,7 +134,7 @@ const SettingsPage = () => {
     <div style={{ minHeight: "100vh", background: T.bg }}>
 
       {/* ═══ DARK HERO ═══════════════════════════════════════════════════ */}
-      <div className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8" style={{ background: T.hero }}>
+      <div className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 bg-[#162E93] md:bg-[#08090C]">
         <div style={{ padding: "18px 22px 0" }}>
           <p style={{ fontSize: 9, fontWeight: 500, color: "rgba(255,255,255,0.28)", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 5 }}>
             Preferences

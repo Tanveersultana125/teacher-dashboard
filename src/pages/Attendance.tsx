@@ -283,7 +283,7 @@ const Attendance = () => {
       <div className="md:hidden">
 
       {/* ── Dark Hero ──────────────────────────────────────────────────────────── */}
-      <div style={{ background: T.ink0 }} className="-mx-4 sm:-mx-6 px-[22px] pb-7">
+      <div className="-mx-4 sm:-mx-6 px-[22px] pb-7 bg-[#162E93] md:bg-[#08090C]">
         <div className="pt-2 mb-5">
           <h1 style={{ fontSize: 22, fontWeight: 500, color: '#fff', letterSpacing: '-0.4px', lineHeight: 1.2, marginBottom: 4 }}>
             Attendance

@@ -217,110 +217,115 @@ const ConceptMasteryDetail = ({ student, concepts, scores, className, onBack }: 
     <div style={{ minHeight: "100vh", background: T.bg }}>
 
       {/* ── Dark hero ────────────────────────────────────────────────────────── */}
-      <div style={{
-        background: T.hero,
-        margin: "0 -22px",
-        padding: "0 22px 28px",
-        position: "relative",
-      }}>
-        {/* Back button row */}
-        <div style={{ paddingTop: 20, marginBottom: 22 }}>
-          <button
-            onClick={onBack}
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              background: "rgba(255,255,255,0.08)",
-              border: "1.5px solid rgba(255,255,255,0.12)",
-              borderRadius: 10, padding: "7px 14px",
-              color: "rgba(255,255,255,0.7)", fontSize: 13, fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            {/* left arrow */}
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-            All students
-          </button>
-        </div>
-
-        {/* Eyebrow */}
-        <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 14 }}>
-          Concept Mastery Analysis
-        </p>
-
-        {/* Avatar + name row */}
-        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 22 }}>
-          <div style={{
-            width: 52, height: 52, borderRadius: 14,
-            background: av.bg, color: av.text,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 18, fontWeight: 800, flexShrink: 0,
-            boxShadow: `0 0 0 3px ${av.bg}55`,
-          }}>
-            {student.initials || getInitials(student.name || "S")}
+      <div
+        className="bg-[#162E93] md:bg-[#08090C] md:rounded-2xl"
+        style={{ margin: "0 -22px", position: "relative" }}
+      >
+        <div className="max-w-[1200px] md:mx-auto" style={{ padding: "0 22px 28px" }}>
+          {/* Back button row */}
+          <div style={{ paddingTop: 20, marginBottom: 22 }}>
+            <button
+              onClick={onBack}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                background: "rgba(255,255,255,0.08)",
+                border: "1.5px solid rgba(255,255,255,0.12)",
+                borderRadius: 10, padding: "7px 14px",
+                color: "rgba(255,255,255,0.7)", fontSize: 13, fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              {/* left arrow */}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+              All students
+            </button>
           </div>
-          <div>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: "#fff", margin: 0, lineHeight: 1.2 }}>
-              {student.name}
-            </h1>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", margin: "4px 0 0" }}>
-              {className ? `${className}` : ""}
-              {student.roll ? ` · Roll ${student.roll}` : ""}
-            </p>
-          </div>
-        </div>
 
-        {/* Action buttons */}
-        <div style={{ display: "flex", gap: 10 }}>
-          <button style={{
-            flex: 1, padding: "10px 0",
-            background: "rgba(255,255,255,0.08)",
-            border: "1.5px solid rgba(255,255,255,0.15)",
-            borderRadius: 12, color: "rgba(255,255,255,0.85)",
-            fontSize: 13, fontWeight: 700, cursor: "pointer",
-          }}>
-            View Profile
-          </button>
-          <button style={{
-            flex: 1, padding: "10px 0",
-            background: T.blue2,
-            border: "none", borderRadius: 12,
-            color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer",
-          }}>
-            Contact Parent
-          </button>
+          {/* Eyebrow */}
+          <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 14 }}>
+            Concept Mastery Analysis
+          </p>
+
+          {/* Desktop: avatar+name left, action buttons right | Mobile: stacked */}
+          <div className="md:flex md:items-center md:justify-between md:gap-6">
+            {/* Avatar + name row */}
+            <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 22 }} className="md:!mb-0">
+              <div style={{
+                width: 52, height: 52, borderRadius: 14,
+                background: av.bg, color: av.text,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 18, fontWeight: 800, flexShrink: 0,
+                boxShadow: `0 0 0 3px ${av.bg}55`,
+              }}>
+                {student.initials || getInitials(student.name || "S")}
+              </div>
+              <div>
+                <h1 style={{ fontSize: 22, fontWeight: 800, color: "#fff", margin: 0, lineHeight: 1.2 }}>
+                  {student.name}
+                </h1>
+                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", margin: "4px 0 0" }}>
+                  {className ? `${className}` : ""}
+                  {student.roll ? ` · Roll ${student.roll}` : ""}
+                </p>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-2.5 md:shrink-0">
+              <button className="md:px-6" style={{
+                flex: 1, padding: "10px 16px",
+                background: "rgba(255,255,255,0.08)",
+                border: "1.5px solid rgba(255,255,255,0.15)",
+                borderRadius: 12, color: "rgba(255,255,255,0.85)",
+                fontSize: 13, fontWeight: 700, cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}>
+                View Profile
+              </button>
+              <button className="md:px-6" style={{
+                flex: 1, padding: "10px 16px",
+                background: T.blue2,
+                border: "none", borderRadius: 12,
+                color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}>
+                Contact Parent
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* ── Body ─────────────────────────────────────────────────────────────── */}
-      <div style={{ paddingTop: 24 }}>
+      <div className="max-w-[1200px] md:mx-auto" style={{ paddingTop: 24 }}>
 
         {/* 3-stat row */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 22 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 22 }} className="md:!gap-4">
           {[
             { label: "Mastered",   count: mastered.length,   color: T.green, bg: "#f0fdf4" },
             { label: "Developing", count: developing.length, color: T.amber, bg: "#fffbeb" },
             { label: "Weak Areas", count: weak.length,       color: T.rose,  bg: "#fff1f2" },
           ].map(stat => (
-            <div key={stat.label} style={{
+            <div key={stat.label} className="md:!py-6" style={{
               background: stat.bg,
               border: `1.5px solid ${stat.color}22`,
               borderRadius: 16, padding: "14px 0",
               textAlign: "center",
             }}>
-              <p style={{ fontSize: 26, fontWeight: 800, color: stat.color, margin: 0, lineHeight: 1 }}>
+              <p className="md:!text-4xl" style={{ fontSize: 26, fontWeight: 800, color: stat.color, margin: 0, lineHeight: 1 }}>
                 {stat.count}
               </p>
-              <p style={{ fontSize: 11, fontWeight: 600, color: T.ink2, margin: "4px 0 0" }}>
+              <p className="md:!text-sm" style={{ fontSize: 11, fontWeight: 600, color: T.ink2, margin: "4px 0 0" }}>
                 {stat.label}
               </p>
             </div>
           ))}
         </div>
 
-        {/* 3 concept status cards */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 22 }}>
+        {/* 3 concept status cards — stacked on mobile, 3-col grid on desktop */}
+        <div className="flex flex-col gap-3.5 md:grid md:grid-cols-3 md:gap-4 mb-6">
           <ConceptCard type="mastered"   items={mastered} />
           <ConceptCard type="developing" items={developing} />
           <ConceptCard type="weak"       items={weak} />
@@ -372,13 +377,15 @@ const ConceptMasteryDetail = ({ student, concepts, scores, className, onBack }: 
           </div>
         )}
 
+        {/* Recommended actions + Risk banner — stacked on mobile, side-by-side on desktop */}
+        <div className="md:grid md:grid-cols-[1.4fr_1fr] md:gap-5 md:items-start">
+
         {/* Recommended actions */}
-        <div style={{
+        <div className="mb-[22px] md:!mb-0" style={{
           background: T.white,
           border: `1.5px solid ${T.s2}`,
           borderRadius: 20,
           padding: "20px",
-          marginBottom: 22,
           boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
         }}>
           <p style={{ fontSize: 13, fontWeight: 700, color: T.ink1, margin: "0 0 14px" }}>
@@ -458,6 +465,8 @@ const ConceptMasteryDetail = ({ student, concepts, scores, className, onBack }: 
             </div>
           </div>
         )}
+
+        </div>{/* ═══ end Recommended/Risk grid ═══ */}
 
         {/* Bottom spacing */}
         <div style={{ height: 32 }} />

@@ -114,10 +114,15 @@ export default function Students() {
   const [filterClass, setFilterClass]       = useState('All');
 
   useEffect(() => {
-    if (!teacherData?.id) return;
+    if (!teacherData?.id || !teacherData?.schoolId) return;
+    const schoolId = teacherData.schoolId;
     setLoading(true);
     try {
-      const qEnroll = query(collection(db, 'enrollments'), where('teacherId', '==', teacherData.id));
+      const qEnroll = query(
+        collection(db, 'enrollments'),
+        where('schoolId', '==', schoolId),
+        where('teacherId', '==', teacherData.id),
+      );
       const unsubEnroll = onSnapshot(qEnroll, async (snap) => {
         const enrolledDocs = snap.docs.map(d => ({ id: d.id, ...d.data() } as any));
         const uniqueMap = new Map();
@@ -135,8 +140,16 @@ export default function Students() {
         });
         const studentsArray = Array.from(uniqueMap.values());
         const [scoresSnap, attSnap] = await Promise.all([
-          getDocs(query(collection(db, 'test_scores'),  where('teacherId', '==', teacherData.id))),
-          getDocs(query(collection(db, 'attendance'),   where('teacherId', '==', teacherData.id))),
+          getDocs(query(
+            collection(db, 'test_scores'),
+            where('schoolId', '==', schoolId),
+            where('teacherId', '==', teacherData.id),
+          )),
+          getDocs(query(
+            collection(db, 'attendance'),
+            where('schoolId', '==', schoolId),
+            where('teacherId', '==', teacherData.id),
+          )),
         ]);
         const scoresData = scoresSnap.docs.map(d => d.data());
         const attData    = attSnap.docs.map(d => d.data());
@@ -168,14 +181,15 @@ export default function Students() {
       console.error('Students fetch error', e);
       setLoading(false);
     }
-  }, [teacherData?.id]);
+  }, [teacherData?.id, teacherData?.schoolId]);
 
   const handleDelete = async (stu: any) => {
-    if (!teacherData?.id) return;
+    if (!teacherData?.id || !teacherData?.schoolId) return;
     if (!confirm(`Remove ${stu.name} from your class?`)) return;
     try {
       const q = query(
         collection(db, 'enrollments'),
+        where('schoolId', '==', teacherData.schoolId),
         where('teacherId', '==', teacherData.id),
         where('studentEmail', '==', stu.email),
         where('classId', '==', stu.classId)
@@ -226,7 +240,7 @@ export default function Students() {
       <div className="md:hidden" style={{ background: T.s1 }}>
 
       {/* ── Dark Hero ──────────────────────────────────────────────────────── */}
-      <div style={{ background: T.ink0 }} className="-mx-4 sm:-mx-6 px-[22px] pb-5">
+      <div className="-mx-4 sm:-mx-6 px-[22px] pb-5 bg-[#162E93] md:bg-[#08090C]">
         <p style={{ fontSize: 9, fontWeight: 500, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 4 }}>
           All students
         </p>

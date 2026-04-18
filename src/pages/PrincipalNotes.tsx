@@ -149,8 +149,8 @@ const PrincipalNotes = () => {
 
       {/* ═══ DARK HERO + PRINCIPAL CARD ═══════════════════════════════════ */}
       <div
-        className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8"
-        style={{ background: T.hero, padding: "0 22px 0" }}
+        className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 bg-[#162E93] md:bg-[#08090C]"
+        style={{ padding: "0 22px 0" }}
       >
         {/* Hero text */}
         <div style={{ paddingTop: 18 }}>

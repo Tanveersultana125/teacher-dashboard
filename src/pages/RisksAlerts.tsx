@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { db } from "../lib/firebase";
 import {
   collection, query, onSnapshot, getDocs,
-  doc, updateDoc, where, Timestamp,
+  doc, updateDoc, where, Timestamp, serverTimestamp,
 } from "firebase/firestore";
 import { Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -209,26 +209,36 @@ const RisksAlerts = () => {
   const [selectedContact, setSelectedContact] = useState<any | null>(null);
   const [fetchingContact, setFetchingContact] = useState(false);
   const [subjectHealth, setSubjectHealth]   = useState<{ name: string; avg: number }[]>([]);
+  const [refreshKey, setRefreshKey]         = useState(0);
 
   // ── Firebase listener ───────────────────────────────────────────────────────
   // Fixed: removed SC (schoolId/branchId) from queries that may not have those
   // fields — Firestore returns 0 docs if a where() field doesn't exist on docs.
   // Only teacherId is used for scoping; classId-based queries use classIds only.
   useEffect(() => {
-    if (!teacherData?.id) return;
+    if (!teacherData?.id || !teacherData?.schoolId) return;
     setLoading(true);
 
     const tid = teacherData.id;
+    const schoolId = teacherData.schoolId;
 
     const chunkArr = <X,>(arr: X[], n: number): X[][] =>
       Array.from({ length: Math.ceil(arr.length / n) }, (_, i) => arr.slice(i * n, (i + 1) * n));
 
     // Listen on classes — re-compute when classes change
-    const qClasses = query(collection(db, "classes"), where("teacherId", "==", tid));
+    const qClasses = query(
+      collection(db, "classes"),
+      where("schoolId", "==", schoolId),
+      where("teacherId", "==", tid),
+    );
     const unsubscribe = onSnapshot(qClasses, async (classSnap) => {
       try {
         // Also pick up teaching_assignments
-        const taSnap = await getDocs(query(collection(db, "teaching_assignments"), where("teacherId", "==", tid)));
+        const taSnap = await getDocs(query(
+          collection(db, "teaching_assignments"),
+          where("schoolId", "==", schoolId),
+          where("teacherId", "==", tid),
+        ));
         const classIdSet = new Set<string>([
           ...classSnap.docs.map(d => d.id),
           ...taSnap.docs.map(d => d.data().classId).filter(Boolean),
@@ -237,10 +247,13 @@ const RisksAlerts = () => {
 
         if (classIds.length === 0) { setAlerts([]); setLoading(false); return; }
 
-        // Enrollments — query ONLY by classId (no schoolId/branchId — those fields
-        // may not exist on enrollment docs, causing 0 results)
+        // Enrollments — scoped by school + classId
         const enrollSnaps = await Promise.all(
-          chunkArr(classIds, 10).map(ch => getDocs(query(collection(db, "enrollments"), where("classId", "in", ch))))
+          chunkArr(classIds, 10).map(ch => getDocs(query(
+            collection(db, "enrollments"),
+            where("schoolId", "==", schoolId),
+            where("classId", "in", ch),
+          )))
         );
         const enrolls = enrollSnaps.flatMap(s => s.docs).map(d => ({ enrollId: d.id, ...d.data() })) as any[];
 
@@ -253,16 +266,18 @@ const RisksAlerts = () => {
         });
         const uniqueRoster = Array.from(rosterMap.values());
 
-        // Gradebook scores — by classId only
+        // Gradebook scores — scoped by school + classId
         const gbSnapPromise = Promise.all(
-          chunkArr(classIds, 10).map(ch => getDocs(query(collection(db, "gradebook_scores"), where("classId", "in", ch))))
+          chunkArr(classIds, 10).map(ch => getDocs(query(
+            collection(db, "gradebook_scores"),
+            where("schoolId", "==", schoolId),
+            where("classId", "in", ch),
+          )))
         ).then(snaps => ({ docs: snaps.flatMap(s => s.docs) })).catch(() => ({ docs: [] as any[] }));
 
-        // All other queries — only teacherId filter (no SC)
-        // Attendance: removed date filter to avoid composite index requirement;
-        // we filter by date client-side instead.
+        // All other queries — schoolId + teacherId scoped
         const safeGet = (col: string, ...filters: any[]) =>
-          getDocs(query(collection(db, col), ...filters)).catch(() => ({ docs: [] as any[] }));
+          getDocs(query(collection(db, col), where("schoolId", "==", schoolId), ...filters)).catch(() => ({ docs: [] as any[] }));
 
         const [attSnap, tsSnap, gbSnap, assignSnap, subsSnap, manualSnap, resultsSnap, notesSnap] = await Promise.all([
           safeGet("attendance",    where("teacherId", "==", tid)),
@@ -284,7 +299,19 @@ const RisksAlerts = () => {
         const manuals    = manualSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })) as any[];
         const allNotes   = notesSnap.docs.map((d: any) => d.data());
 
-        setResolvedCount(manuals.filter((r: any) => r.resolved).length);
+        // Resolved this week: only resolved risks whose resolvedAt is within last 7 days
+        const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+        const resolvedThisWeek = manuals.filter((r: any) => {
+          if (!r.resolved) return false;
+          let ts = 0;
+          if (r.resolvedAt instanceof Timestamp) ts = r.resolvedAt.toMillis();
+          else if (r.resolvedAt?.toDate)         ts = r.resolvedAt.toDate().getTime();
+          else if (typeof r.resolvedAt === "string") ts = new Date(r.resolvedAt).getTime();
+          else if (typeof r.resolvedAt === "number") ts = r.resolvedAt;
+          // Legacy docs without resolvedAt: count as "this week" so old data isn't hidden entirely
+          return ts === 0 || ts >= weekAgo;
+        }).length;
+        setResolvedCount(resolvedThisWeek);
 
         // Subject health computation
         const subMap = new Map<string, { total: number; count: number }>();
@@ -457,7 +484,7 @@ const RisksAlerts = () => {
       }
     });
     return () => unsubscribe();
-  }, [teacherData?.id]);
+  }, [teacherData?.id, refreshKey]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const handleResolve = async (a: Alert) => {
@@ -467,7 +494,10 @@ const RisksAlerts = () => {
     }
     setResolving(a.id);
     try {
-      await updateDoc(doc(db, "risks", a.id), { resolved: true });
+      await updateDoc(doc(db, "risks", a.id), {
+        resolved: true,
+        resolvedAt: serverTimestamp(),
+      });
       setAlerts(prev => prev.filter(x => x.id !== a.id));
       setResolvedCount(c => c + 1);
       toast.success("Alert marked as resolved.");
@@ -479,22 +509,38 @@ const RisksAlerts = () => {
   };
 
   const fetchContact = async (sId: string, sName: string) => {
+    if (!teacherData?.schoolId) return;
     setFetchingContact(true);
-    const schoolId = teacherData?.schoolId as string | undefined;
+    const schoolId = teacherData.schoolId as string;
     const branchId = teacherData?.branchId as string | undefined;
-    const SC: any[] = [];
-    if (schoolId) SC.push(where("schoolId", "==", schoolId));
+    const SC: any[] = [where("schoolId", "==", schoolId)];
     if (branchId) SC.push(where("branchId", "==", branchId));
     try {
-      const q = query(collection(db, "enrollments"), where("studentId", "==", sId), ...SC);
+      // Try enrollments first, then fall back to students collection by studentId
+      let phone: string | null = null;
+      let parent: string | null = null;
+
+      const q = query(collection(db, "enrollments"), ...SC, where("studentId", "==", sId));
       const snap = await getDocs(q);
-      let phone = "+91 98765 43210", parent = "Parent/Guardian";
       if (!snap.empty) {
         const d = snap.docs[0].data();
-        phone  = d.parentPhone || d.phone || phone;
-        parent = d.parentName || `Parent of ${sName}`;
+        phone  = d.parentPhone || d.phone || null;
+        parent = d.parentName || null;
       }
-      setSelectedContact({ name: sName, parent, phone });
+      if (!phone) {
+        // Fallback: look up the student doc directly
+        const sSnap = await getDocs(query(collection(db, "students"), ...SC, where("studentId", "==", sId))).catch(() => null);
+        if (sSnap && !sSnap.empty) {
+          const d = sSnap.docs[0].data();
+          phone  = phone  || d.parentPhone || d.phone || d.guardianPhone || null;
+          parent = parent || d.parentName  || d.guardianName             || null;
+        }
+      }
+      setSelectedContact({
+        name:   sName,
+        parent: parent || `Parent of ${sName}`,
+        phone:  phone,  // null when not available — UI shows "Not available"
+      });
     } catch {
       toast.error("Could not fetch contact details.");
     } finally {
@@ -568,8 +614,8 @@ const RisksAlerts = () => {
 
       {/* ── Dark hero ───────────────────────────────────────────────────────── */}
       <div
-        className="-mx-4 sm:-mx-6"
-        style={{ background: T.hero, padding: "0 22px 28px" }}
+        className="-mx-4 sm:-mx-6 bg-[#162E93] md:bg-[#08090C]"
+        style={{ padding: "0 22px 28px" }}
       >
         <div style={{ paddingTop: 20 }}>
           <p style={{ fontSize: 10, fontWeight: 500, color: "rgba(255,255,255,0.3)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>
@@ -671,7 +717,7 @@ const RisksAlerts = () => {
             </div>
             {activeTab === "All" ? (
               <button
-                onClick={() => { setLoading(true); setTimeout(() => setLoading(false), 400); }}
+                onClick={() => { setLoading(true); setRefreshKey(k => k + 1); }}
                 style={{ fontSize: 11, color: T.blue, background: "none", border: "none", cursor: "pointer" }}
               >
                 Refresh
@@ -811,10 +857,16 @@ const RisksAlerts = () => {
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
               {([
-                { label: "View at-risk",  sub: "See students needing help",  iconBg: T.rlBg, ic: T.red,  svgD: "M6.5 1.5L12 11.5H1L6.5 1.5z", onClick: () => {} },
-                { label: "Send alerts",   sub: "Notify parents directly",     iconBg: T.blBg, ic: T.blue, svgD: null, onClick: () => toast.info("Use Contact Parent on individual alerts.") },
-                { label: "Mark resolved", sub: "Close active alerts",         iconBg: T.glBg, ic: T.grn2, svgD: "M1.5,7 5,10.5 11.5,3", onClick: () => toast.info("Select an alert to mark it resolved.") },
-                { label: "Export report", sub: "Download alert log",          iconBg: T.alBg, ic: T.amb,  svgD: null, onClick: () => toast.info("Export coming soon.") },
+                { label: "View at-risk",  sub: "See students needing help", iconBg: T.rlBg, ic: T.red,  svgD: "M6.5 1.5L12 11.5H1L6.5 1.5z", onClick: () => navigate("/students?filter=at-risk") },
+                { label: "Go to reports", sub: "Generate alert report",     iconBg: T.blBg, ic: T.blue, svgD: null,                           onClick: () => navigate("/reports") },
+                { label: "Refresh data",  sub: "Re-sync latest alerts",     iconBg: T.glBg, ic: T.grn2, svgD: "M1.5,7 5,10.5 11.5,3",         onClick: () => { setLoading(true); setRefreshKey(k => k + 1); } },
+                { label: "Export JSON",   sub: "Download alert log",        iconBg: T.alBg, ic: T.amb,  svgD: null,                           onClick: () => {
+                  const blob = new Blob([JSON.stringify(alerts, null, 2)], { type: "application/json" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url; a.download = `alerts_${new Date().toISOString().slice(0,10)}.json`;
+                  a.click(); URL.revokeObjectURL(url);
+                } },
               ] as const).map((qa) => (
                 <button
                   key={qa.label}
@@ -827,11 +879,11 @@ const RisksAlerts = () => {
                   }}
                 >
                   <div style={{ width: 28, height: 28, borderRadius: 8, background: qa.iconBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    {qa.label === "Send alerts" ? (
+                    {qa.label === "Go to reports" ? (
                       <svg width="12" height="12" viewBox="0 0 13 13" fill="none" stroke={qa.ic} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M2,9.5 L11,9.5 L9,6 L11,2.5 L2,2.5 L4,6 Z" />
                       </svg>
-                    ) : qa.label === "Export report" ? (
+                    ) : qa.label === "Export JSON" ? (
                       <svg width="12" height="12" viewBox="0 0 13 13" fill="none" stroke={qa.ic} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="2" y="1.5" width="9" height="10" rx="1.5" /><line x1="4.5" y1="5" x2="8.5" y2="5" /><line x1="4.5" y1="7.5" x2="7" y2="7.5" />
                       </svg>
@@ -916,12 +968,18 @@ const RisksAlerts = () => {
         }}
       >
         {([
-          { label: "Dashboard", type: "grid",     active: false },
-          { label: "Students",  type: "students", active: false },
-          { label: "Alerts",    type: "alert",    active: true  },
-          { label: "Profile",   type: "user",     active: false },
+          { label: "Dashboard", type: "grid",     active: false, path: "/dashboard" },
+          { label: "Students",  type: "students", active: false, path: "/students" },
+          { label: "Alerts",    type: "alert",    active: true,  path: "/risks"    },
+          { label: "Profile",   type: "user",     active: false, path: "/settings" },
         ] as const).map(ti => (
-          <div key={ti.label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, cursor: "pointer" }}>
+          <div
+            key={ti.label}
+            onClick={() => navigate(ti.path)}
+            role="button"
+            tabIndex={0}
+            style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, cursor: "pointer" }}
+          >
             <TabIcon type={ti.type} active={ti.active} />
             <span style={{ fontSize: 9, color: ti.active ? T.red : T.ink3, fontWeight: ti.active ? 500 : 400 }}>{ti.label}</span>
             {ti.active && <div style={{ width: 13, height: 2.5, borderRadius: 2, background: T.red }} />}
@@ -969,22 +1027,57 @@ const RisksAlerts = () => {
                 </div>
                 <div style={{ background: T.s1, borderRadius: 12, padding: "12px 14px" }}>
                   <p style={{ fontSize: 10, color: T.ink3, margin: "0 0 4px" }}>Contact Number</p>
-                  <p style={{ fontSize: 17, fontWeight: 700, color: T.blue, margin: 0 }}>{selectedContact.phone}</p>
+                  {selectedContact.phone ? (
+                    <p style={{ fontSize: 17, fontWeight: 700, color: T.blue, margin: 0 }}>{selectedContact.phone}</p>
+                  ) : (
+                    <p style={{ fontSize: 13, fontWeight: 500, color: T.ink3, margin: 0, fontStyle: "italic" }}>
+                      Not available — add parent phone in Students
+                    </p>
+                  )}
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  <button style={{ padding: "12px 0", background: T.blue, color: "#fff", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12.5 9.5c0 .4-.1.8-.3 1.1-.2.3-.5.6-.8.8-.5.5-1 .7-1.6.7-.4 0-.9-.1-1.4-.4-1.4-.7-2.6-1.7-3.7-2.8C3.6 7.8 2.6 6.6 1.9 5.3 1.6 4.8 1.5 4.3 1.5 3.9c0-.6.2-1.1.7-1.6.3-.3.6-.5 1-.6C3.5 1.6 3.7 1.5 4 1.5c.1 0 .2 0 .3.1.1 0 .2.1.3.2L6.4 4c.1.1.2.3.2.4 0 .2-.1.3-.2.5l-.6.7c0 .1-.1.2-.1.3 0 .1.1.2.1.3.1.2.7.9 1.4 1.6.7.7 1.4 1.3 1.6 1.4.1.1.2.1.3.1s.2 0 .3-.1l.7-.6c.1-.1.3-.2.5-.2.1 0 .3 0 .4.1l2.2 1.8c.1.1.2.2.2.3.1.1.1.2.1.3z" />
-                    </svg>
-                    Call
-                  </button>
-                  <button style={{ padding: "12px 0", background: "#25D366", color: "#fff", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M7 1.5C3.96 1.5 1.5 3.96 1.5 7c0 .97.25 1.88.7 2.67L1.5 12.5l2.83-.69C5.12 12.26 6.03 12.5 7 12.5c3.04 0 5.5-2.46 5.5-5.5S10.04 1.5 7 1.5z" />
-                      <path d="M5 5.5c.5 1.2 1.4 2.2 2.5 2.5" />
-                    </svg>
-                    WhatsApp
-                  </button>
+                  {(() => {
+                    const p   = (selectedContact.phone || "").trim();
+                    const sanitized = p.replace(/[^+\d]/g, ""); // strip spaces/dashes for tel: / wa.me
+                    const waNum     = sanitized.replace(/^\+/, ""); // wa.me wants no leading +
+                    const disabled  = !p;
+                    return (
+                      <>
+                        <a
+                          href={disabled ? undefined : `tel:${sanitized}`}
+                          onClick={(e) => { if (disabled) { e.preventDefault(); toast.error("No phone number on file."); } }}
+                          style={{
+                            padding: "12px 0", background: disabled ? T.s2 : T.blue, color: disabled ? T.ink3 : "#fff",
+                            borderRadius: 12, fontSize: 13, fontWeight: 600,
+                            textDecoration: "none", cursor: disabled ? "not-allowed" : "pointer",
+                            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                          }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke={disabled ? T.ink3 : "#fff"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12.5 9.5c0 .4-.1.8-.3 1.1-.2.3-.5.6-.8.8-.5.5-1 .7-1.6.7-.4 0-.9-.1-1.4-.4-1.4-.7-2.6-1.7-3.7-2.8C3.6 7.8 2.6 6.6 1.9 5.3 1.6 4.8 1.5 4.3 1.5 3.9c0-.6.2-1.1.7-1.6.3-.3.6-.5 1-.6C3.5 1.6 3.7 1.5 4 1.5c.1 0 .2 0 .3.1.1 0 .2.1.3.2L6.4 4c.1.1.2.3.2.4 0 .2-.1.3-.2.5l-.6.7c0 .1-.1.2-.1.3 0 .1.1.2.1.3.1.2.7.9 1.4 1.6.7.7 1.4 1.3 1.6 1.4.1.1.2.1.3.1s.2 0 .3-.1l.7-.6c.1-.1.3-.2.5-.2.1 0 .3 0 .4.1l2.2 1.8c.1.1.2.2.2.3.1.1.1.2.1.3z" />
+                          </svg>
+                          Call
+                        </a>
+                        <a
+                          href={disabled ? undefined : `https://wa.me/${waNum}`}
+                          target="_blank" rel="noopener noreferrer"
+                          onClick={(e) => { if (disabled) { e.preventDefault(); toast.error("No phone number on file."); } }}
+                          style={{
+                            padding: "12px 0", background: disabled ? T.s2 : "#25D366", color: disabled ? T.ink3 : "#fff",
+                            borderRadius: 12, fontSize: 13, fontWeight: 600,
+                            textDecoration: "none", cursor: disabled ? "not-allowed" : "pointer",
+                            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                          }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke={disabled ? T.ink3 : "#fff"} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M7 1.5C3.96 1.5 1.5 3.96 1.5 7c0 .97.25 1.88.7 2.67L1.5 12.5l2.83-.69C5.12 12.26 6.03 12.5 7 12.5c3.04 0 5.5-2.46 5.5-5.5S10.04 1.5 7 1.5z" />
+                            <path d="M5 5.5c.5 1.2 1.4 2.2 2.5 2.5" />
+                          </svg>
+                          WhatsApp
+                        </a>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             )}
@@ -1078,7 +1171,7 @@ const RisksAlerts = () => {
         {/* Tabs */}
         <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
           <div className="flex items-center gap-1 px-5 pt-4 border-b border-slate-100">
-            {filterTabs.map(tab => (
+            {FILTER_TABS.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
@@ -1093,7 +1186,7 @@ const RisksAlerts = () => {
 
           {/* Alert rows */}
           <div className="p-5 space-y-3">
-            {filteredAlerts.length === 0 ? (
+            {visible.length === 0 ? (
               <div className="py-12 text-center">
                 <p className="text-sm font-semibold text-slate-600">
                   {activeTab === 'All' ? 'All students on track' : activeTab === 'Attendance' ? 'No attendance concerns' : 'No grade concerns'}
@@ -1101,7 +1194,7 @@ const RisksAlerts = () => {
                 <p className="text-xs text-slate-400 mt-1">No active alerts.</p>
               </div>
             ) : (
-              filteredAlerts.map(a => {
+              visible.map(a => {
                 const sev = SEV[a.severity];
                 return (
                   <div
@@ -1138,7 +1231,7 @@ const RisksAlerts = () => {
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {a.severity === 'Critical' ? (
                         <button
-                          onClick={() => toast.info('Opening parent contact')}
+                          onClick={() => fetchContact(a.studentId, a.name)}
                           className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
                           style={{ background: T.red }}
                         >
@@ -1146,7 +1239,7 @@ const RisksAlerts = () => {
                         </button>
                       ) : (
                         <button
-                          onClick={() => toast.info('Opening action')}
+                          onClick={() => fetchContact(a.studentId, a.name)}
                           className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
                           style={{ background: sev.color }}
                         >
@@ -1155,9 +1248,10 @@ const RisksAlerts = () => {
                       )}
                       <button
                         onClick={() => handleResolve(a)}
-                        className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
+                        disabled={resolving === a.id}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-60"
                       >
-                        Mark Resolved
+                        {resolving === a.id ? "Resolving…" : "Mark Resolved"}
                       </button>
                     </div>
                   </div>

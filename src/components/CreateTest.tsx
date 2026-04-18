@@ -35,14 +35,13 @@ export default function CreateTest({ onCancel, onCreate }: { onCancel: () => voi
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (!teacherData?.id) return;
-    const schoolId = teacherData.schoolId as string | undefined;
+    if (!teacherData?.id || !teacherData?.schoolId) return;
+    const schoolId = teacherData.schoolId as string;
     const branchId = teacherData.branchId as string | undefined;
-    const SC: any[] = [];
-    if (schoolId) SC.push(where("schoolId", "==", schoolId));
+    const SC: any[] = [where("schoolId", "==", schoolId)];
     if (branchId) SC.push(where("branchId", "==", branchId));
 
-    const q = query(collection(db, "classes"), where("teacherId", "==", teacherData.id), ...SC);
+    const q = query(collection(db, "classes"), ...SC, where("teacherId", "==", teacherData.id));
     const unsub = onSnapshot(q, (snap) => {
       const cls = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
       setClasses(cls);
@@ -121,8 +120,7 @@ export default function CreateTest({ onCancel, onCreate }: { onCancel: () => voi
 
       {/* ── Dark Hero ─────────────────────────────────────────────────────── */}
       <div
-        style={{ background: T.ink0 }}
-        className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 px-[22px] pb-5"
+        className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 px-[22px] pb-5 bg-[#162E93] md:bg-[#08090C]"
       >
         {/* Back link */}
         <button

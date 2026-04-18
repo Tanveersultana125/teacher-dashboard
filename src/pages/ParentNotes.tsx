@@ -246,8 +246,8 @@ const ParentNotes = () => {
 
         {/* ── Dark hero ───────────────────────────────────────────────────── */}
         <div
-          className="-mx-4 sm:-mx-6"
-          style={{ background: T.hero, padding: "0 22px 24px" }}
+          className="-mx-4 sm:-mx-6 bg-[#162E93] md:bg-[#08090C]"
+          style={{ padding: "0 22px 24px" }}
         >
           <div style={{ paddingTop: 20 }}>
             <p style={{ fontSize: 10, fontWeight: 500, color: "rgba(255,255,255,0.3)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>
@@ -638,7 +638,7 @@ const ParentNotes = () => {
         style={{ display: "flex", flexDirection: "column", minHeight: "calc(100vh - 56px)", background: T.chatBg }}
       >
         {/* ── Dark chat header ─────────────────────────────────────────────── */}
-        <div style={{ background: T.hero, padding: "12px 22px 18px", flexShrink: 0 }}>
+        <div className="bg-[#162E93] md:bg-[#08090C]" style={{ padding: "12px 22px 18px", flexShrink: 0 }}>
           {/* Back link */}
           <button
             onClick={() => setSelectedStudent(null)}

@@ -96,12 +96,14 @@ const Syllabus = () => {
 
   // ── Load teacher's assigned classes ─────────────────────────────────────────
   useEffect(() => {
-    if (!teacherData?.id) return;
+    if (!teacherData?.id || !teacherData?.schoolId) return;
+    const schoolId = teacherData.schoolId;
     let cancelled = false;
     setLoading(true);
 
     const qAssign = query(
       collection(db, "teaching_assignments"),
+      where("schoolId", "==", schoolId),
       where("teacherId", "==", teacherData.id),
       where("status", "==", "active"),
     );
@@ -118,7 +120,11 @@ const Syllabus = () => {
           if (classIds.length > 0) {
             const classSnaps = await Promise.all(
               classIds.map((cid) =>
-                getDocs(query(collection(db, "classes"), where("__name__", "==", cid))),
+                getDocs(query(
+                  collection(db, "classes"),
+                  where("schoolId", "==", schoolId),
+                  where("__name__", "==", cid),
+                )),
               ),
             );
             classSnaps.forEach((s) => {
@@ -157,15 +163,16 @@ const Syllabus = () => {
     );
 
     return () => { cancelled = true; unsub(); };
-  }, [teacherData?.id]);
+  }, [teacherData?.id, teacherData?.schoolId]);
 
   // ── Live listener on docs this teacher uploaded ─────────────────────────────
   useEffect(() => {
-    if (!teacherData?.id) return;
+    if (!teacherData?.id || !teacherData?.schoolId) return;
     let cancelled = false;
 
     const qDocs = query(
       collection(db, "syllabi"),
+      where("schoolId", "==", teacherData.schoolId),
       where("uploadedByTeacherId", "==", teacherData.id),
     );
 
@@ -193,7 +200,7 @@ const Syllabus = () => {
     );
 
     return () => { cancelled = true; unsub(); };
-  }, [teacherData?.id]);
+  }, [teacherData?.id, teacherData?.schoolId]);
 
   // Group docs by class for display
   const docsByClass = useMemo(() => {

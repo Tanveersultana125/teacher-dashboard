@@ -348,8 +348,7 @@ const Assignments = () => {
 
       {/* ── Dark Hero ───────────────────────────────────────────────────────── */}
       <div
-        style={{ background: T.ink0 }}
-        className="-mx-4 sm:-mx-6 px-[22px] pb-6"
+        className="-mx-4 sm:-mx-6 px-[22px] pb-6 bg-[#162E93] md:bg-[#08090C]"
       >
         <h1 style={{ fontSize: 22, fontWeight: 500, color: '#fff', letterSpacing: '-0.4px', marginBottom: 3 }}>
           Assignments

@@ -200,7 +200,7 @@ const LessonPlanGenerator = () => {
 
       {/* ═══ DARK HERO ═══════════════════════════════════════════════════ */}
       {!showResult && (
-        <div className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8" style={{ background: T.hero }}>
+        <div className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 bg-[#162E93] md:bg-[#08090C]">
           <div style={{ padding: "18px 22px 0" }}>
             {/* AI badge */}
             <div style={{

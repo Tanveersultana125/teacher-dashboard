@@ -46,9 +46,9 @@ const Card = ({children,title,action,style}:{children:React.ReactNode;title?:str
 const DLink = () => <span style={{fontSize:11,color:T.blue,fontWeight:500,cursor:"pointer"}}>Details →</span>;
 
 // ═══════════════════════════════════════════════════════════════════════════════
-interface Props { student: any; onBack: () => void; }
+interface Props { student: any; onBack?: () => void; embedded?: boolean; }
 
-export default function StudentProfile({ student, onBack }: Props) {
+export default function StudentProfile({ student, onBack, embedded = false }: Props) {
   const { teacherData } = useAuth();
   const [masterProfile, setMasterProfile] = useState<any>(null);
   const [attendance, setAttendance] = useState<any[]>([]);
@@ -298,17 +298,18 @@ export default function StudentProfile({ student, onBack }: Props) {
 
   // ══════════════════════════════════════════════════════════════════════════════
   return (
-    <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',-apple-system,sans-serif" }}>
-      {/* Top bar */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 10, border: `1px solid ${T.bdr}`, background: T.white, color: T.ink2, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
-          <ArrowLeft size={14} /> RETURN
-        </button>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => window.print()} style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${T.bdr}`, background: T.white, color: T.ink2, fontSize: 12, fontWeight: 500, cursor: "pointer" }}>EXPORT</button>
-          <button style={{ padding: "8px 16px", borderRadius: 10, border: "none", background: T.blue, color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>CONTACT</button>
+    <div style={{ minHeight: embedded ? "auto" : "100vh", background: T.bg, fontFamily: "'Inter',-apple-system,sans-serif" }}>
+      {!embedded && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 10, border: `1px solid ${T.bdr}`, background: T.white, color: T.ink2, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
+            <ArrowLeft size={14} /> RETURN
+          </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => window.print()} style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${T.bdr}`, background: T.white, color: T.ink2, fontSize: 12, fontWeight: 500, cursor: "pointer" }}>EXPORT</button>
+            <button style={{ padding: "8px 16px", borderRadius: 10, border: "none", background: T.blue, color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>CONTACT</button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ═══ HERO 3-COL ═══ */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 280px 1fr", gap: 20, marginBottom: 20 }}>
@@ -474,15 +475,16 @@ export default function StudentProfile({ student, onBack }: Props) {
         </Card>
       </div>
 
-      {/* Status bar */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 20px", background: T.white, border: `1px solid ${T.bdr}`, borderRadius: 12, fontSize: 10, color: T.ink3 }}>
-        <span>★ PARENT ENGAGEMENT: {Math.min(100, parentNotes.length * 20)}%</span>
-        <span>★ Status: Active</span>
-        <span>★ Data: Live</span>
-        <span>★ Secured</span>
-        <span>★ STUDENT ID: {sid.slice(0, 8).toUpperCase()}</span>
-        <span style={{ color: T.blue, fontWeight: 600 }}>{new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
-      </div>
+      {!embedded && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 20px", background: T.white, border: `1px solid ${T.bdr}`, borderRadius: 12, fontSize: 10, color: T.ink3 }}>
+          <span>★ PARENT ENGAGEMENT: {Math.min(100, parentNotes.length * 20)}%</span>
+          <span>★ Status: Active</span>
+          <span>★ Data: Live</span>
+          <span>★ Secured</span>
+          <span>★ STUDENT ID: {sid.slice(0, 8).toUpperCase()}</span>
+          <span style={{ color: T.blue, fontWeight: 600 }}>{new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
+        </div>
+      )}
     </div>
   );
 }
