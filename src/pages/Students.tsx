@@ -3,9 +3,13 @@ import { useNavigate, useLocation } from "react-router-dom";
 import StudentProfile from "@/components/StudentProfile";
 import { useAuth } from "../lib/AuthContext";
 import { db } from "../lib/firebase";
-import { collection, query, where, onSnapshot, getDocs, deleteDoc, doc as firestoreDoc } from "firebase/firestore";
-import { Loader2 } from "lucide-react";
+import {
+  collection, query, where, onSnapshot, getDocs,
+  deleteDoc, doc as firestoreDoc, addDoc, serverTimestamp,
+} from "firebase/firestore";
+import { Loader2, X, UserPlus, Mail } from "lucide-react";
 import { toast } from "sonner";
+import { sendStudentInviteEmail } from "../lib/resend";
 
 // ── Design tokens ────────────────────────────────────────────────────────────
 const T = {
@@ -113,6 +117,12 @@ export default function Students() {
   const [filterStatus, setFilterStatus]     = useState('All');
   const [filterClass, setFilterClass]       = useState('All');
 
+  // Invite modal state
+  const [inviteOpen, setInviteOpen]         = useState(false);
+  const [inviting, setInviting]             = useState(false);
+  const [teacherClasses, setTeacherClasses] = useState<any[]>([]);
+  const [inv, setInv] = useState({ name: '', email: '', classId: '', rollNo: '' });
+
   useEffect(() => {
     if (!teacherData?.id || !teacherData?.schoolId) return;
     const schoolId = teacherData.schoolId;
@@ -183,6 +193,124 @@ export default function Students() {
     }
   }, [teacherData?.id, teacherData?.schoolId]);
 
+  // Load teacher's classes for invite dropdown
+  useEffect(() => {
+    if (!teacherData?.id || !teacherData?.schoolId) return;
+    const schoolId = teacherData.schoolId;
+
+    const qAssign = query(
+      collection(db, 'teaching_assignments'),
+      where('schoolId', '==', schoolId),
+      where('teacherId', '==', teacherData.id),
+      where('status', '==', 'active'),
+    );
+    const unsub = onSnapshot(qAssign, async (snap) => {
+      const assignedIds = snap.docs.map(d => d.data().classId).filter(Boolean);
+      const legacySnap = await getDocs(query(
+        collection(db, 'classes'),
+        where('schoolId', '==', schoolId),
+        where('teacherId', '==', teacherData.id),
+      ));
+      const legacyIds = legacySnap.docs.map(d => d.id);
+      const allIds = Array.from(new Set([...assignedIds, ...legacyIds]));
+      if (allIds.length === 0) { setTeacherClasses([]); return; }
+      const classSnap = await getDocs(query(
+        collection(db, 'classes'),
+        where('schoolId', '==', schoolId),
+      ));
+      setTeacherClasses(
+        classSnap.docs.filter(d => allIds.includes(d.id)).map(d => ({ id: d.id, ...d.data() } as any))
+      );
+    });
+    return () => unsub();
+  }, [teacherData?.id, teacherData?.schoolId]);
+
+  const openInvite = () => {
+    setInv({ name: '', email: '', classId: teacherClasses[0]?.id || '', rollNo: '' });
+    setInviteOpen(true);
+  };
+
+  const handleInvite = async () => {
+    if (!teacherData?.id || !teacherData?.schoolId) return;
+    const name  = inv.name.trim();
+    const email = inv.email.trim().toLowerCase();
+    if (!name)  return toast.error('Student ka naam daalo.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast.error('Valid email daalo.');
+    if (!inv.classId) return toast.error('Class select karo.');
+
+    const cls = teacherClasses.find(c => c.id === inv.classId);
+    const schoolId = teacherData.schoolId;
+    const branchId = teacherData.branchId || teacherData.branch || '';
+
+    setInviting(true);
+    try {
+      const dup = await getDocs(query(
+        collection(db, 'enrollments'),
+        where('schoolId', '==', schoolId),
+        where('classId', '==', inv.classId),
+        where('studentEmail', '==', email),
+      ));
+      if (!dup.empty) {
+        toast.error('Ye student is class me pehle se enrolled hai.');
+        setInviting(false);
+        return;
+      }
+
+      // Create the student doc first so we can use its real Firestore ID
+      // as the canonical studentId in the enrollment. Previously we stored
+      // `studentId: email` here, but parent-dashboard queries enrollments by
+      // `studentData.id` (the student doc ID). That mismatch made every
+      // newly invited student's "My Classes" page show "No Classes Found"
+      // even though the enrollment was created.
+      const studentDocRef = await addDoc(collection(db, 'students'), {
+        name,
+        email,
+        studentId:   email, // legacy/secondary identifier — kept for back-compat with old reads
+        classId:     inv.classId,
+        className:   cls?.name || '',
+        teacherId:   teacherData.id,
+        teacherName: teacherData.name || '',
+        rollNo:      inv.rollNo.trim(),
+        schoolId,
+        branchId,
+        status:      'Invited',
+        createdAt:   serverTimestamp(),
+      });
+
+      await addDoc(collection(db, 'enrollments'), {
+        studentId:    studentDocRef.id, // matches studentData.id used by parent-dashboard reads
+        studentEmail: email,            // secondary key for legacy clients
+        studentName:  name,
+        classId:      inv.classId,
+        className:    cls?.name || '',
+        teacherId:    teacherData.id,
+        teacherName:  teacherData.name || '',
+        rollNo:       inv.rollNo.trim(),
+        schoolId,
+        branchId,
+        createdAt:    serverTimestamp(),
+      });
+
+      sendStudentInviteEmail({
+        to: email,
+        studentName: name,
+        className: cls?.name || '',
+        teacherName: teacherData.name || '',
+      }).catch(err => {
+        console.error('Invite email failed:', err);
+        toast.warning('Student enroll ho gaya, par email nahi gayi.');
+      });
+
+      toast.success(`${name} ko invite bhej diya!`);
+      setInviteOpen(false);
+    } catch (e) {
+      console.error('Invite failed:', e);
+      toast.error('Invite fail ho gaya. Dubara try karo.');
+    } finally {
+      setInviting(false);
+    }
+  };
+
   const handleDelete = async (stu: any) => {
     if (!teacherData?.id || !teacherData?.schoolId) return;
     if (!confirm(`Remove ${stu.name} from your class?`)) return;
@@ -241,15 +369,25 @@ export default function Students() {
 
       {/* ── Dark Hero ──────────────────────────────────────────────────────── */}
       <div className="-mx-4 sm:-mx-6 px-[22px] pb-5 bg-[#162E93] md:bg-[#08090C]">
-        <p style={{ fontSize: 9, fontWeight: 500, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 4 }}>
-          All students
-        </p>
-        <h1 style={{ fontSize: 20, fontWeight: 500, color: '#fff', letterSpacing: '-0.4px', lineHeight: 1.15 }}>
-          Your students
-        </h1>
-        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.30)', marginTop: 3 }}>
-          View and manage students across classes.
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 9, fontWeight: 500, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 4 }}>
+              All students
+            </p>
+            <h1 style={{ fontSize: 20, fontWeight: 500, color: '#fff', letterSpacing: '-0.4px', lineHeight: 1.15 }}>
+              Your students
+            </h1>
+            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.30)', marginTop: 3 }}>
+              View and manage students across classes.
+            </p>
+          </div>
+          <button
+            onClick={openInvite}
+            style={{ padding: '7px 11px', borderRadius: 9, background: '#fff', border: 'none', color: '#162E93', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', flexShrink: 0 }}
+          >
+            <UserPlus size={13} /> Invite
+          </button>
+        </div>
         <div style={{ display: 'flex', gap: 7, marginTop: 13, flexWrap: 'wrap' }}>
           {[
             { icon: <IcoUser color="rgba(255,255,255,0.4)" />, val: students.length,  lbl: 'Total' },
@@ -457,6 +595,12 @@ export default function Students() {
               <option value="All">All classes</option>
               {uniqueClasses.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
+            <button
+              onClick={openInvite}
+              className="h-10 px-4 rounded-lg bg-[#1e3272] hover:bg-[#162552] text-white text-sm font-semibold flex items-center gap-2 whitespace-nowrap"
+            >
+              <UserPlus size={15} /> Invite Student
+            </button>
           </div>
         </div>
 
@@ -525,6 +669,118 @@ export default function Students() {
         )}
 
       </div>{/* ═══════════ END DESKTOP VIEW ═══════════ */}
+
+      {/* ═══════════════════ INVITE STUDENT MODAL ═══════════════════ */}
+      {inviteOpen && (
+        <div
+          onClick={() => !inviting && setInviteOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(8,9,12,0.55)', zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: 440, background: T.s0, borderRadius: 16, overflow: 'hidden', border: `1px solid ${T.bdr}` }}
+          >
+            {/* Header */}
+            <div style={{ padding: '18px 20px', borderBottom: `1px solid ${T.bdr}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 9, background: T.blueL, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Mail size={15} color={T.blue} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: T.ink0 }}>Invite Student</div>
+                  <div style={{ fontSize: 11, color: T.ink2, marginTop: 1 }}>Email ke through invite bhejo</div>
+                </div>
+              </div>
+              <button
+                onClick={() => !inviting && setInviteOpen(false)}
+                style={{ width: 28, height: 28, borderRadius: 7, background: T.s1, border: `1px solid ${T.bdr}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              >
+                <X size={14} color={T.ink2} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 500, color: T.ink1, display: 'block', marginBottom: 5 }}>Full name *</label>
+                <input
+                  type="text"
+                  value={inv.name}
+                  onChange={e => setInv({ ...inv, name: e.target.value })}
+                  placeholder="e.g. Aarav Sharma"
+                  disabled={inviting}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 9, border: `1px solid ${T.bdr}`, background: T.s0, fontSize: 13, color: T.ink0, fontFamily: 'inherit', outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 500, color: T.ink1, display: 'block', marginBottom: 5 }}>Email *</label>
+                <input
+                  type="email"
+                  value={inv.email}
+                  onChange={e => setInv({ ...inv, email: e.target.value })}
+                  placeholder="student@example.com"
+                  disabled={inviting}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 9, border: `1px solid ${T.bdr}`, background: T.s0, fontSize: 13, color: T.ink0, fontFamily: 'inherit', outline: 'none' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 11, fontWeight: 500, color: T.ink1, display: 'block', marginBottom: 5 }}>Class *</label>
+                  <select
+                    value={inv.classId}
+                    onChange={e => setInv({ ...inv, classId: e.target.value })}
+                    disabled={inviting || teacherClasses.length === 0}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 9, border: `1px solid ${T.bdr}`, background: T.s0, fontSize: 13, color: T.ink0, fontFamily: 'inherit', outline: 'none', appearance: 'none' }}
+                  >
+                    <option value="">
+                      {teacherClasses.length === 0 ? 'No classes assigned' : 'Select class…'}
+                    </option>
+                    {teacherClasses.map(c => (
+                      <option key={c.id} value={c.id}>{c.name || c.id}</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ width: 110 }}>
+                  <label style={{ fontSize: 11, fontWeight: 500, color: T.ink1, display: 'block', marginBottom: 5 }}>Roll No.</label>
+                  <input
+                    type="text"
+                    value={inv.rollNo}
+                    onChange={e => setInv({ ...inv, rollNo: e.target.value })}
+                    placeholder="Optional"
+                    disabled={inviting}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 9, border: `1px solid ${T.bdr}`, background: T.s0, fontSize: 13, color: T.ink0, fontFamily: 'inherit', outline: 'none' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ background: T.blueL, border: `1px solid ${T.blueL}`, borderRadius: 9, padding: '9px 12px', fontSize: 11, color: T.blue, lineHeight: 1.5 }}>
+                Invite email student ko bhej di jayegi with login link. Same email se login karke apna portal access kar sakte hain.
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding: '14px 20px', borderTop: `1px solid ${T.bdr}`, display: 'flex', gap: 8, justifyContent: 'flex-end', background: T.s1 }}>
+              <button
+                onClick={() => setInviteOpen(false)}
+                disabled={inviting}
+                style={{ padding: '9px 16px', borderRadius: 9, background: T.s0, border: `1px solid ${T.bdr}`, color: T.ink1, fontSize: 12, fontWeight: 500, cursor: inviting ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleInvite}
+                disabled={inviting}
+                style={{ padding: '9px 18px', borderRadius: 9, background: T.ink0, border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, cursor: inviting ? 'not-allowed' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6, opacity: inviting ? 0.7 : 1 }}
+              >
+                {inviting ? <Loader2 size={13} className="animate-spin" /> : <Mail size={13} />}
+                {inviting ? 'Sending…' : 'Send invite'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Mobile bottom tab bar ─────────────────────────────────────────── */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-40" style={{ background: T.s0, borderTop: `1px solid ${T.bdr}`, padding: '8px 16px 16px', display: 'flex', justifyContent: 'space-between' }}>

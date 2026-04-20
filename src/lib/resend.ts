@@ -1,8 +1,8 @@
 /**
  * resend.ts — client-side wrapper for /api/send-email.
  *
- * The teacher endpoint only accepts type: "parent_notification" with structured
- * fields. Raw HTML is NOT accepted — the server renders the template.
+ * Teacher endpoint accepts structured fields only — server renders the template,
+ * raw HTML is NOT accepted. Supported types: parent_notification, student_invite.
  */
 import { auth } from "./firebase";
 
@@ -15,7 +15,15 @@ export interface ParentNotificationPayload {
   teacherName?: string;
 }
 
-export const sendParentNotificationEmail = async (p: ParentNotificationPayload) => {
+export interface StudentInvitePayload {
+  to: string;
+  studentName: string;
+  className?: string;
+  teacherName?: string;
+  subject?: string;
+}
+
+const postEmail = async (body: Record<string, unknown>) => {
   const token = await auth.currentUser?.getIdToken();
   const response = await fetch("/api/send-email", {
     method: "POST",
@@ -23,7 +31,7 @@ export const sendParentNotificationEmail = async (p: ParentNotificationPayload) 
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify({ type: "parent_notification", ...p }),
+    body: JSON.stringify(body),
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -31,3 +39,9 @@ export const sendParentNotificationEmail = async (p: ParentNotificationPayload) 
   }
   return data;
 };
+
+export const sendParentNotificationEmail = (p: ParentNotificationPayload) =>
+  postEmail({ type: "parent_notification", ...p });
+
+export const sendStudentInviteEmail = (p: StudentInvitePayload) =>
+  postEmail({ type: "student_invite", ...p });
