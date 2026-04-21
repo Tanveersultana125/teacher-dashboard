@@ -167,7 +167,7 @@ const SettingsPage = () => {
 
         {/* Save + Reset buttons */}
         <div style={{ display: "flex", gap: 8, padding: "18px 22px 18px" }}>
-          <button onClick={handleReset} style={{
+          <button type="button" onClick={handleReset} style={{
             padding: "11px 14px", borderRadius: 12,
             background: "rgba(255,255,255,0.08)",
             border: "1px solid rgba(255,255,255,0.14)",
@@ -180,7 +180,7 @@ const SettingsPage = () => {
             </svg>
             Reset
           </button>
-          <button onClick={handleSave} disabled={isSaving} style={{
+          <button type="button" onClick={handleSave} disabled={isSaving} style={{
             flex: 1, padding: "11px", borderRadius: 12,
             background: T.blue, border: "none", color: "#fff",
             fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
@@ -221,7 +221,7 @@ const SettingsPage = () => {
               <p style={{ fontSize: 15, fontWeight: 500, color: T.ink1, margin: 0 }}>{formData.name || "Teacher"}</p>
               <p style={{ fontSize: 11, color: T.ink3, marginTop: 2 }}>{formData.email}</p>
             </div>
-            <button style={{
+            <button type="button" style={{
               padding: "7px 12px", borderRadius: 10,
               border: `1px solid ${T.bdr}`, background: T.s1,
               fontSize: 11, fontWeight: 500, color: T.blue,
@@ -441,7 +441,7 @@ const DangerRow = ({ title, sub, onClick, last }: {
       <p style={{ fontSize: 13, fontWeight: 500, color: T.red, margin: 0 }}>{title}</p>
       <p style={{ fontSize: 11, color: T.ink3, marginTop: 2 }}>{sub}</p>
     </div>
-    <button onClick={onClick} style={{
+    <button type="button" onClick={onClick} style={{
       padding: "7px 13px", borderRadius: 10,
       background: T.rlBg, border: `1px solid ${T.rlBdr}`,
       color: T.red, fontSize: 11, fontWeight: 500,

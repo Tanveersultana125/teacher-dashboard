@@ -675,6 +675,8 @@ const RisksAlerts = () => {
           {FILTER_TABS.map(tab => (
             <button
               key={tab.id}
+              type="button"
+              aria-pressed={activeTab === tab.id}
               onClick={() => setActiveTab(tab.id)}
               style={{
                 flex: 1, padding: "8px 6px", borderRadius: 11,
@@ -725,6 +727,7 @@ const RisksAlerts = () => {
             </div>
             {activeTab === "All" ? (
               <button
+                type="button"
                 onClick={() => { setLoading(true); setRefreshKey(k => k + 1); }}
                 style={{ fontSize: 11, color: T.blue, background: "none", border: "none", cursor: "pointer" }}
               >
@@ -814,6 +817,7 @@ const RisksAlerts = () => {
                         {actions.map((action, i) => (
                           <button
                             key={i}
+                            type="button"
                             onClick={action.onClick}
                             disabled={resolving === a.id}
                             style={{
@@ -878,6 +882,7 @@ const RisksAlerts = () => {
               ] as const).map((qa) => (
                 <button
                   key={qa.label}
+                  type="button"
                   onClick={qa.onClick}
                   style={{
                     padding: "11px 10px", borderRadius: 13,
@@ -1009,10 +1014,12 @@ const RisksAlerts = () => {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: `1px solid ${T.s2}` }}>
               <h3 style={{ fontSize: 15, fontWeight: 600, color: T.ink1, margin: 0 }}>Contact Parent</h3>
               <button
+                type="button"
+                aria-label="Close contact panel"
                 onClick={() => setSelectedContact(null)}
                 style={{ width: 28, height: 28, border: "none", background: T.s1, borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
               >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke={T.ink3} strokeWidth="1.8" strokeLinecap="round">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke={T.ink3} strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
                   <line x1="2" y1="2" x2="12" y2="12" /><line x1="12" y1="2" x2="2" y2="12" />
                 </svg>
               </button>
@@ -1182,6 +1189,8 @@ const RisksAlerts = () => {
             {FILTER_TABS.map(tab => (
               <button
                 key={tab.id}
+                type="button"
+                aria-pressed={activeTab === tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors ${
                   activeTab === tab.id ? 'border-[#1e3272] text-[#1e3272]' : 'border-transparent text-slate-500 hover:text-slate-700'
@@ -1239,6 +1248,7 @@ const RisksAlerts = () => {
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {a.severity === 'Critical' ? (
                         <button
+                          type="button"
                           onClick={() => fetchContact(a.studentId, a.name)}
                           className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
                           style={{ background: T.red }}
@@ -1247,6 +1257,7 @@ const RisksAlerts = () => {
                         </button>
                       ) : (
                         <button
+                          type="button"
                           onClick={() => fetchContact(a.studentId, a.name)}
                           className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
                           style={{ background: sev.color }}
@@ -1255,6 +1266,7 @@ const RisksAlerts = () => {
                         </button>
                       )}
                       <button
+                        type="button"
                         onClick={() => handleResolve(a)}
                         disabled={resolving === a.id}
                         className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-60"

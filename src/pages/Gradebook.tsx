@@ -316,11 +316,18 @@ export default function Gradebook() {
       const pct = totalMax > 0 ? (earned / totalMax) * 100 : 0;
       return [stu.name, ...columns.map(c => localScores[`${(stu.email || stu.id).toLowerCase()}_${c.id}`] || ""), earned, getGrade(pct)];
     });
-    const XLSX = await loadXLSX();
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Gradebook");
-    XLSX.writeFile(wb, `Gradebook_${selectedClass?.name || "Export"}.xlsx`);
+    try {
+      const XLSX = await loadXLSX();
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Gradebook");
+      const rawName = selectedClass?.name || "Export";
+      const safeName = rawName.replace(/[\\/:*?"<>|]/g, "_").trim() || "Export";
+      XLSX.writeFile(wb, `Gradebook_${safeName}.xlsx`);
+    } catch (e) {
+      console.error("[Gradebook] export failed", e);
+      toast.error("Export failed.");
+    }
   };
 
   // ── Computed ───────────────────────────────────────────────────────────────
@@ -367,6 +374,8 @@ export default function Gradebook() {
         {/* Dark hero */}
         <div className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 px-[22px] pb-6 bg-[#162E93] md:bg-[#08090C]">
           <button
+            type="button"
+            aria-label="Back to gradebook"
             onClick={() => setView('main')}
             style={{
               display: 'flex', alignItems: 'center', gap: 5,
@@ -540,6 +549,7 @@ export default function Gradebook() {
           {/* Save / Discard footer */}
           <div style={{ display: 'flex', gap: 8 }}>
             <button
+              type="button"
               onClick={handleSaveColumn}
               disabled={saving}
               style={{
@@ -554,6 +564,7 @@ export default function Gradebook() {
               Save scores
             </button>
             <button
+              type="button"
               onClick={handleDiscard}
               style={{
                 padding: '12px 14px', borderRadius: 12,
@@ -631,6 +642,8 @@ export default function Gradebook() {
             />
           </div>
           <button
+            type="button"
+            aria-expanded={showAddCol}
             onClick={() => setShowAddCol(v => !v)}
             style={{
               padding: '9px 11px', borderRadius: 11, border: `1px solid ${T.bdr}`, background: T.s0,
@@ -643,6 +656,8 @@ export default function Gradebook() {
             Column
           </button>
           <button
+            type="button"
+            aria-label="Export gradebook to Excel"
             onClick={handleExport}
             style={{
               width: 34, height: 34, borderRadius: 11,
@@ -692,6 +707,7 @@ export default function Gradebook() {
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button
+                type="button"
                 onClick={handleAddColumn}
                 style={{
                   flex: 1, padding: 10, borderRadius: 10, background: T.ink0, border: 'none',
@@ -701,6 +717,7 @@ export default function Gradebook() {
                 Add column
               </button>
               <button
+                type="button"
                 onClick={() => { setShowAddCol(false); setNewColName(''); setNewColMax('100'); }}
                 style={{
                   padding: '10px 14px', borderRadius: 10, background: T.s1,
@@ -737,6 +754,8 @@ export default function Gradebook() {
             </svg>
           </div>
           <button
+            type="button"
+            aria-label={saving ? "Saving grades" : "Save grades"}
             onClick={handleSave}
             disabled={saving || !hasUnsaved}
             style={{
@@ -1031,13 +1050,14 @@ export default function Gradebook() {
               {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
             <button
+              type="button"
               onClick={handleExport}
               className="h-10 px-4 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
               Export
             </button>
             {hasUnsaved && (
-              <button onClick={handleSave} className="h-10 px-4 rounded-lg bg-[#1e3272] text-white text-sm font-semibold hover:bg-[#162552]">
+              <button type="button" onClick={handleSave} className="h-10 px-4 rounded-lg bg-[#1e3272] text-white text-sm font-semibold hover:bg-[#162552]">
                 Save Changes
               </button>
             )}

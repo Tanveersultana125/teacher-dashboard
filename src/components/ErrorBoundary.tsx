@@ -63,19 +63,19 @@ export class ErrorBoundary extends Component<Props, State> {
             An unexpected error occurred. Try again, refresh, or sign out if the problem persists.
           </p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
-            <button
+            <button type="button"
               onClick={this.handleTryAgain}
               style={{ padding: "12px 28px", borderRadius: 12, background: "#1e3272", color: "#fff", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer" }}
             >
               Try Again
             </button>
-            <button
+            <button type="button"
               onClick={() => window.location.reload()}
               style={{ padding: "12px 24px", borderRadius: 12, background: "#fff", color: "#1e3272", fontSize: 14, fontWeight: 600, border: "1px solid #e2e8f0", cursor: "pointer" }}
             >
               Refresh Page
             </button>
-            <button
+            <button type="button"
               onClick={this.handleSignOut}
               style={{ padding: "12px 24px", borderRadius: 12, background: "#fff", color: "#dc2626", fontSize: 14, fontWeight: 600, border: "1px solid #fee2e2", cursor: "pointer" }}
             >

@@ -427,6 +427,8 @@ const ParentNotes = () => {
 
           {/* Compose button */}
           <button
+            type="button"
+            aria-label="Focus search"
             onClick={() => { searchRef.current?.focus(); }}
             style={{
               width: "100%", padding: 12, borderRadius: 12,
@@ -455,10 +457,12 @@ const ParentNotes = () => {
               <p className="text-sm text-slate-500 mt-1">Communicate with parents and track conversations.</p>
             </div>
             <button
+              type="button"
+              aria-label="Focus search"
               onClick={() => { searchRef.current?.focus(); }}
               className="h-11 px-5 rounded-lg bg-[#1e3272] text-white text-sm font-semibold hover:bg-[#162552] flex items-center gap-2 shadow-sm"
             >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
                 <line x1="7" y1="2" x2="7" y2="12" /><line x1="2" y1="7" x2="12" y2="7" />
               </svg>
               New Message
@@ -551,6 +555,7 @@ const ParentNotes = () => {
                 ].map(tpl => (
                   <button
                     key={tpl.title}
+                    type="button"
                     onClick={() => { searchRef.current?.focus(); toast.info(`Template: ${tpl.title}`); }}
                     className="w-full text-left px-3 py-3 rounded-lg border border-slate-100 hover:bg-slate-50 hover:border-slate-200"
                   >
@@ -649,6 +654,8 @@ const ParentNotes = () => {
         <div className="bg-[#162E93] md:bg-[#08090C]" style={{ padding: "12px 22px 18px", flexShrink: 0 }}>
           {/* Back link */}
           <button
+            type="button"
+            aria-label="Back to students"
             onClick={() => setSelectedStudent(null)}
             style={{
               display: "flex", alignItems: "center", gap: 4,
@@ -840,6 +847,8 @@ const ParentNotes = () => {
 
           {/* Send button */}
           <button
+            type="button"
+            aria-label="Send message"
             onClick={handleSend}
             disabled={!messageContent.trim()}
             style={{

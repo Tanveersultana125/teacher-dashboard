@@ -353,7 +353,7 @@ export default function TestsExams() {
       <div className="px-4 sm:px-6 md:px-0 pt-4 flex flex-col gap-3">
 
         {/* Create CTA */}
-        <button
+        <button type="button"
           onClick={() => setView("create")}
           style={{
             width: '100%', padding: 13, borderRadius: 13, background: T.blue,
@@ -490,7 +490,7 @@ export default function TestsExams() {
 
                   {/* Actions */}
                   <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
-                    <button
+                    <button type="button"
                       onClick={(e) => { e.stopPropagation(); setSelectedTest(test); setView("enter-scores"); }}
                       style={{
                         flex: 1, padding: '9px 12px', borderRadius: 10,
@@ -569,7 +569,7 @@ export default function TestsExams() {
             <h1 className="text-[28px] font-bold text-slate-900 leading-tight tracking-tight">Tests &amp; Exams</h1>
             <p className="text-sm text-slate-500 mt-1">Manage tests, enter scores, and analyze performance.</p>
           </div>
-          <button
+          <button type="button"
             onClick={() => setView("create")}
             className="h-11 px-5 rounded-lg bg-[#1e3272] text-white text-sm font-semibold hover:bg-[#162552] flex items-center gap-2 shadow-sm"
           >
@@ -680,14 +680,14 @@ export default function TestsExams() {
                         {test.marks && <span>{test.marks} marks</span>}
                       </div>
                       <div className="flex items-center gap-2">
-                        <button
+                        <button type="button"
                           onClick={(e) => { e.stopPropagation(); setSelectedTest(test); setView('enter-scores'); }}
                           className="px-4 py-1.5 rounded-lg bg-[#1e3272] text-white text-xs font-semibold hover:bg-[#162552]"
                         >
                           {isPast ? 'View Scores' : 'Enter Scores'}
                         </button>
-                        <button className="px-4 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50">Edit</button>
-                        <button className="px-4 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50">Print</button>
+                        <button type="button" className="px-4 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50">Edit</button>
+                        <button type="button" className="px-4 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50">Print</button>
                       </div>
                     </div>
                   );

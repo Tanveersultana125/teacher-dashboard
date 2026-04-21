@@ -381,7 +381,7 @@ const Dashboard = () => {
 
           {/* Bell button */}
           <div className="relative mt-1" ref={notifRef}>
-            <button
+            <button type="button"
               onClick={() => setShowNotifPanel(p => !p)}
               style={{
                 width: 36, height: 36, borderRadius: '50%',
@@ -412,7 +412,7 @@ const Dashboard = () => {
                       {unreadNotes.length > 0 ? `${unreadNotes.length} unread from parents` : "All caught up!"}
                     </p>
                   </div>
-                  <button onClick={() => setShowNotifPanel(false)}
+                  <button type="button" onClick={() => setShowNotifPanel(false)}
                     className="p-1 rounded-lg hover:bg-slate-100 transition-colors">
                     <X size={14} className="text-slate-400" />
                   </button>
@@ -422,7 +422,7 @@ const Dashboard = () => {
                     <div className="py-10 text-center" style={{ fontSize: 13, color: T.ink2 }}>No new notifications</div>
                   ) : (
                     unreadNotes.map(note => (
-                      <button key={note.id}
+                      <button type="button" key={note.id}
                         onClick={() => { setShowNotifPanel(false); navigate("/parent-notes"); }}
                         className="w-full flex items-start gap-3 px-4 py-3 hover:bg-slate-50 text-left"
                         style={{ borderBottom: `1px solid ${T.surface2}` }}>
@@ -537,7 +537,7 @@ const Dashboard = () => {
             <IconBox bg={T.blueL}><IcoCalendar size={16} color={T.blue} /></IconBox>
             <span style={{ fontSize: 15, fontWeight: 500, color: T.ink0 }}>Today's classes</span>
           </div>
-          <button onClick={() => navigate('/my-classes')}
+          <button type="button" onClick={() => navigate('/my-classes')}
             style={{ fontSize: 13, fontWeight: 400, color: T.blue, background: 'none', border: 'none', cursor: 'pointer' }}>
             See all
           </button>
@@ -551,7 +551,7 @@ const Dashboard = () => {
         ) : (
           todayClasses.map((cls, idx) => (
             <div key={idx}>
-              <button
+              <button type="button"
                 onClick={() => navigate('/my-classes')}
                 className="w-full text-left flex items-center gap-3 px-4"
                 style={{ padding: '12px 16px' }}
@@ -592,7 +592,7 @@ const Dashboard = () => {
             <IconBox bg={T.amberL}><IcoCheck size={16} color={T.amber} /></IconBox>
             <span style={{ fontSize: 15, fontWeight: 500, color: T.ink0 }}>Pending tasks</span>
           </div>
-          <button
+          <button type="button"
             onClick={() => navigate('/attendance')}
             style={{ fontSize: 13, fontWeight: 400, color: T.blue, background: 'none', border: 'none', cursor: 'pointer' }}>
             Add
@@ -609,7 +609,7 @@ const Dashboard = () => {
             const badge = taskBadge(task.status);
             return (
               <div key={idx}>
-                <button
+                <button type="button"
                   onClick={() => navigate(task.title.includes('Attendance') ? '/attendance' : '/gradebook')}
                   className="w-full flex items-center gap-3"
                   style={{ padding: '12px 16px', textAlign: 'left' }}
@@ -650,7 +650,7 @@ const Dashboard = () => {
             <IconBox bg={T.redL}><IcoAlert size={16} color={T.red} /></IconBox>
             <span style={{ fontSize: 15, fontWeight: 500, color: T.ink0 }}>Needs attention</span>
           </div>
-          <button onClick={() => navigate('/risks-alerts')}
+          <button type="button" onClick={() => navigate('/risks-alerts')}
             style={{ fontSize: 13, fontWeight: 400, color: T.blue, background: 'none', border: 'none', cursor: 'pointer' }}>
             View all
           </button>
@@ -715,7 +715,7 @@ const Dashboard = () => {
               {new Date().toLocaleDateString("en-US", { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
             </div>
             <div className="relative" ref={notifRef}>
-              <button
+              <button type="button"
                 onClick={() => setShowNotifPanel(p => !p)}
                 className="relative w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-colors shadow-sm"
               >
@@ -733,7 +733,7 @@ const Dashboard = () => {
                       <p className="text-sm font-semibold text-slate-900">Notifications</p>
                       <p className="text-[11px] text-slate-500">{unreadNotes.length > 0 ? `${unreadNotes.length} unread from parents` : "All caught up!"}</p>
                     </div>
-                    <button onClick={() => setShowNotifPanel(false)} className="p-1 rounded-lg hover:bg-slate-100">
+                    <button type="button" onClick={() => setShowNotifPanel(false)} className="p-1 rounded-lg hover:bg-slate-100">
                       <X size={14} className="text-slate-400" />
                     </button>
                   </div>
@@ -742,7 +742,7 @@ const Dashboard = () => {
                       <div className="py-10 text-center text-sm text-slate-400">No new notifications</div>
                     ) : (
                       unreadNotes.map(note => (
-                        <button key={note.id}
+                        <button type="button" key={note.id}
                           onClick={() => { setShowNotifPanel(false); navigate("/parent-notes"); }}
                           className="w-full flex items-start gap-3 px-4 py-3 hover:bg-slate-50 text-left border-b border-slate-50">
                           <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: T.blueL }}>
@@ -845,14 +845,14 @@ const Dashboard = () => {
           <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-semibold text-slate-900">Today's Classes</h2>
-              <button onClick={() => navigate('/my-classes')} className="text-xs font-medium text-blue-600 hover:text-blue-700">See all</button>
+              <button type="button" onClick={() => navigate('/my-classes')} className="text-xs font-medium text-blue-600 hover:text-blue-700">See all</button>
             </div>
             {todayClasses.length === 0 ? (
               <div className="py-10 text-center text-sm text-slate-400">No classes scheduled today</div>
             ) : (
               <div className="space-y-2">
                 {todayClasses.map((cls, idx) => (
-                  <button
+                  <button type="button"
                     key={idx}
                     onClick={() => navigate('/my-classes')}
                     className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-colors ${cls.isNow ? 'border-l-[3px] pl-[10px]' : 'hover:bg-slate-50'}`}
@@ -878,7 +878,7 @@ const Dashboard = () => {
           <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-semibold text-slate-900">Pending Tasks</h2>
-              <button onClick={() => navigate('/attendance')} className="text-xs font-medium text-blue-600 hover:text-blue-700">Add</button>
+              <button type="button" onClick={() => navigate('/attendance')} className="text-xs font-medium text-blue-600 hover:text-blue-700">Add</button>
             </div>
             {pendingTasks.length === 0 ? (
               <div className="py-10 text-center text-sm text-slate-400">All tasks complete</div>
@@ -890,7 +890,7 @@ const Dashboard = () => {
                     task.status === 'Todo'    ? { bg: T.amberL, accent: T.amber, dot: T.amber } :
                                                 { bg: T.surface2, accent: T.ink1, dot: T.ink2 };
                   return (
-                    <button
+                    <button type="button"
                       key={idx}
                       onClick={() => navigate(task.title.includes('Attendance') ? '/attendance' : '/gradebook')}
                       className="w-full flex items-start gap-3 px-3 py-3 rounded-xl text-left"
@@ -912,7 +912,7 @@ const Dashboard = () => {
           <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-semibold text-slate-900">Students Needing Attention</h2>
-              <button onClick={() => navigate('/risks-alerts')} className="text-xs font-medium text-blue-600 hover:text-blue-700">View all</button>
+              <button type="button" onClick={() => navigate('/risks-alerts')} className="text-xs font-medium text-blue-600 hover:text-blue-700">View all</button>
             </div>
             {criticalStudents.length === 0 ? (
               <div className="py-10 text-center text-sm text-slate-400">All students on track</div>
@@ -945,7 +945,7 @@ const Dashboard = () => {
                         <p className="text-[13px] font-semibold text-slate-900 truncate">{name}</p>
                         <p className="text-[11px] text-slate-600 truncate mt-0.5">{s.trigger}</p>
                       </div>
-                      <button
+                      <button type="button"
                         onClick={(e) => { e.stopPropagation(); navigate('/risks-alerts'); }}
                         className="text-[11px] font-semibold px-3 py-1.5 rounded-lg text-white flex-shrink-0"
                         style={{ background: actionColor }}
@@ -969,7 +969,7 @@ const Dashboard = () => {
           {tabs.map(tab => {
             const isActive = tab.path === "/" ? activeTab === "/" : activeTab.startsWith(tab.path);
             return (
-              <button key={tab.label} onClick={() => navigate(tab.path)}
+              <button type="button" key={tab.label} onClick={() => navigate(tab.path)}
                 className="flex flex-col items-center gap-1"
                 style={{ background: 'none', border: 'none', cursor: 'pointer', minWidth: 48 }}>
                 {tab.icon(isActive)}

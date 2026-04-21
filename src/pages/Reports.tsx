@@ -243,7 +243,7 @@ const Reports = () => {
         {/* Filter pills */}
         <div style={{ display: "flex", gap: 6 }}>
           {FILTERS.map(f => (
-            <button
+            <button type="button"
               key={f}
               onClick={() => setFilter(f)}
               style={{
@@ -293,7 +293,7 @@ const Reports = () => {
 
               {/* Action buttons */}
               <div style={{ display: "flex", gap: 8, borderTop: `1px solid ${T.s2}`, paddingTop: 13 }}>
-                <button
+                <button type="button"
                   onClick={() => handleOpenGenerate(r)}
                   style={{
                     flex: 1, padding: 10, borderRadius: 11,
@@ -322,7 +322,7 @@ const Reports = () => {
             </p>
           </div>
           {history.length > 10 && (
-            <button
+            <button type="button"
               onClick={() => setShowAllHistory(v => !v)}
               style={{
                 display: "flex", alignItems: "center", gap: 4,
@@ -391,7 +391,7 @@ const Reports = () => {
                   </div>
 
                   {/* Download btn — exports stored report JSON */}
-                  <button
+                  <button type="button"
                     onClick={() => handleDownloadHistory(h)}
                     title="Download report snapshot"
                     style={{

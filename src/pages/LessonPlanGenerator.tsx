@@ -288,7 +288,7 @@ const LessonPlanGenerator = () => {
 
           {/* Action tabs */}
           <div style={{ display: "flex", gap: 7, padding: "18px 22px 20px" }}>
-            <button
+            <button type="button"
               onClick={() => setActiveTab("generate")}
               style={{
                 flex: 1, padding: "10px 8px", borderRadius: 12,
@@ -305,7 +305,7 @@ const LessonPlanGenerator = () => {
               </svg>
               Generate plan
             </button>
-            <button
+            <button type="button"
               onClick={() => setActiveTab("history")}
               style={{
                 flex: 1, padding: "10px 8px", borderRadius: 12,
@@ -439,7 +439,7 @@ const LessonPlanGenerator = () => {
 
             {/* Generate + Reset buttons */}
             <div style={{ display: "flex", gap: 8 }}>
-              <button
+              <button type="button"
                 onClick={handleGenerate}
                 disabled={loading}
                 style={{
@@ -456,7 +456,7 @@ const LessonPlanGenerator = () => {
                 </svg>
                 Generate plan
               </button>
-              <button
+              <button type="button"
                 onClick={handleReset}
                 style={{
                   width: 44, height: 44, borderRadius: 13,
@@ -553,7 +553,7 @@ const LessonPlanGenerator = () => {
                       <span style={{ fontSize: 10, color: "#4CC9A4", fontWeight: 500 }}>Saved</span>
                     </div>
                   ) : (
-                    <button
+                    <button type="button"
                       onClick={handleSave}
                       disabled={saving}
                       style={{
@@ -718,7 +718,7 @@ const LessonPlanGenerator = () => {
 
             {/* Export + Regenerate buttons */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              <button
+              <button type="button"
                 onClick={handleSave}
                 disabled={saving || saved}
                 style={{
@@ -735,7 +735,7 @@ const LessonPlanGenerator = () => {
                 </svg>
                 {saved ? "Saved" : saving ? "Saving..." : "Save Plan"}
               </button>
-              <button
+              <button type="button"
                 onClick={handleReset}
                 style={{
                   padding: 11, borderRadius: 12,

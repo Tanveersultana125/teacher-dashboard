@@ -274,7 +274,7 @@ const MarkAttendance = ({ onBack, initialClassId }: Props) => {
 
         {/* Nav row: Back | title | Save */}
         <div className="flex items-center justify-between pt-3 mb-5">
-          <button onClick={onBack}
+          <button type="button" onClick={onBack}
             style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
             <IcoBack />
             <span style={{ fontSize: 13, color: T.blue }}>Back</span>
@@ -316,7 +316,7 @@ const MarkAttendance = ({ onBack, initialClassId }: Props) => {
             Quick actions
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            <button onClick={markAllPresent}
+            <button type="button" onClick={markAllPresent}
               style={{
                 padding: '10px 8px', borderRadius: 10, border: `1px solid ${T.bdr}`,
                 background: T.s1, fontSize: 11, fontWeight: 500, color: T.ink1,
@@ -325,7 +325,7 @@ const MarkAttendance = ({ onBack, initialClassId }: Props) => {
               }}>
               <IcoMarkAll /> Mark all present
             </button>
-            <button onClick={copyFromYesterday}
+            <button type="button" onClick={copyFromYesterday}
               style={{
                 padding: '10px 8px', borderRadius: 10, border: `1px solid ${T.bdr}`,
                 background: T.s1, fontSize: 11, fontWeight: 500, color: T.ink1,
@@ -398,7 +398,7 @@ const MarkAttendance = ({ onBack, initialClassId }: Props) => {
                     ] as const).map(({ key, label, Icon, activeColor }) => {
                       const isOn = student.status === key;
                       return (
-                        <button key={key}
+                        <button type="button" key={key}
                           onClick={() => setStatus(student.id, key)}
                           style={{
                             flex: 1, padding: '9px 6px', borderRadius: 10, fontSize: 12, fontWeight: 500,
@@ -440,14 +440,14 @@ const MarkAttendance = ({ onBack, initialClassId }: Props) => {
                 Showing {Math.min((currentPage - 1) * ITEMS_PER_PAGE + 1, students.length)}–{Math.min(currentPage * ITEMS_PER_PAGE, students.length)} of {students.length} students
               </p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <button onClick={() => goPage(currentPage - 1)} disabled={currentPage === 1}
+                <button type="button" onClick={() => goPage(currentPage - 1)} disabled={currentPage === 1}
                   style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.s0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', opacity: currentPage === 1 ? 0.4 : 1 }}>
                   <IcoChevLeft />
                 </button>
                 <div style={{ width: 28, height: 28, borderRadius: 8, background: T.blue, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 500, color: '#fff' }}>
                   {currentPage}
                 </div>
-                <button onClick={() => goPage(currentPage + 1)} disabled={currentPage === totalPages}
+                <button type="button" onClick={() => goPage(currentPage + 1)} disabled={currentPage === totalPages}
                   style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${T.bdr}`, background: T.s0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', opacity: currentPage === totalPages ? 0.4 : 1 }}>
                   <IcoChevRight />
                 </button>

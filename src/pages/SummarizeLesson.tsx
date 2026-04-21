@@ -271,7 +271,7 @@ const SummarizeLesson = () => {
                         {extracting ? "Reading PDF..." : `${pageCount} pages · ${(file.size / 1024).toFixed(0)} KB`}
                       </p>
                     </div>
-                    <button onClick={handleReset} style={{ width: 28, height: 28, border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <button type="button" onClick={handleReset} style={{ width: 28, height: 28, border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke={T.ink3} strokeWidth="1.8" strokeLinecap="round">
                         <line x1="3" y1="3" x2="11" y2="11" /><line x1="11" y1="3" x2="3" y2="11" />
                       </svg>
@@ -316,7 +316,7 @@ const SummarizeLesson = () => {
             )}
 
             {/* Summarize button */}
-            <button
+            <button type="button"
               onClick={handleGenerate}
               disabled={!file || extracting || loading}
               style={{
@@ -490,19 +490,19 @@ const SummarizeLesson = () => {
 
             {/* Action buttons */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              <button style={{ padding: 11, borderRadius: 12, background: T.pur, border: "none", color: "#fff", fontSize: 11, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+              <button type="button" style={{ padding: 11, borderRadius: 12, background: T.pur, border: "none", color: "#fff", fontSize: 11, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
                 <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="2,8.5 6,4.5 8.5,7 10.5,4.5" /><line x1="3" y1="11" x2="11" y2="11" />
                 </svg>
                 Export PDF
               </button>
-              <button style={{ padding: 11, borderRadius: 12, background: T.white, border: `1px solid ${T.bdr}`, color: T.ink2, fontSize: 11, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+              <button type="button" style={{ padding: 11, borderRadius: 12, background: T.white, border: `1px solid ${T.bdr}`, color: T.ink2, fontSize: 11, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
                 <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke={T.ink2} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="6,2 6,9" /><polyline points="3,7 6,10 9,7" />
                 </svg>
                 Save summary
               </button>
-              <button
+              <button type="button"
                 onClick={handleReset}
                 style={{ gridColumn: "span 2", padding: 11, borderRadius: 12, background: T.white, border: `1px solid ${T.bdr}`, color: T.ink2, fontSize: 11, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}
               >

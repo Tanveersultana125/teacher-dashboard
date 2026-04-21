@@ -291,7 +291,7 @@ const GradeAssignment = ({ assignment, onBack }: GradeAssignmentProps) => {
     <div className="text-left space-y-6 pb-10">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <button onClick={onBack} className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-slate-600 mb-2 transition-colors">
+          <button type="button" onClick={onBack} className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-slate-600 mb-2 transition-colors">
             <ChevronLeft size={14} aria-hidden="true" /> Back to Assignments
           </button>
           <h1 className="text-2xl font-bold text-slate-800">Grade: {assignment?.title}</h1>
@@ -310,10 +310,10 @@ const GradeAssignment = ({ assignment, onBack }: GradeAssignmentProps) => {
             </div>
             <span className="text-xs font-semibold text-slate-700">{gradedCount}/{totalRoster}</span>
           </div>
-          <button onClick={handleExport} className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 flex items-center gap-2 shadow-sm">
+          <button type="button" onClick={handleExport} className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 flex items-center gap-2 shadow-sm">
             <Download size={14} aria-hidden="true" /> Export
           </button>
-          <button
+          <button type="button"
             onClick={handleSave}
             disabled={isSaving}
             aria-label={isSaving ? "Saving grades" : "Save grades"}

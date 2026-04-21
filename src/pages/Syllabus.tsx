@@ -378,7 +378,7 @@ const Syllabus = () => {
             Upload PDFs (syllabus, notes, resources) for your classes
           </p>
         </div>
-        <button
+        <button type="button"
           onClick={openModal}
           disabled={loading || classes.length === 0}
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1e3272] text-white text-sm font-semibold hover:bg-[#162552] transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
@@ -411,7 +411,7 @@ const Syllabus = () => {
           <p className="text-slate-400 text-xs max-w-sm mb-4">
             Click "Upload Document" to share syllabus, notes, or any resource with your students.
           </p>
-          <button
+          <button type="button"
             onClick={openModal}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1e3272] text-white text-xs font-semibold hover:bg-[#162552] transition-colors"
           >
@@ -465,7 +465,7 @@ const Syllabus = () => {
                               <Eye className="w-3 h-3" /> View PDF
                             </a>
                           )}
-                          <button
+                          <button type="button"
                             onClick={(e) => { e.stopPropagation(); handleDelete(d); }}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200 text-rose-600 text-[11px] font-semibold hover:bg-rose-50 transition-colors"
                           >
@@ -503,7 +503,7 @@ const Syllabus = () => {
                   <p className="text-[11px] text-slate-500">PDF only · Max 50 MB</p>
                 </div>
               </div>
-              <button
+              <button type="button"
                 onClick={closeModal}
                 disabled={uploading}
                 className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50"
@@ -596,14 +596,14 @@ const Syllabus = () => {
 
             {/* Footer */}
             <div className="px-6 py-3.5 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-2">
-              <button
+              <button type="button"
                 onClick={closeModal}
                 disabled={uploading}
                 className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-100 transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
-              <button
+              <button type="button"
                 onClick={handleUpload}
                 disabled={uploading || !title.trim() || !pickedFile || !selClassId}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1e3272] text-white text-xs font-semibold hover:bg-[#162552] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

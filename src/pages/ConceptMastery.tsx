@@ -385,7 +385,7 @@ const ConceptMastery = () => {
               style={{ width: '100%', padding: '10px 10px 10px 28px', borderRadius: 11, border: `1px solid ${T.bdr}`, background: T.s0, fontSize: 12, color: T.ink0, fontFamily: 'inherit', outline: 'none' }}
             />
           </div>
-          <button
+          <button type="button"
             onClick={exportCSV}
             disabled={masteryData.length === 0}
             style={{ padding: '9px 13px', borderRadius: 11, background: T.ink0, border: 'none', color: '#fff', fontSize: 11, fontWeight: 500, cursor: masteryData.length === 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', opacity: masteryData.length === 0 ? 0.5 : 1 }}
@@ -610,7 +610,7 @@ const ConceptMastery = () => {
                 className="w-56 h-10 pl-9 pr-3 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-100"
               />
             </div>
-            <button
+            <button type="button"
               onClick={exportCSV}
               disabled={masteryData.length === 0}
               className="h-10 px-4 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"

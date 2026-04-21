@@ -394,7 +394,7 @@ export default function Students() {
               View and manage students across classes.
             </p>
           </div>
-          <button
+          <button type="button"
             onClick={openInvite}
             style={{ padding: '7px 11px', borderRadius: 9, background: '#fff', border: 'none', color: '#162E93', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', flexShrink: 0 }}
           >
@@ -524,7 +524,7 @@ export default function Students() {
                         <span style={{ padding: '3px 8px', borderRadius: 20, fontSize: 10, fontWeight: 500, background: badge.bg, color: badge.color }}>
                           {stu.statusTag}
                         </span>
-                        <button
+                        <button type="button"
                           onClick={(e) => { e.stopPropagation(); handleDelete(stu); }}
                           style={{ width: 26, height: 26, borderRadius: 7, background: T.s1, border: `1px solid ${T.bdr}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                         >
@@ -552,7 +552,7 @@ export default function Students() {
                     </div>
 
                     {/* View profile button */}
-                    <button
+                    <button type="button"
                       onClick={(e) => { e.stopPropagation(); setSelectedStudent(stu); }}
                       style={{ width: '100%', padding: 9, borderRadius: 10, background: T.ink0, border: 'none', color: '#fff', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}
                     >
@@ -608,7 +608,7 @@ export default function Students() {
               <option value="All">All classes</option>
               {uniqueClasses.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
-            <button
+            <button type="button"
               onClick={openInvite}
               className="h-10 px-4 rounded-lg bg-[#1e3272] hover:bg-[#162552] text-white text-sm font-semibold flex items-center gap-2 whitespace-nowrap"
             >
@@ -669,7 +669,7 @@ export default function Students() {
                     </div>
                   </div>
 
-                  <button
+                  <button type="button"
                     onClick={(e) => { e.stopPropagation(); setSelectedStudent(stu); }}
                     className="mt-4 w-full py-2.5 rounded-lg bg-[#1e3272] text-white text-xs font-semibold hover:bg-[#162552]"
                   >
@@ -704,7 +704,7 @@ export default function Students() {
                   <div style={{ fontSize: 11, color: T.ink2, marginTop: 1 }}>Email ke through invite bhejo</div>
                 </div>
               </div>
-              <button
+              <button type="button"
                 onClick={() => !inviting && setInviteOpen(false)}
                 style={{ width: 28, height: 28, borderRadius: 7, background: T.s1, border: `1px solid ${T.bdr}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
               >
@@ -775,14 +775,14 @@ export default function Students() {
 
             {/* Footer */}
             <div style={{ padding: '14px 20px', borderTop: `1px solid ${T.bdr}`, display: 'flex', gap: 8, justifyContent: 'flex-end', background: T.s1 }}>
-              <button
+              <button type="button"
                 onClick={() => setInviteOpen(false)}
                 disabled={inviting}
                 style={{ padding: '9px 16px', borderRadius: 9, background: T.s0, border: `1px solid ${T.bdr}`, color: T.ink1, fontSize: 12, fontWeight: 500, cursor: inviting ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
               >
                 Cancel
               </button>
-              <button
+              <button type="button"
                 onClick={handleInvite}
                 disabled={inviting}
                 style={{ padding: '9px 18px', borderRadius: 9, background: T.ink0, border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, cursor: inviting ? 'not-allowed' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6, opacity: inviting ? 0.7 : 1 }}
@@ -800,7 +800,7 @@ export default function Students() {
         {tabs.map(tab => {
           const isActive = tab.path === activePath;
           return (
-            <button key={tab.path} onClick={() => navigate(tab.path)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: 'pointer', background: 'none', border: 'none', padding: 0, fontFamily: 'inherit' }}>
+            <button type="button" key={tab.path} onClick={() => navigate(tab.path)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: 'pointer', background: 'none', border: 'none', padding: 0, fontFamily: 'inherit' }}>
               {tab.icon(isActive)}
               <span style={{ fontSize: 9, color: isActive ? T.blue : T.ink2, fontWeight: isActive ? 500 : 400 }}>{tab.label}</span>
               {isActive && <div style={{ width: 12, height: 2.5, borderRadius: 2, background: T.blue, marginTop: -2 }} />}

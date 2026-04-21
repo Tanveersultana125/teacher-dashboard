@@ -88,7 +88,7 @@ const TeacherLayout = () => {
           <div className="flex items-center gap-3 px-4 h-14">
 
             {/* Hamburger */}
-            <button
+            <button type="button"
               onClick={() => setSidebarOpen(true)}
               className={`w-9 h-9 flex items-center justify-center rounded-xl active:scale-90 transition-transform flex-shrink-0 ${
                 isDarkNav ? "text-white/60 hover:text-white" : "bg-[#1e3272] text-white"

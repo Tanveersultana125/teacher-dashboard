@@ -496,14 +496,14 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
                   <Label className="text-[11px] font-black uppercase text-slate-500 tracking-widest ml-2">Export Foundation</Label>
                   <div className="flex gap-6">
                     {['pdf', 'excel'].map((f) => (
-                      <button key={f} onClick={() => setParams({ ...params, format: f })} className={`flex-1 h-20 rounded-[1.8rem] border-[3px] text-[12px] font-black uppercase tracking-widest transition-all ${params.format === f ? 'bg-[#1e3272] text-white border-[#1e3272] shadow-2xl' : 'bg-white text-slate-300 border-slate-50 hover:border-slate-200'}`}>
+                      <button type="button" key={f} onClick={() => setParams({ ...params, format: f })} className={`flex-1 h-20 rounded-[1.8rem] border-[3px] text-[12px] font-black uppercase tracking-widest transition-all ${params.format === f ? 'bg-[#1e3272] text-white border-[#1e3272] shadow-2xl' : 'bg-white text-slate-300 border-slate-50 hover:border-slate-200'}`}>
                         {f === 'pdf' ? <div className="flex items-center justify-center gap-3"><FileText size={20}/> Print PDF</div> : <div className="flex items-center justify-center gap-3"><TableIcon size={20}/> Excel Ledger</div>}
                       </button>
                     ))}
                   </div>
                 </div>
                 <DialogFooter className="pt-10">
-                  <button onClick={handleGenerate} disabled={isGenerating} className="w-full h-24 rounded-[2.5rem] bg-[#1e3272] text-white text-[13px] font-black uppercase tracking-[0.3em] hover:bg-black transition-all flex items-center justify-center gap-4 shadow-2xl active:scale-95 disabled:opacity-50">
+                  <button type="button" onClick={handleGenerate} disabled={isGenerating} className="w-full h-24 rounded-[2.5rem] bg-[#1e3272] text-white text-[13px] font-black uppercase tracking-[0.3em] hover:bg-black transition-all flex items-center justify-center gap-4 shadow-2xl active:scale-95 disabled:opacity-50">
                     {isGenerating ? <><Loader2 className="w-6 h-6 animate-spin" /> Establishing Sync...</> : <><Sparkles className="w-6 h-6" /> Extract Institutional Merit</>}
                   </button>
                 </DialogFooter>
@@ -598,17 +598,17 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
 
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:hidden">
                   {(report.id === "at_risk" || report.id === "attendance_summary") ? (
-                     <button onClick={()=>handleSendToPortal('both')} disabled={isSending || isSent} className="col-span-full h-28 bg-[#0f172a] text-white rounded-[2.8rem] text-[13px] font-black uppercase tracking-[0.3em] flex flex-col items-center justify-center gap-1 shadow-2xl hover:bg-black transition-all hover:translate-y-[-4px] active:scale-95 disabled:opacity-50 group">
+                     <button type="button" onClick={()=>handleSendToPortal('both')} disabled={isSending || isSent} className="col-span-full h-28 bg-[#0f172a] text-white rounded-[2.8rem] text-[13px] font-black uppercase tracking-[0.3em] flex flex-col items-center justify-center gap-1 shadow-2xl hover:bg-black transition-all hover:translate-y-[-4px] active:scale-95 disabled:opacity-50 group">
                         {isSending ? <Loader2 className="w-8 h-8 animate-spin"/> : <><div className="flex items-center gap-3"><Sparkles className="w-7 h-7 group-hover:rotate-180 transition-all duration-700"/> Broadcast to Both Portals</div><span className="text-[9px] opacity-60 font-bold tracking-widest italic leading-none">Synchronize Parent & Principal Portals Simultaneously</span></>}
                      </button>
                   ) : null}
-                  <button onClick={()=>handleSendToPortal('parent')} disabled={isSending || isSent} className={`h-28 bg-emerald-600 text-white rounded-[2.8rem] text-[13px] font-black uppercase tracking-[0.2em] flex flex-col items-center justify-center gap-1 shadow-2xl hover:bg-black transition-all hover:translate-y-[-4px] active:scale-95 disabled:opacity-50 group ${(report.id === "at_risk" || report.id === "attendance_summary") ? 'md:col-span-1' : 'col-span-full'}`}>
+                  <button type="button" onClick={()=>handleSendToPortal('parent')} disabled={isSending || isSent} className={`h-28 bg-emerald-600 text-white rounded-[2.8rem] text-[13px] font-black uppercase tracking-[0.2em] flex flex-col items-center justify-center gap-1 shadow-2xl hover:bg-black transition-all hover:translate-y-[-4px] active:scale-95 disabled:opacity-50 group ${(report.id === "at_risk" || report.id === "attendance_summary") ? 'md:col-span-1' : 'col-span-full'}`}>
                     {isSending ? <Loader2 className="w-8 h-8 animate-spin"/> : <><div className="flex items-center gap-3"><CheckCircle2 className="w-7 h-7 group-hover:scale-110 transition-all"/> Sync to Parent</div><span className="text-[9px] opacity-60 font-bold">Portal Manifest Update</span></>}
                   </button>
-                  <button onClick={()=>handleSendToPortal('principal')} disabled={isSending || isSent} className={`h-28 bg-[#1e3272] text-white rounded-[2.8rem] text-[13px] font-black uppercase tracking-[0.2em] flex flex-col items-center justify-center gap-1 shadow-2xl hover:bg-black transition-all hover:translate-y-[-4px] active:scale-95 disabled:opacity-50 group ${(report.id === "at_risk" || report.id === "attendance_summary") ? 'md:col-span-1' : 'col-span-full'}`}>
+                  <button type="button" onClick={()=>handleSendToPortal('principal')} disabled={isSending || isSent} className={`h-28 bg-[#1e3272] text-white rounded-[2.8rem] text-[13px] font-black uppercase tracking-[0.2em] flex flex-col items-center justify-center gap-1 shadow-2xl hover:bg-black transition-all hover:translate-y-[-4px] active:scale-95 disabled:opacity-50 group ${(report.id === "at_risk" || report.id === "attendance_summary") ? 'md:col-span-1' : 'col-span-full'}`}>
                     {isSending ? <Loader2 className="w-8 h-8 animate-spin"/> : <><div className="flex items-center gap-3"><ShieldCheck className="w-7 h-7 group-hover:rotate-12 transition-all"/> Transmit to Principal</div><span className="text-[9px] opacity-60 font-bold">Administrative Filing</span></>}
                   </button>
-                  <button onClick={handleDownload} className="col-span-full h-24 bg-white border border-slate-100 text-[#1e3272] rounded-[2.8rem] text-[12px] font-black uppercase tracking-widest flex items-center justify-center gap-4 shadow-xl hover:bg-slate-50 transition-all active:scale-95">
+                  <button type="button" onClick={handleDownload} className="col-span-full h-24 bg-white border border-slate-100 text-[#1e3272] rounded-[2.8rem] text-[12px] font-black uppercase tracking-widest flex items-center justify-center gap-4 shadow-xl hover:bg-slate-50 transition-all active:scale-95">
                     <Download className="w-7 h-7"/> {params.format === 'pdf' ? 'Initiate Print Protocol' : 'Export Excel Data Registry'}
                   </button>
                </div>

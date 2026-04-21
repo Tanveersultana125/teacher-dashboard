@@ -320,7 +320,7 @@ export default function EnterScores({ test, onBack }: EnterScoresProps) {
       <div className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 bg-[#162E93] md:bg-[#08090C]">
         <div style={{ padding: "10px 22px 0" }}>
           {/* Back */}
-          <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", marginBottom: 10, padding: 0 }}>
+          <button type="button" onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", marginBottom: 10, padding: 0 }}>
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke={T.blue} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="8,2 3,6.5 8,11" />
             </svg>
@@ -349,7 +349,7 @@ export default function EnterScores({ test, onBack }: EnterScoresProps) {
               <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>({avgPct.toFixed(0)}%)</span>
             </div>
           </div>
-          <button onClick={handleSave} disabled={saving} style={{
+          <button type="button" onClick={handleSave} disabled={saving} style={{
             padding: "9px 16px", borderRadius: 11,
             background: T.grn2, border: "none", color: "#fff",
             fontSize: 12, fontWeight: 500, cursor: "pointer",
@@ -430,7 +430,7 @@ export default function EnterScores({ test, onBack }: EnterScoresProps) {
               />
             </div>
             {/* Export */}
-            <button onClick={handleExportExcel} style={{
+            <button type="button" onClick={handleExportExcel} style={{
               padding: "8px 11px", borderRadius: 10, background: T.ink1,
               border: "none", color: "#fff", fontSize: 10, fontWeight: 500,
               cursor: "pointer", fontFamily: "inherit",
@@ -575,7 +575,7 @@ export default function EnterScores({ test, onBack }: EnterScoresProps) {
               Showing {Math.min(filtered.length, (currentPage - 1) * itemsPerPage + 1)} – {Math.min(filtered.length, currentPage * itemsPerPage)} of {filtered.length}
             </span>
             <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-              <button
+              <button type="button"
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage(p => p - 1)}
                 style={{
@@ -595,7 +595,7 @@ export default function EnterScores({ test, onBack }: EnterScoresProps) {
               }}>
                 {currentPage}
               </div>
-              <button
+              <button type="button"
                 disabled={currentPage === totalPages}
                 onClick={() => setCurrentPage(p => p + 1)}
                 style={{

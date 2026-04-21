@@ -455,7 +455,7 @@ const PrincipalNotes = () => {
         }}
       >
         {QUICK_REPLIES.map(qr => (
-          <button
+          <button type="button"
             key={qr}
             onClick={() => setMessageContent(qr)}
             style={{
@@ -509,7 +509,7 @@ const PrincipalNotes = () => {
         />
 
         {/* Send */}
-        <button
+        <button type="button"
           onClick={handleSend}
           disabled={!messageContent.trim()}
           style={{

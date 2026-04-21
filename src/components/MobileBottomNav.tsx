@@ -89,7 +89,7 @@ const MobileBottomNav = () => {
         const color = active ? T.blue : T.ink3;
 
         return (
-          <button
+          <button type="button"
             key={item.path}
             onClick={() => navigate(item.path)}
             aria-label={item.label}

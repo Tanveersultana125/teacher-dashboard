@@ -307,12 +307,12 @@ export default function StudentProfile({ student, onBack, embedded = false }: Pr
     <div style={{ minHeight: embedded ? "auto" : "100vh", background: T.bg, fontFamily: "'Inter',-apple-system,sans-serif" }}>
       {!embedded && (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 10, border: `1px solid ${T.bdr}`, background: T.white, color: T.ink2, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
+          <button type="button" onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 10, border: `1px solid ${T.bdr}`, background: T.white, color: T.ink2, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
             <ArrowLeft size={14} /> RETURN
           </button>
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={() => window.print()} style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${T.bdr}`, background: T.white, color: T.ink2, fontSize: 12, fontWeight: 500, cursor: "pointer" }}>EXPORT</button>
-            <button style={{ padding: "8px 16px", borderRadius: 10, border: "none", background: T.blue, color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>CONTACT</button>
+            <button type="button" onClick={() => window.print()} style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${T.bdr}`, background: T.white, color: T.ink2, fontSize: 12, fontWeight: 500, cursor: "pointer" }}>EXPORT</button>
+            <button type="button" style={{ padding: "8px 16px", borderRadius: 10, border: "none", background: T.blue, color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>CONTACT</button>
           </div>
         </div>
       )}
@@ -403,9 +403,9 @@ export default function StudentProfile({ student, onBack, embedded = false }: Pr
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
         <Card title="Attendance Calendar">
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, marginBottom: 14 }}>
-            <button onClick={() => setCalMonth(new Date(calY, calM - 1))} style={{ background: "none", border: "none", cursor: "pointer", color: T.ink3 }}><ChevronLeft size={16} /></button>
+            <button type="button" onClick={() => setCalMonth(new Date(calY, calM - 1))} style={{ background: "none", border: "none", cursor: "pointer", color: T.ink3 }}><ChevronLeft size={16} /></button>
             <span style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{MONTHS[calM]} {calY}</span>
-            <button onClick={() => setCalMonth(new Date(calY, calM + 1))} style={{ background: "none", border: "none", cursor: "pointer", color: T.ink3 }}><ChevronRight size={16} /></button>
+            <button type="button" onClick={() => setCalMonth(new Date(calY, calM + 1))} style={{ background: "none", border: "none", cursor: "pointer", color: T.ink3 }}><ChevronRight size={16} /></button>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 14 }}>
             {[{ v: calP, c: T.grn, l: "PRESENT" }, { v: calL, c: T.amb, l: "LATE" }, { v: calA, c: T.red, l: "ABSENT" }].map(x => <div key={x.l} style={{ textAlign: "center", padding: "10px 0", background: x.c === T.grn ? T.glBg : x.c === T.amb ? T.alBg : T.rlBg, borderRadius: 10 }}><div style={{ fontSize: 20, fontWeight: 700, color: x.c }}>{x.v}</div><div style={{ fontSize: 10, color: x.c }}>{x.l}</div></div>)}
@@ -472,7 +472,7 @@ export default function StudentProfile({ student, onBack, embedded = false }: Pr
           {/* Quick send */}
           <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
             <input value={feedbackText} onChange={e => setFeedbackText(e.target.value)} placeholder="Send a note to parent..." style={{ flex: 1, padding: "8px 12px", borderRadius: 10, border: `1px solid ${T.bdr}`, fontSize: 12, outline: "none" }} onKeyDown={e => { if (e.key === "Enter") handleSendFeedback(); }} />
-            <button onClick={handleSendFeedback} disabled={sending || !feedbackText.trim()} style={{ padding: "8px 16px", borderRadius: 10, background: T.blue, color: "#fff", border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer", opacity: feedbackText.trim() ? 1 : 0.5 }}>Send</button>
+            <button type="button" onClick={handleSendFeedback} disabled={sending || !feedbackText.trim()} style={{ padding: "8px 16px", borderRadius: 10, background: T.blue, color: "#fff", border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer", opacity: feedbackText.trim() ? 1 : 0.5 }}>Send</button>
           </div>
         </Card>
         <Card title={`Score History · ${testScores.length} records`}>

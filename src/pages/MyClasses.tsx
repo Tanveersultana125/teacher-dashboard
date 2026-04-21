@@ -236,7 +236,7 @@ const MyClasses = () => {
       {/* ── Filter chips ────────────────────────────────────────── */}
       <div className="flex items-center gap-2 mb-6 overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
         {filterChips.map(({ key, label, Icon }) => (
-          <button
+          <button type="button"
             key={key}
             onClick={() => setFilter(key)}
             className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-150 active:scale-95 whitespace-nowrap ${
@@ -348,13 +348,13 @@ const MyClasses = () => {
 
                   {/* Action buttons */}
                   <div className="flex gap-2 mt-auto">
-                    <button
+                    <button type="button"
                       onClick={(e) => { e.stopPropagation(); navigate(`/my-classes/${cls.id}`); }}
                       className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50 active:scale-[0.97] transition-all duration-150"
                     >
                       View class
                     </button>
-                    <button
+                    <button type="button"
                       onClick={(e) => { e.stopPropagation(); navigate("/attendance"); }}
                       className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50 active:scale-[0.97] transition-all duration-150 flex items-center justify-center gap-1.5"
                     >
@@ -391,7 +391,7 @@ const MyClasses = () => {
                 className="w-64 h-10 pl-9 pr-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
               />
             </div>
-            <button className="h-10 px-4 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50">
+            <button type="button" className="h-10 px-4 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50">
               Filter
             </button>
           </div>
@@ -400,7 +400,7 @@ const MyClasses = () => {
         {/* Filter chips desktop */}
         <div className="flex items-center gap-2 mb-5">
           {filterChips.map(({ key, label, Icon }) => (
-            <button
+            <button type="button"
               key={key}
               onClick={() => setFilter(key)}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -469,13 +469,13 @@ const MyClasses = () => {
 
                   {/* Buttons */}
                   <div className="grid grid-cols-2 gap-2">
-                    <button
+                    <button type="button"
                       onClick={(e) => { e.stopPropagation(); navigate(`/my-classes/${cls.id}`); }}
                       className="py-2.5 rounded-lg bg-[#1e3272] text-white text-sm font-semibold hover:bg-[#162552] transition-colors"
                     >
                       View Class
                     </button>
-                    <button
+                    <button type="button"
                       onClick={(e) => { e.stopPropagation(); navigate('/attendance'); }}
                       className="py-2.5 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
                     >

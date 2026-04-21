@@ -155,7 +155,7 @@ export default function CreateTest({ onCancel, onCreate }: { onCancel: () => voi
         className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 px-[22px] pb-5 bg-[#162E93] md:bg-[#08090C]"
       >
         {/* Back link */}
-        <button
+        <button type="button"
           onClick={onCancel}
           style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
         >
@@ -177,7 +177,7 @@ export default function CreateTest({ onCancel, onCreate }: { onCancel: () => voi
 
         {/* Hero actions */}
         <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-          <button
+          <button type="button"
             onClick={onCancel}
             style={{
               padding: '9px 16px', borderRadius: 11,
@@ -404,7 +404,7 @@ export default function CreateTest({ onCancel, onCreate }: { onCancel: () => voi
                   value={newTopic} onChange={e => setNewTopic(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter' && newTopic.trim()) { setTopics([...topics, newTopic.trim()]); setNewTopic(''); } }}
                 />
-                <button
+                <button type="button"
                   onClick={() => { if (newTopic.trim()) { setTopics([...topics, newTopic.trim()]); setNewTopic(''); } }}
                   style={{ padding: '10px 14px', borderRadius: 11, background: T.ink0, border: 'none', color: '#fff', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}
                 >
@@ -421,7 +421,7 @@ export default function CreateTest({ onCancel, onCreate }: { onCancel: () => voi
                     border: `1px solid ${T.blueB}`,
                   }}>
                     {q}
-                    <button onClick={() => setQTypes(qTypes.filter((_, i) => i !== idx))}
+                    <button type="button" onClick={() => setQTypes(qTypes.filter((_, i) => i !== idx))}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
                       <X size={9} style={{ color: T.blue }} />
                     </button>
@@ -434,7 +434,7 @@ export default function CreateTest({ onCancel, onCreate }: { onCancel: () => voi
                     border: `1px solid ${T.blueB}`,
                   }}>
                     {t}
-                    <button onClick={() => setTopics(topics.filter((_, i) => i !== idx))}
+                    <button type="button" onClick={() => setTopics(topics.filter((_, i) => i !== idx))}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
                       <X size={9} style={{ color: T.blue }} />
                     </button>
@@ -483,7 +483,7 @@ export default function CreateTest({ onCancel, onCreate }: { onCancel: () => voi
 
         {/* Publish footer */}
         <div style={{ background: T.s0, border: `1px solid ${T.bdr}`, borderRadius: 16, padding: '13px 14px', display: 'flex', gap: 8 }}>
-          <button
+          <button type="button"
             onClick={handleSave}
             disabled={isSaving}
             style={{
@@ -502,7 +502,7 @@ export default function CreateTest({ onCancel, onCreate }: { onCancel: () => voi
               </>
             )}
           </button>
-          <button
+          <button type="button"
             onClick={onCancel}
             style={{
               padding: '11px 14px', borderRadius: 11, background: T.s1,

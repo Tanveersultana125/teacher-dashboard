@@ -72,7 +72,7 @@ const TeacherSidebar = ({ onClose }: TeacherSidebarProps) => {
         </div>
         {/* Close button — mobile only */}
         {onClose && (
-          <button
+          <button type="button"
             onClick={onClose}
             aria-label="Close menu"
             className="md:hidden w-7 h-7 flex items-center justify-center rounded-lg text-white/40 hover:text-white/70 hover:bg-white/[0.08] flex-shrink-0 transition-colors duration-150"
@@ -139,7 +139,7 @@ const TeacherSidebar = ({ onClose }: TeacherSidebarProps) => {
             </p>
           </div>
         </div>
-        <button
+        <button type="button"
           onClick={logout}
           className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] font-medium text-white/40 hover:bg-white/[0.06] hover:text-rose-300 md:text-slate-500 md:hover:bg-rose-50 md:hover:text-rose-600 transition-all duration-150 ease-out"
         >

@@ -178,7 +178,7 @@ const ConceptMasteryDetail = ({ student, concepts, scores, className, onBack }: 
                   </div>
                   {/* AI remedial button for weak concepts */}
                   {type === "weak" && (
-                    <button
+                    <button type="button"
                       onClick={() => handleRemedial(c.title)}
                       disabled={isGenerating && selectedRemedial === c.title}
                       style={{
@@ -225,7 +225,7 @@ const ConceptMasteryDetail = ({ student, concepts, scores, className, onBack }: 
         <div className="max-w-[1200px] md:mx-auto" style={{ padding: "0 22px 28px" }}>
           {/* Back button row */}
           <div style={{ paddingTop: 20, marginBottom: 22 }}>
-            <button
+            <button type="button"
               onClick={onBack}
               style={{
                 display: "inline-flex", alignItems: "center", gap: 6,
@@ -275,7 +275,7 @@ const ConceptMasteryDetail = ({ student, concepts, scores, className, onBack }: 
 
             {/* Action buttons */}
             <div className="flex gap-2.5 md:shrink-0">
-              <button className="md:px-6" style={{
+              <button type="button" className="md:px-6" style={{
                 flex: 1, padding: "10px 16px",
                 background: "rgba(255,255,255,0.08)",
                 border: "1.5px solid rgba(255,255,255,0.15)",
@@ -285,7 +285,7 @@ const ConceptMasteryDetail = ({ student, concepts, scores, className, onBack }: 
               }}>
                 View Profile
               </button>
-              <button className="md:px-6" style={{
+              <button type="button" className="md:px-6" style={{
                 flex: 1, padding: "10px 16px",
                 background: T.blue2,
                 border: "none", borderRadius: 12,

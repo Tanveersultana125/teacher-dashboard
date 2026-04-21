@@ -364,7 +364,7 @@ const Assignments = () => {
       <div className="px-4 sm:px-6 md:px-0 pt-4 flex flex-col gap-3">
 
         {/* Create CTA */}
-        <button
+        <button type="button"
           onClick={() => setView("create")}
           style={{
             width: '100%', padding: '13px', borderRadius: 13,
@@ -433,7 +433,7 @@ const Assignments = () => {
         <div style={{ display: 'flex', gap: 7, overflowX: 'auto', paddingBottom: 2 }}
              className="scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
           {filterChips.map(key => (
-            <button
+            <button type="button"
               key={key}
               onClick={() => setFilter(key)}
               style={{
@@ -553,7 +553,7 @@ const Assignments = () => {
 
                     {/* Actions */}
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', borderTop: `1px solid ${T.s2}`, paddingTop: 12 }}>
-                      <button
+                      <button type="button"
                         onClick={(e) => { e.stopPropagation(); setSelectedAssignment(a); setView("grade"); }}
                         style={{
                           flex: 1, padding: 10, borderRadius: 11, background: T.blue,
@@ -564,7 +564,7 @@ const Assignments = () => {
                       >
                         <IcoGradeCheck /> Grade submissions
                       </button>
-                      <button
+                      <button type="button"
                         onClick={(e) => { e.stopPropagation(); handleDelete(a.id, a.title); }}
                         style={{
                           width: 36, height: 36, borderRadius: 10,
@@ -615,7 +615,7 @@ const Assignments = () => {
             <h1 className="text-[28px] font-bold text-slate-900 leading-tight tracking-tight">Assignments</h1>
             <p className="text-sm text-slate-500 mt-1">Create, manage, and grade student assignments.</p>
           </div>
-          <button
+          <button type="button"
             onClick={() => setView("create")}
             className="h-11 px-5 rounded-lg bg-[#1e3272] text-white text-sm font-semibold hover:bg-[#162552] flex items-center gap-2 shadow-sm"
           >
@@ -675,7 +675,7 @@ const Assignments = () => {
         <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
           <div className="flex items-center gap-2 flex-wrap">
             {filterChips.map(key => (
-              <button
+              <button type="button"
                 key={key}
                 onClick={() => setFilter(key)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -752,14 +752,14 @@ const Assignments = () => {
                         </td>
                         <td className="px-5 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <button
+                            <button type="button"
                               onClick={(e) => { e.stopPropagation(); setSelectedAssignment(a); setView("grade"); }}
                               className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline"
                             >
                               Grade
                             </button>
                             <span className="text-slate-300">|</span>
-                            <button
+                            <button type="button"
                               onClick={(e) => { e.stopPropagation(); handleDelete(a.id, a.title); }}
                               className="text-xs font-semibold text-rose-600 hover:text-rose-700 hover:underline"
                             >
@@ -787,7 +787,7 @@ const Assignments = () => {
         {tabs.map(tab => {
           const isActive = tab.path === activePath;
           return (
-            <button
+            <button type="button"
               key={tab.path}
               onClick={() => navigate(tab.path)}
               style={{

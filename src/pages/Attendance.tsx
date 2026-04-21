@@ -322,7 +322,7 @@ const Attendance = () => {
             Track and manage student attendance.
           </p>
         </div>
-        <button
+        <button type="button"
           onClick={() => { setMarkingClassId(selectedClassId); setMarking(true); }}
           style={{
             width: '100%', padding: 13, borderRadius: 13, background: T.blue,
@@ -374,7 +374,7 @@ const Attendance = () => {
       {classes.length > 0 && (
         <div className="flex flex-wrap gap-[7px] py-4">
           {classes.map(cls => (
-            <button key={cls.id} onClick={() => setSelectedClassId(cls.id)}
+            <button type="button" key={cls.id} onClick={() => setSelectedClassId(cls.id)}
               style={{
                 padding: '7px 16px', borderRadius: 20, fontSize: 12, cursor: 'pointer',
                 fontWeight: selectedClassId === cls.id ? 500 : 400, fontFamily: 'inherit',
@@ -450,7 +450,7 @@ const Attendance = () => {
 
               {/* Status / Mark CTA */}
               {day.isToday && !day.hasData && !day.isWeekend ? (
-                <button onClick={() => { setMarkingClassId(selectedClassId); setMarking(true); }}
+                <button type="button" onClick={() => { setMarkingClassId(selectedClassId); setMarking(true); }}
                   style={{
                     padding: '5px 10px', borderRadius: 8, background: T.blue,
                     border: 'none', color: '#fff', fontSize: 11, fontWeight: 500,
@@ -587,7 +587,7 @@ const Attendance = () => {
             <h1 className="text-[28px] font-bold text-slate-900 leading-tight tracking-tight">Attendance</h1>
             <p className="text-sm text-slate-500 mt-1">Track and manage student attendance across all classes.</p>
           </div>
-          <button
+          <button type="button"
             onClick={() => { setMarkingClassId(selectedClassId); setMarking(true); }}
             className="h-11 px-5 rounded-lg bg-[#1e3272] text-white text-sm font-semibold hover:bg-[#162552] flex items-center gap-2 shadow-sm transition-colors"
           >
@@ -667,7 +667,7 @@ const Attendance = () => {
         {classes.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-5">
             {classes.map(cls => (
-              <button
+              <button type="button"
                 key={cls.id}
                 onClick={() => setSelectedClassId(cls.id)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -732,7 +732,7 @@ const Attendance = () => {
                         <span style={{ color: T.ink2 }}>Absent</span>
                         <span style={{ color: T.ink2 }}>—</span>
                       </div>
-                      <button
+                      <button type="button"
                         onClick={() => { setMarkingClassId(selectedClassId); setMarking(true); }}
                         className="mt-2 w-full py-1.5 rounded-md text-[11px] font-semibold text-white"
                         style={{ background: T.blue }}
@@ -755,7 +755,7 @@ const Attendance = () => {
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base font-semibold text-slate-900">Attendance Concerns</h2>
-            <button className="text-xs font-medium text-blue-600 hover:text-blue-700">View All</button>
+            <button type="button" className="text-xs font-medium text-blue-600 hover:text-blue-700">View All</button>
           </div>
 
           {concerns.length === 0 ? (

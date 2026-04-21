@@ -114,12 +114,24 @@ const CreateAssignment = ({ onCancel, onCreate }: { onCancel: () => void, onCrea
       // filtering for any section other than A.
       const gradeClass = selClass?.name || "";
 
-      await auditedAdd(collection(db, "assignments"), {
-        ...formData,
+      // Hard-guard: schoolId MUST be a non-empty string for Firestore rules to
+      // accept the write (rule requires schoolId.size() > 0). Empty string or
+      // missing → rule rejects with "permission-denied".
+      if (!teacherData.schoolId || typeof teacherData.schoolId !== "string") {
+        toast.error("Your teacher profile is missing a school ID. Please sign out and sign in again.");
+        setIsSaving(false);
+        return;
+      }
+
+      // Build payload explicitly — avoid `...formData` spreading unknown keys.
+      // Firestore rejects `undefined` values silently with a cryptic error, so
+      // every field below is either a concrete value or a safe default.
+      const payload = {
         title,
+        description: formData.description || "",
         dueDate,
         teacherId: teacherData.id,
-        schoolId: teacherData.schoolId || "",
+        schoolId: teacherData.schoolId,
         branchId: teacherData.branchId || "",
         assignmentId: teachingAssignmentId,
         teacherName: teacherData.name || "Faculty",
@@ -130,13 +142,29 @@ const CreateAssignment = ({ onCancel, onCreate }: { onCancel: () => void, onCrea
         status: "Active",
         pdfUrl: attachmentUrl,
         fileName: selectedFile?.name || "",
-        createdAt: serverTimestamp()
-      });
+        createdAt: serverTimestamp(),
+      };
+
+      await auditedAdd(collection(db, "assignments"), payload);
       toast.success("Assignment published to class roster!");
       onCreate();
-    } catch (e) {
-      console.error(e);
-      toast.error("Failed to persist curriculum.");
+    } catch (e: unknown) {
+      // Surface the real Firebase error so we can diagnose. The previous
+      // generic "Failed to persist curriculum." hid permission-denied,
+      // invalid-argument, and quota errors behind identical toast text.
+      const err = e as { code?: string; message?: string } | null;
+      console.error("[CreateAssignment] save failed", { code: err?.code, message: err?.message, error: e });
+      const humanMsg =
+        err?.code === "permission-denied"
+          ? "Permission denied — your account may not have write access to assignments. Check your role."
+          : err?.code === "unauthenticated"
+          ? "You are signed out. Please sign in again."
+          : err?.code === "invalid-argument"
+          ? "Invalid data submitted. Check required fields."
+          : err?.message
+          ? `Save failed: ${err.message}`
+          : "Failed to save assignment.";
+      toast.error(humanMsg);
     } finally {
       setIsSaving(false);
     }
@@ -173,7 +201,7 @@ const CreateAssignment = ({ onCancel, onCreate }: { onCancel: () => void, onCrea
 
         {/* Hero actions */}
         <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-          <button
+          <button type="button"
             onClick={onCancel}
             style={{
               padding: '9px 16px', borderRadius: 11,
@@ -185,7 +213,7 @@ const CreateAssignment = ({ onCancel, onCreate }: { onCancel: () => void, onCrea
           >
             Cancel
           </button>
-          <button
+          <button type="button"
             onClick={handleSave}
             disabled={isSaving}
             style={{
