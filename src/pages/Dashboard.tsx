@@ -6,7 +6,7 @@ import {
   type QueryConstraint,
 } from 'firebase/firestore';
 import { Loader2, X, MessageSquare } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 // ── Module-level dashboard cache ──────────────────────────────────────────────
 interface _DashboardSnapshot {
@@ -89,45 +89,10 @@ const IcoCheckFilled = ({ size = 12 }: { size?: number }) => (
     <path d="M2.5 6l2.5 2.5 5-5"/>
   </svg>
 );
-const IcoGrid = ({ size = 20, color = T.blue }: { size?: number; color?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="2" width="7" height="7" rx="1.5"/>
-    <rect x="11" y="2" width="7" height="7" rx="1.5"/>
-    <rect x="2" y="11" width="7" height="7" rx="1.5"/>
-    <rect x="11" y="11" width="7" height="7" rx="1.5"/>
-  </svg>
-);
-const IcoUser = ({ size = 20, color = T.ink2 }: { size?: number; color?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="10" cy="7" r="3.5"/>
-    <path d="M3 18c0-3.866 3.134-7 7-7s7 3.134 7 7"/>
-  </svg>
-);
-
-// ── Badge component ────────────────────────────────────────────────────────────
-const Badge = ({ text, bg, color }: { text: string; bg: string; color: string }) => (
-  <span style={{
-    background: bg, color, borderRadius: 20,
-    padding: '3px 8px', fontSize: 10, fontWeight: 500, whiteSpace: 'nowrap'
-  }}>
-    {text}
-  </span>
-);
-
-// ── Icon box component ─────────────────────────────────────────────────────────
-const IconBox = ({ bg, children, size = 32 }: { bg: string; children: React.ReactNode; size?: number }) => (
-  <div style={{
-    width: size, height: size, background: bg, borderRadius: size === 32 ? 9 : 12,
-    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-  }}>
-    {children}
-  </div>
-);
 
 const Dashboard = () => {
   const { teacherData } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -310,135 +275,128 @@ const Dashboard = () => {
   // ── Derived values ─────────────────────────────────────────────────────────
   const firstName = teacherData?.name?.split(" ")[0] || "Teacher";
   const dayLabel = new Date().toLocaleDateString("en-US", { weekday: 'long', month: 'long', day: 'numeric' });
+  const _hour = new Date().getHours();
+  const greeting = _hour < 12 ? "Good Morning" : _hour < 17 ? "Good Afternoon" : "Good Evening";
+  const shortDate = new Date().toLocaleDateString("en-US", { weekday: 'short', month: 'short', day: 'numeric' });
 
-  // Badge helpers. Previously compared against a hardcoded 91.8% baseline
-  // which produced misleading "+X%" deltas that had no real basis. Now shows
-  // just the current rate until a proper historical baseline is wired.
-  const atndBadge  = stats.avgAttendance > 0
-    ? { text: `${stats.avgAttendance.toFixed(1)}%`, bg: T.greenL, color: T.green }
-    : { text: "No data", bg: T.surface2, color: T.ink2 };
-  const gradeBadge = stats.pendingGrading > 0 ? { text: "Urgent", bg: T.redL, color: T.red } : { text: "All clear", bg: T.greenL, color: T.green };
-  const riskBadge  = stats.atRiskCount > 0 ? { text: `${stats.atRiskCount} flagged`, bg: T.redL, color: T.red } : { text: "Secure", bg: T.greenL, color: T.green };
-  const clsBadge   = { text: "On track", bg: T.greenL, color: T.green };
+  // AI summary line — derived from live stats (no fake data)
+  const aiMessage = (() => {
+    const attStr = stats.avgAttendance >= 85 ? `Attendance is strong at ${stats.avgAttendance}%`
+      : stats.avgAttendance >= 70 ? `Attendance is holding at ${stats.avgAttendance}%`
+      : stats.avgAttendance > 0   ? `Attendance is dipping to ${stats.avgAttendance}%`
+      : `Attendance data still loading`;
+    const gradeStr = stats.pendingGrading === 0
+      ? "grading is current"
+      : `${stats.pendingGrading} grading task${stats.pendingGrading > 1 ? 's' : ''} pending`;
+    if (stats.atRiskCount === 0) return `${attStr} and ${gradeStr} — every student is on track today.`;
+    const top  = criticalStudents[0]?.studentName;
+    const next = criticalStudents[1]?.studentName;
+    const namePart = top && next ? ` Prioritise ${top} and ${next}.`
+                   : top ?          ` Prioritise ${top}.`
+                   : '';
+    return `${attStr} and ${gradeStr} — but ${stats.atRiskCount} student${stats.atRiskCount > 1 ? 's need' : ' needs'} immediate outreach.${namePart}`;
+  })();
 
-  // Student avatar colors
-  const avatarStyles = [
-    { bg: T.blueL, color: T.blue },
-    { bg: T.amberL, color: T.amber },
-    { bg: T.purpleL, color: T.purple },
-  ];
+  // ── Blue Apple design tokens (shared mobile + desktop) ─────────────────────
+  const B1 = "#0055FF", B2 = "#1166FF", B3 = "#2277FF", B4 = "#4499FF";
+  const BG_D = "#EEF4FF", BG2_D = "#E0ECFF";
+  const TT1 = "#001040", TT2 = "#002080", TT3 = "#5070B0", TT4 = "#99AACC";
+  const GREEN = "#00C853", GREEN_D_COL = "#007830";
+  const RED = "#FF3355";
+  const ORANGE = "#FF8800";
+  const VIOLET = "#6B21E8";
+  const BLUE_BDR = "rgba(0,85,255,0.12)";
+  const SEP_D = "rgba(0,85,255,0.07)";
+  const SH_D = "0 0 0 0.5px rgba(0,85,255,0.08), 0 2px 8px rgba(0,85,255,0.09), 0 10px 28px rgba(0,85,255,0.11)";
+  const SH_LG_D = "0 0 0 0.5px rgba(0,85,255,0.10), 0 4px 16px rgba(0,85,255,0.12), 0 18px 44px rgba(0,85,255,0.14)";
+  const SH_BTN_D = "0 6px 22px rgba(0,85,255,0.42), 0 2px 6px rgba(0,85,255,0.22)";
+  const FONT_D = "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif";
 
-  const studentBadge = (lvl: string) =>
-    lvl === 'critical'
-      ? { text: "At risk",   bg: T.redL,    color: T.red    }
-      : { text: "Follow up", bg: T.amberL,  color: T.amber  };
+  // 3D tilt handlers (desktop)
+  const handle3DEnter = (e: React.MouseEvent<HTMLElement>) => {
+    const el = e.currentTarget;
+    el.style.transition = "transform 0.06s cubic-bezier(0.2,0.8,0.2,1), box-shadow 0.2s ease";
+  };
+  const handle3DMove = (e: React.MouseEvent<HTMLElement>) => {
+    const el = e.currentTarget;
+    const rect = el.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const rotX = (((y / rect.height) - 0.5) * -7).toFixed(2);
+    const rotY = (((x / rect.width) - 0.5) * 7).toFixed(2);
+    el.style.transform = `perspective(1100px) rotateX(${rotX}deg) rotateY(${rotY}deg) translateY(-3px) scale(1.006)`;
+    const glow = el.querySelector<HTMLDivElement>('[data-glow]');
+    if (glow) {
+      glow.style.opacity = "1";
+      glow.style.background = `radial-gradient(420px circle at ${x}px ${y}px, rgba(0,85,255,0.13), transparent 45%)`;
+    }
+  };
+  const handle3DLeave = (e: React.MouseEvent<HTMLElement>) => {
+    const el = e.currentTarget;
+    el.style.transition = "transform 0.5s cubic-bezier(0.2,0.8,0.2,1), box-shadow 0.3s ease";
+    el.style.transform = "perspective(1100px) rotateX(0deg) rotateY(0deg) translateY(0) scale(1)";
+    const glow = el.querySelector<HTMLDivElement>('[data-glow]');
+    if (glow) glow.style.opacity = "0";
+  };
 
-  const taskBadge = (status: string) =>
-    status === 'Done'    ? { text: "Done",    bg: T.greenL,  color: T.green  } :
-    status === 'Pending' ? { text: "Pending", bg: T.amberL,  color: T.amber  } :
-                           { text: "Todo",    bg: T.blueL,   color: T.blue   };
-
-  const classBadge = (isNow: boolean, idx: number) =>
-    isNow ? { text: "Live", bg: T.greenL, color: T.green } :
-    idx === 1 ? { text: "Soon", bg: T.amberL, color: T.amber } :
-    { text: "Later", bg: T.surface2, color: T.ink2 };
-
-  // Tab bar tabs
-  const tabs = [
-    { label: "Dashboard", path: "/",           icon: (active: boolean) => <IcoGrid  size={20} color={active ? T.blue : T.ink2} /> },
-    { label: "Classes",   path: "/my-classes", icon: (active: boolean) => <IcoHome  size={20} color={active ? T.blue : T.ink2} /> },
-    { label: "Schedule",  path: "/attendance", icon: (active: boolean) => <IcoCalendar size={20} color={active ? T.blue : T.ink2} /> },
-    { label: "Profile",   path: "/settings",   icon: (active: boolean) => <IcoUser  size={20} color={active ? T.blue : T.ink2} /> },
-  ];
-  const activeTab = location.pathname;
+  const avatarInitial = (teacherData?.name?.[0] || "T").toUpperCase();
 
   return (
-    <div style={{ fontFamily: 'inherit' }} className="min-h-screen pb-28 md:pb-0 text-left">
+    <div style={{ fontFamily: FONT_D, background: BG_D }} className="min-h-screen pb-28 md:pb-0 text-left">
 
-      {/* ═══════════════════ MOBILE VIEW (unchanged) ═══════════════════ */}
-      <div className="md:hidden" style={{ background: T.surface1 }}>
+      {/* ═══════════════════ MOBILE VIEW — Blue Apple ═══════════════════ */}
+      <div className="md:hidden animate-in fade-in duration-500" style={{ background: BG_D, minHeight: "100vh" }}>
 
-      {/* ── Hero (dark, full-bleed) ─────────────────────────────────────────── */}
-      <div
-        className="-mx-4 sm:-mx-6 px-[22px] pb-7 bg-[#162E93] md:bg-[#08090C]"
-      >
-        {/* Welcome row */}
-        <div className="flex items-start justify-between pt-2">
-          <div>
-            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.38)', fontWeight: 400 }}>
-              Welcome back
-            </p>
-            <h1 style={{
-              fontSize: 24, fontWeight: 500, color: '#FFFFFF',
-              letterSpacing: '-0.5px', lineHeight: 1.2, margin: '2px 0'
-            }}>
-              Hello, {firstName}
-            </h1>
-            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', fontWeight: 400 }}>
-              {dayLabel}
-            </p>
-          </div>
-
-          {/* Bell button */}
-          <div className="relative mt-1" ref={notifRef}>
-            <button type="button"
-              onClick={() => setShowNotifPanel(p => !p)}
-              style={{
-                width: 36, height: 36, borderRadius: '50%',
-                background: 'rgba(255,255,255,0.08)',
-                border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer'
-              }}
-            >
-              <IcoBell size={18} />
+      {/* ── Header: brand dot + bell + avatar ── */}
+      <div className="flex items-center justify-between px-5 pt-4">
+        <div className="flex items-center gap-[7px]">
+          <div className="w-[7px] h-[7px] rounded-full animate-pulse" style={{ background: "#00CC55", boxShadow: "0 0 0 2.5px rgba(0,204,85,0.2)" }} />
+          <span className="text-[15px] font-bold" style={{ color: B1 }}>EduIntellect Teacher</span>
+        </div>
+        <div className="flex items-center gap-[9px]" ref={notifRef}>
+          <div className="relative">
+            <button type="button" onClick={() => setShowNotifPanel(p => !p)}
+              className="w-8 h-8 rounded-[11px] flex items-center justify-center relative active:scale-90 transition-transform"
+              style={{ background: "#fff", border: `0.5px solid ${BLUE_BDR}`, boxShadow: SH_D }}>
+              <IcoBell size={14} color="rgba(0,85,255,0.60)" />
+              {unreadNotes.length > 0 && (
+                <span className="absolute top-[5px] right-[5px] w-[7px] h-[7px] rounded-full" style={{ background: RED, border: "1.5px solid white" }} />
+              )}
             </button>
-            {unreadNotes.length > 0 && (
-              <span style={{
-                position: 'absolute', top: -1, right: -1,
-                width: 8, height: 8, borderRadius: '50%',
-                background: '#FF4757', border: `1.5px solid ${T.ink0}`
-              }} />
-            )}
-
-            {/* Notification panel */}
             {showNotifPanel && (
-              <div className="absolute right-0 top-11 w-[calc(100vw-2.5rem)] sm:w-80 max-w-sm bg-white rounded-2xl shadow-2xl z-50 overflow-hidden"
-                style={{ border: `1px solid ${T.border}` }}>
-                <div className="flex items-center justify-between px-4 py-3"
-                  style={{ borderBottom: `1px solid ${T.surface2}` }}>
+              <div className="absolute right-0 top-11 w-[calc(100vw-2.5rem)] sm:w-80 max-w-sm rounded-[22px] z-50 overflow-hidden"
+                style={{ background: "#fff", border: `0.5px solid ${BLUE_BDR}`, boxShadow: SH_LG_D }}>
+                <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: `0.5px solid ${BLUE_BDR}`, background: BG_D }}>
                   <div>
-                    <p style={{ fontSize: 14, fontWeight: 500, color: T.ink0 }}>Notifications</p>
-                    <p style={{ fontSize: 10, color: T.ink2, fontWeight: 400 }}>
+                    <p className="text-[14px] font-bold" style={{ color: TT1, letterSpacing: "-0.2px" }}>Notifications</p>
+                    <p className="text-[10px] font-medium mt-[1px]" style={{ color: TT3 }}>
                       {unreadNotes.length > 0 ? `${unreadNotes.length} unread from parents` : "All caught up!"}
                     </p>
                   </div>
                   <button type="button" onClick={() => setShowNotifPanel(false)}
-                    className="p-1 rounded-lg hover:bg-slate-100 transition-colors">
-                    <X size={14} className="text-slate-400" />
+                    className="w-7 h-7 rounded-[9px] flex items-center justify-center"
+                    style={{ background: "#fff", border: `0.5px solid ${BLUE_BDR}` }}>
+                    <X size={13} style={{ color: TT3 }} />
                   </button>
                 </div>
                 <div className="max-h-64 overflow-y-auto">
                   {unreadNotes.length === 0 ? (
-                    <div className="py-10 text-center" style={{ fontSize: 13, color: T.ink2 }}>No new notifications</div>
+                    <div className="py-10 text-center text-[13px]" style={{ color: TT4 }}>No new notifications</div>
                   ) : (
                     unreadNotes.map(note => (
                       <button type="button" key={note.id}
                         onClick={() => { setShowNotifPanel(false); navigate("/parent-notes"); }}
-                        className="w-full flex items-start gap-3 px-4 py-3 hover:bg-slate-50 text-left"
-                        style={{ borderBottom: `1px solid ${T.surface2}` }}>
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                          style={{ background: T.blueL }}>
-                          <MessageSquare size={13} style={{ color: T.blue }} />
+                        className="w-full flex items-start gap-3 px-4 py-3 text-left active:bg-[color:var(--hv)]"
+                        style={{ borderBottom: `0.5px solid ${SEP_D}`, ["--hv" as any]: BG_D }}>
+                        <div className="w-9 h-9 rounded-[11px] flex items-center justify-center flex-shrink-0"
+                          style={{ background: `linear-gradient(135deg, ${B1}, ${B2})`, boxShadow: "0 2px 8px rgba(0,85,255,0.28)" }}>
+                          <MessageSquare size={15} color="#fff" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p style={{ fontSize: 12, fontWeight: 500, color: T.ink0 }} className="truncate">
-                            {note.studentName || "Parent Message"}
-                          </p>
-                          <p style={{ fontSize: 11, color: T.ink1, fontWeight: 400 }} className="truncate mt-0.5">
-                            {note.content || "New message received"}
-                          </p>
+                          <p className="text-[13px] font-bold truncate" style={{ color: TT1, letterSpacing: "-0.1px" }}>{note.studentName || "Parent Message"}</p>
+                          <p className="text-[11px] mt-[2px] truncate" style={{ color: TT3 }}>{(note.content as string) || "New message received"}</p>
                         </div>
-                        <div className="w-2 h-2 rounded-full mt-2 flex-shrink-0" style={{ background: T.blue }} />
+                        <div className="w-2 h-2 rounded-full mt-2 flex-shrink-0" style={{ background: B1 }} />
                       </button>
                     ))
                   )}
@@ -446,550 +404,733 @@ const Dashboard = () => {
               </div>
             )}
           </div>
+          <button type="button" onClick={() => navigate('/settings')}
+            className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-[12px] font-bold text-white active:scale-95 transition-transform"
+            style={{ background: `linear-gradient(140deg, ${B1}, ${B2})`, boxShadow: "0 3px 12px rgba(0,85,255,0.36), 0 0 0 2px rgba(255,255,255,0.85)" }}>
+            {avatarInitial}
+          </button>
         </div>
       </div>
 
-      {/* ── Metric Cards (2×2 grid) ──────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-3 pt-5 pb-1">
-
-        {/* Card 1 — Attendance */}
-        <div
-          onClick={() => navigate('/attendance')}
-          role="button"
-          tabIndex={0}
-          className="clickable-card"
-          style={{ background: T.surface0, border: `1px solid ${T.border}`, borderRadius: 16, padding: 16 }}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <IconBox bg={T.blueL}><IcoBarChart size={16} color={T.blue} /></IconBox>
-            <Badge text={atndBadge.text} bg={atndBadge.bg} color={atndBadge.color} />
-          </div>
-          <p style={{ fontSize: 22, fontWeight: 500, color: T.blue, letterSpacing: '-0.5px', lineHeight: 1 }}>
-            {stats.avgAttendance > 0 ? `${stats.avgAttendance}%` : "—"}
-          </p>
-          <p style={{ fontSize: 11, color: T.ink2, fontWeight: 400, marginTop: 4 }}>Attendance rate</p>
-          {/* Progress bar */}
-          <div style={{ marginTop: 10, height: 3, borderRadius: 2, background: T.blueL, overflow: 'hidden' }}>
-            <div style={{ height: '100%', borderRadius: 2, background: T.blue, width: `${Math.min(stats.avgAttendance, 100)}%`, transition: 'width 0.5s ease' }} />
-          </div>
+      {/* ── Page Head ── */}
+      <div className="px-5 pt-[14px]">
+        <div className="text-[10px] font-bold uppercase tracking-[0.12em] mb-1" style={{ color: TT3 }}>
+          {greeting} · {shortDate}
         </div>
-
-        {/* Card 2 — Pending Grading */}
-        <div
-          onClick={() => navigate('/gradebook')}
-          role="button"
-          tabIndex={0}
-          className="clickable-card"
-          style={{ background: T.surface0, border: `1px solid ${T.border}`, borderRadius: 16, padding: 16 }}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <IconBox bg={T.amberL}><IcoClipboard size={16} color={T.amber} /></IconBox>
-            <Badge text={gradeBadge.text} bg={gradeBadge.bg} color={gradeBadge.color} />
-          </div>
-          <p style={{ fontSize: 22, fontWeight: 500, color: T.ink0, letterSpacing: '-0.5px', lineHeight: 1 }}>
-            {stats.pendingGrading}
-          </p>
-          <p style={{ fontSize: 11, color: T.ink2, fontWeight: 400, marginTop: 4 }}>Pending grading</p>
+        <div className="text-[24px] font-bold leading-[1.1]" style={{ color: TT1, letterSpacing: "-0.6px" }}>
+          Hi, {firstName} 👋
         </div>
-
-        {/* Card 3 — At-risk Students */}
-        <div
-          onClick={() => navigate('/risks-alerts')}
-          role="button"
-          tabIndex={0}
-          className="clickable-card"
-          style={{ background: T.surface0, border: `1px solid ${T.border}`, borderRadius: 16, padding: 16 }}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <IconBox bg={T.redL}><IcoAlert size={16} color={T.red} /></IconBox>
-            <Badge text={riskBadge.text} bg={riskBadge.bg} color={riskBadge.color} />
-          </div>
-          <p style={{ fontSize: 22, fontWeight: 500, color: T.ink0, letterSpacing: '-0.5px', lineHeight: 1 }}>
-            {stats.atRiskCount}
-          </p>
-          <p style={{ fontSize: 11, color: T.ink2, fontWeight: 400, marginTop: 4 }}>At-risk students</p>
-        </div>
-
-        {/* Card 4 — Classes Today */}
-        <div
-          onClick={() => navigate('/my-classes')}
-          role="button"
-          tabIndex={0}
-          className="clickable-card"
-          style={{ background: T.surface0, border: `1px solid ${T.border}`, borderRadius: 16, padding: 16 }}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <IconBox bg={T.purpleL}><IcoHome size={16} color={T.purple} /></IconBox>
-            <Badge text={clsBadge.text} bg={clsBadge.bg} color={clsBadge.color} />
-          </div>
-          <p style={{ fontSize: 22, fontWeight: 500, color: T.ink0, letterSpacing: '-0.5px', lineHeight: 1 }}>
-            {stats.activeClasses}
-          </p>
-          <p style={{ fontSize: 11, color: T.ink2, fontWeight: 400, marginTop: 4 }}>Classes today</p>
+        <div className="text-[11px] font-medium mt-1" style={{ color: TT3 }}>
+          Real-time data from your classes &amp; students
         </div>
       </div>
 
-      {/* ── Today's Classes ──────────────────────────────────────────────────── */}
-      <div style={{ background: T.surface0, border: `1px solid ${T.border}`, borderRadius: 20, margin: '16px 0 12px' }}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3.5">
-          <div className="flex items-center gap-2.5">
-            <IconBox bg={T.blueL}><IcoCalendar size={16} color={T.blue} /></IconBox>
-            <span style={{ fontSize: 15, fontWeight: 500, color: T.ink0 }}>Today's classes</span>
+      {/* ── KPI 2×2 (icon top-right light, label top, value, bar bottom) ── */}
+      <div className="grid grid-cols-2 gap-[10px] px-5 pt-[14px] pb-1">
+        {[
+          { val: stats.avgAttendance > 0 ? `${stats.avgAttendance}%` : "—", label: "Attendance Rate", color: B1, iconBg: "rgba(0,85,255,0.10)", iconBdr: "rgba(0,85,255,0.18)", iconColor: B1, glow: "rgba(0,85,255,0.10)", barGrad: `linear-gradient(90deg, ${B1}, ${B3})`, icon: IcoBarChart, barPct: Math.min(stats.avgAttendance, 100), path: "/attendance" },
+          { val: `${stats.pendingGrading}`, label: "Pending Grading", color: "#FFAA00", iconBg: "rgba(255,170,0,0.10)", iconBdr: "rgba(255,170,0,0.22)", iconColor: "#FFAA00", glow: "rgba(255,170,0,0.10)", barGrad: "linear-gradient(90deg, #FFAA00, #FFCC22)", icon: IcoClipboard, barPct: stats.pendingGrading > 0 ? 60 : 0, path: "/gradebook" },
+          { val: `${stats.atRiskCount}`, label: "At-Risk Students", color: RED, iconBg: "rgba(255,51,85,0.10)", iconBdr: "rgba(255,51,85,0.22)", iconColor: RED, glow: "rgba(255,51,85,0.10)", barGrad: `linear-gradient(90deg, ${RED}, #FF5577)`, icon: IcoAlert, barPct: stats.atRiskCount > 0 ? 42 : 0, path: "/risks-alerts" },
+          { val: `${stats.activeClasses}`, label: "Classes Today", color: "#7B3FF4", iconBg: "rgba(123,63,244,0.10)", iconBdr: "rgba(123,63,244,0.22)", iconColor: "#7B3FF4", glow: "rgba(123,63,244,0.10)", barGrad: "linear-gradient(90deg, #7B3FF4, #9266FF)", icon: IcoHome, barPct: stats.activeClasses > 0 ? 66 : 0, path: "/my-classes" },
+        ].map(({ val, label, color, iconBg, iconBdr, iconColor, glow, barGrad, icon: Ico, barPct, path }) => (
+          <button type="button" key={label}
+            onClick={() => navigate(path)}
+            className="bg-white rounded-[20px] p-[15px] relative overflow-hidden cursor-pointer active:scale-[0.96] transition-transform text-left"
+            style={{ boxShadow: SH_LG_D, border: "0.5px solid rgba(0,85,255,0.10)", minHeight: 108 }}>
+            <div className="absolute -top-[18px] -right-[14px] w-[65px] h-[65px] rounded-full pointer-events-none"
+              style={{ background: `radial-gradient(circle, ${glow} 0%, transparent 70%)` }} />
+            <div className="absolute top-[13px] right-[13px] w-[28px] h-[28px] rounded-[9px] flex items-center justify-center"
+              style={{ background: iconBg, border: `0.5px solid ${iconBdr}` }}>
+              <Ico size={13} color={iconColor} />
+            </div>
+            <div className="text-[9px] font-bold uppercase tracking-[0.07em] mb-[9px]" style={{ color: TT4 }}>{label}</div>
+            <div className="text-[28px] font-bold leading-none mb-[10px]" style={{ color, letterSpacing: "-1px" }}>{val}</div>
+            <div className="h-[4px] rounded-[2px]" style={{ background: BG2_D, overflow: "hidden" }}>
+              <div className="h-full rounded-[2px]" style={{ width: `${barPct}%`, background: barGrad, transition: "width 0.6s ease" }} />
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* ── Schedule section label ── */}
+      <div className="px-5 pt-[18px] flex items-center gap-2">
+        <span className="text-[9px] font-bold uppercase tracking-[0.10em]" style={{ color: TT4 }}>Schedule</span>
+        <span className="px-[9px] py-[3px] rounded-full text-[9px] font-bold" style={{ background: "rgba(0,85,255,0.10)", border: "0.5px solid rgba(0,85,255,0.18)", color: B1 }}>
+          {todayClasses.length} scheduled
+        </span>
+        <div className="flex-1 h-[0.5px]" style={{ background: "rgba(0,85,255,0.12)" }} />
+      </div>
+
+      {/* ── Today's Classes ── */}
+      <div className="mx-5 mt-3 bg-white rounded-[22px] relative overflow-hidden"
+        style={{ boxShadow: SH_LG_D, border: "0.5px solid rgba(0,85,255,0.10)" }}>
+        <div className="flex items-center gap-[11px] px-4 py-[15px] relative z-10">
+          <div className="w-[34px] h-[34px] rounded-[11px] flex items-center justify-center flex-shrink-0"
+            style={{ background: "rgba(0,85,255,0.10)", border: "0.5px solid rgba(0,85,255,0.20)" }}>
+            <IcoCalendar size={15} color={B1} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[14px] font-bold" style={{ color: TT1, letterSpacing: "-0.2px" }}>Today's Classes</div>
+            <div className="text-[10px] mt-[2px] font-medium" style={{ color: TT4 }}>{todayClasses.length} scheduled today</div>
           </div>
           <button type="button" onClick={() => navigate('/my-classes')}
-            style={{ fontSize: 13, fontWeight: 400, color: T.blue, background: 'none', border: 'none', cursor: 'pointer' }}>
+            className="text-[11px] font-bold px-1" style={{ color: B1 }}>
             See all
           </button>
         </div>
-        <div style={{ height: 1, background: T.surface2 }} />
-
+        <div className="h-[0.5px]" style={{ background: SEP_D }} />
         {todayClasses.length === 0 ? (
-          <div className="py-10 text-center" style={{ fontSize: 13, color: T.ink2, fontWeight: 400 }}>
+          <div className="py-8 text-center text-[13px] font-medium" style={{ color: TT4 }}>
             No classes scheduled today
           </div>
         ) : (
           todayClasses.map((cls, idx) => (
-            <div key={idx}>
-              <button type="button"
-                onClick={() => navigate('/my-classes')}
-                className="w-full text-left flex items-center gap-3 px-4"
-                style={{ padding: '12px 16px' }}
-              >
-                {/* Time */}
-                <div style={{ minWidth: 44, textAlign: 'right' }}>
-                  <span style={{ fontSize: 12, color: T.ink2, fontWeight: 400, whiteSpace: 'pre' }}>
-                    {cls.time || "—"}
-                  </span>
+            <button type="button" key={idx}
+              onClick={() => navigate('/my-classes')}
+              className="w-full flex items-center gap-[11px] px-[14px] py-3 active:bg-[color:var(--hv)] transition-colors text-left"
+              style={{ borderBottom: idx < todayClasses.length - 1 ? `0.5px solid ${SEP_D}` : "none", ["--hv" as any]: BG_D }}>
+              <div className="w-[3px] self-stretch rounded-[2px]" style={{
+                background: cls.isNow
+                  ? `linear-gradient(180deg, ${GREEN}, #22DD66)`
+                  : `linear-gradient(180deg, ${B1}, ${B4})`,
+                minHeight: 32,
+              }} />
+              <div className="flex-1 min-w-0">
+                <div className="text-[13px] font-bold truncate" style={{ color: TT1, letterSpacing: "-0.2px" }}>{cls.subject}</div>
+                <div className="text-[10px] font-medium mt-[2px] truncate" style={{ color: TT3 }}>
+                  {cls.className} · {cls.students} {cls.students === 1 ? "student" : "students"}
                 </div>
-                {/* Icon */}
-                <div style={{ width: 32, height: 32, borderRadius: '50%', background: T.blueL, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <IcoHome size={15} color={T.blue} />
+              </div>
+              {cls.isNow ? (
+                <div className="flex items-center gap-[5px] px-[10px] py-[4px] rounded-full text-[10px] font-bold text-white flex-shrink-0"
+                  style={{ background: `linear-gradient(135deg, ${GREEN}, #22DD66)`, boxShadow: "0 3px 10px rgba(0,200,83,0.38)" }}>
+                  <span className="w-[5px] h-[5px] rounded-full bg-white animate-pulse" />
+                  Now
                 </div>
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <p style={{ fontSize: 13, fontWeight: 500, color: T.ink0 }} className="truncate">
-                    {cls.className}
-                  </p>
-                  <p style={{ fontSize: 11, color: T.ink2, fontWeight: 400, marginTop: 1 }}>
-                    {cls.subject} · {cls.students} {cls.students === 1 ? "student" : "students"}
-                  </p>
+              ) : (
+                <div className="px-[10px] py-[4px] rounded-full text-[10px] font-semibold flex-shrink-0"
+                  style={{ background: BG_D, border: "0.5px solid rgba(0,85,255,0.12)", color: TT3 }}>
+                  {cls.time || "Later"}
                 </div>
-                {/* Badge */}
-                <Badge {...classBadge(cls.isNow, idx)} />
-              </button>
-              {idx < todayClasses.length - 1 && <div style={{ height: 1, background: T.surface2, margin: '0 16px' }} />}
-            </div>
+              )}
+            </button>
           ))
         )}
       </div>
 
-      {/* ── Pending Tasks ────────────────────────────────────────────────────── */}
-      <div style={{ background: T.surface0, border: `1px solid ${T.border}`, borderRadius: 20, marginBottom: 12 }}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3.5">
-          <div className="flex items-center gap-2.5">
-            <IconBox bg={T.amberL}><IcoCheck size={16} color={T.amber} /></IconBox>
-            <span style={{ fontSize: 15, fontWeight: 500, color: T.ink0 }}>Pending tasks</span>
+      {/* ── To-do section label ── */}
+      <div className="px-5 pt-[18px] flex items-center gap-2">
+        <span className="text-[9px] font-bold uppercase tracking-[0.10em]" style={{ color: TT4 }}>To-do</span>
+        <span className="px-[9px] py-[3px] rounded-full text-[9px] font-bold" style={{ background: "rgba(0,85,255,0.10)", border: "0.5px solid rgba(0,85,255,0.18)", color: B1 }}>
+          {pendingTasks.length} pending
+        </span>
+        <div className="flex-1 h-[0.5px]" style={{ background: "rgba(0,85,255,0.12)" }} />
+      </div>
+
+      {/* ── Pending Tasks ── */}
+      <div className="mx-5 mt-3 bg-white rounded-[22px] relative overflow-hidden"
+        style={{ boxShadow: SH_LG_D, border: "0.5px solid rgba(0,85,255,0.10)" }}>
+        <div className="flex items-center gap-[11px] px-4 py-[15px] relative z-10">
+          <div className="w-[34px] h-[34px] rounded-[11px] flex items-center justify-center flex-shrink-0"
+            style={{ background: "rgba(255,170,0,0.10)", border: "0.5px solid rgba(255,170,0,0.22)" }}>
+            <IcoCheck size={15} color="#FFAA00" />
           </div>
-          <button type="button"
-            onClick={() => navigate('/attendance')}
-            style={{ fontSize: 13, fontWeight: 400, color: T.blue, background: 'none', border: 'none', cursor: 'pointer' }}>
-            Add
+          <div className="flex-1 min-w-0">
+            <div className="text-[14px] font-bold" style={{ color: TT1, letterSpacing: "-0.2px" }}>Pending Tasks</div>
+            <div className="text-[10px] mt-[2px] font-medium" style={{ color: TT4 }}>{pendingTasks.length} to complete</div>
+          </div>
+          <button type="button" onClick={() => navigate('/attendance')}
+            className="text-[11px] font-bold px-1" style={{ color: B1 }}>
+            + Add
           </button>
         </div>
-        <div style={{ height: 1, background: T.surface2 }} />
-
+        <div className="h-[0.5px]" style={{ background: SEP_D }} />
         {pendingTasks.length === 0 ? (
-          <div className="py-10 text-center" style={{ fontSize: 13, color: T.ink2, fontWeight: 400 }}>
-            All tasks complete
-          </div>
+          <div className="py-8 text-center text-[13px] font-medium" style={{ color: TT4 }}>All tasks complete</div>
         ) : (
-          pendingTasks.map((task, idx) => {
-            const badge = taskBadge(task.status);
-            return (
-              <div key={idx}>
-                <button type="button"
-                  onClick={() => navigate(task.title.includes('Attendance') ? '/attendance' : '/gradebook')}
-                  className="w-full flex items-center gap-3"
-                  style={{ padding: '12px 16px', textAlign: 'left' }}
-                >
-                  {/* Checkbox */}
-                  <div style={{
-                    width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-                    background: task.done ? T.green : 'transparent',
-                    border: task.done ? 'none' : `1px solid ${T.border}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center'
-                  }}>
-                    {task.done && <IcoCheckFilled size={10} />}
-                  </div>
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <p style={{
-                      fontSize: 14, fontWeight: 500, color: task.done ? T.ink2 : T.ink0,
-                      textDecoration: task.done ? 'line-through' : 'none'
-                    }} className="truncate">
-                      {task.title}
-                    </p>
-                    <p style={{ fontSize: 11, color: T.ink2, fontWeight: 400, marginTop: 1 }}>{task.sub}</p>
-                  </div>
-                  <Badge text={badge.text} bg={badge.bg} color={badge.color} />
-                </button>
-                {idx < pendingTasks.length - 1 && <div style={{ height: 1, background: T.surface2, margin: '0 16px' }} />}
+          pendingTasks.map((task, idx) => (
+            <button type="button" key={idx}
+              onClick={() => navigate(task.title.includes('Attendance') ? '/attendance' : '/gradebook')}
+              className="w-full flex items-center gap-[11px] px-[14px] py-3 active:brightness-95 transition text-left"
+              style={{
+                borderBottom: idx < pendingTasks.length - 1 ? `0.5px solid ${SEP_D}` : "none",
+                background: "rgba(255,170,0,0.05)",
+              }}>
+              <div className="w-[22px] h-[22px] rounded-[7px] flex items-center justify-center flex-shrink-0"
+                style={{ background: task.done ? GREEN : BG_D, border: task.done ? "none" : "1.5px solid rgba(0,85,255,0.22)", boxShadow: task.done ? "0 2px 6px rgba(0,200,83,0.28)" : "none" }}>
+                {task.done && <IcoCheckFilled size={11} />}
               </div>
-            );
-          })
+              <div className="flex-1 min-w-0">
+                <div className="text-[13px] font-bold" style={{ color: TT1, letterSpacing: "-0.2px", textDecoration: task.done ? "line-through" : "none" }}>
+                  {task.title}
+                </div>
+                <div className="text-[10px] font-medium mt-[2px]" style={{ color: TT3 }}>{task.sub}</div>
+              </div>
+              <div className="px-[10px] py-[4px] rounded-full text-[10px] font-bold flex-shrink-0"
+                style={{ background: "rgba(255,170,0,0.10)", color: "#8A5800", border: "0.5px solid rgba(255,170,0,0.28)" }}>
+                {task.status === 'Pending' ? 'Pending' : 'To-do'}
+              </div>
+            </button>
+          ))
         )}
       </div>
 
-      {/* ── Needs Attention ──────────────────────────────────────────────────── */}
-      <div style={{ background: T.surface0, border: `1px solid ${T.border}`, borderRadius: 20, marginBottom: 20 }}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3.5">
-          <div className="flex items-center gap-2.5">
-            <IconBox bg={T.redL}><IcoAlert size={16} color={T.red} /></IconBox>
-            <span style={{ fontSize: 15, fontWeight: 500, color: T.ink0 }}>Needs attention</span>
+      {/* ── Needs Attention section label ── */}
+      <div className="px-5 pt-[18px] flex items-center gap-2">
+        <span className="text-[9px] font-bold uppercase tracking-[0.10em]" style={{ color: TT4 }}>Needs Attention</span>
+        <span className="px-[9px] py-[3px] rounded-full text-[9px] font-bold" style={{ background: "rgba(255,51,85,0.10)", color: RED, border: "0.5px solid rgba(255,51,85,0.22)" }}>
+          {criticalStudents.length} flagged
+        </span>
+        <div className="flex-1 h-[0.5px]" style={{ background: "rgba(0,85,255,0.12)" }} />
+      </div>
+
+      {/* ── Needs Attention ── */}
+      <div className="mx-5 mt-3 bg-white rounded-[22px] relative overflow-hidden"
+        style={{ boxShadow: SH_LG_D, border: "0.5px solid rgba(0,85,255,0.10)" }}>
+        <div className="flex items-center gap-[11px] px-4 py-[15px] relative z-10">
+          <div className="w-[34px] h-[34px] rounded-[11px] flex items-center justify-center flex-shrink-0"
+            style={{ background: "rgba(255,51,85,0.10)", border: "0.5px solid rgba(255,51,85,0.22)" }}>
+            <IcoAlert size={15} color={RED} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[14px] font-bold" style={{ color: TT1, letterSpacing: "-0.2px" }}>Needs Attention</div>
+            <div className="text-[10px] mt-[2px] font-medium" style={{ color: TT4 }}>{criticalStudents.length} students flagged</div>
           </div>
           <button type="button" onClick={() => navigate('/risks-alerts')}
-            style={{ fontSize: 13, fontWeight: 400, color: T.blue, background: 'none', border: 'none', cursor: 'pointer' }}>
+            className="text-[11px] font-bold px-1" style={{ color: B1 }}>
             View all
           </button>
         </div>
-        <div style={{ height: 1, background: T.surface2 }} />
-
+        <div className="h-[0.5px]" style={{ background: SEP_D }} />
         {criticalStudents.length === 0 ? (
-          <div className="py-10 text-center" style={{ fontSize: 13, color: T.ink2, fontWeight: 400 }}>
-            All students on track
-          </div>
+          <div className="py-8 text-center text-[13px] font-medium" style={{ color: TT4 }}>All students on track</div>
         ) : (
           criticalStudents.map((s, idx) => {
-            const av  = avatarStyles[idx % avatarStyles.length];
-            const bdg = studentBadge(s.level);
             const name = s.studentName || "Student";
             const initStr = (() => { const p = name.trim().split(" "); return (p.length >= 2 ? p[0][0] + p[1][0] : p[0].substring(0, 2)).toUpperCase(); })();
+            const isCritical = s.level === 'critical';
+            const avatarGrad = [
+              `linear-gradient(135deg, ${B1}, ${B2})`,
+              "linear-gradient(135deg, #FFAA00, #FFCC22)",
+              `linear-gradient(135deg, #7B3FF4, #9266FF)`,
+            ][idx % 3];
+            const avatarSh = [
+              "0 3px 10px rgba(0,85,255,0.32)",
+              "0 3px 10px rgba(255,170,0,0.32)",
+              "0 3px 10px rgba(123,63,244,0.32)",
+            ][idx % 3];
             return (
-              <div key={idx}>
-                <div
-                  onClick={() => navigate(`/students?studentId=${s.studentId || ''}`)}
-                  role="button"
-                  tabIndex={0}
-                  className="flex items-center gap-3 cursor-pointer hover:bg-slate-50 transition-colors"
-                  style={{ padding: '12px 16px' }}
-                >
-                  {/* Avatar */}
-                  <div style={{
-                    width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-                    background: av.bg, color: av.color,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 12, fontWeight: 500
-                  }}>
-                    {initStr}
-                  </div>
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <p style={{ fontSize: 14, fontWeight: 500, color: T.ink0 }} className="truncate">{name}</p>
-                    <p style={{ fontSize: 12, color: T.ink2, fontWeight: 400, marginTop: 1 }} className="truncate">{s.trigger}</p>
-                  </div>
-                  <Badge text={bdg.text} bg={bdg.bg} color={bdg.color} />
+              <div key={idx}
+                onClick={() => navigate(`/students?studentId=${s.studentId || ''}`)}
+                role="button"
+                tabIndex={0}
+                className="flex items-center gap-[11px] px-[14px] py-3 cursor-pointer active:brightness-95 transition"
+                style={{
+                  borderBottom: idx < criticalStudents.length - 1 ? `0.5px solid ${SEP_D}` : "none",
+                  background: "rgba(255,51,85,0.025)",
+                }}>
+                <div className="w-[38px] h-[38px] rounded-full flex items-center justify-center text-[12px] font-bold text-white flex-shrink-0"
+                  style={{ background: avatarGrad, boxShadow: avatarSh }}>
+                  {initStr}
                 </div>
-                {idx < criticalStudents.length - 1 && <div style={{ height: 1, background: T.surface2, margin: '0 16px' }} />}
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13px] font-bold truncate" style={{ color: TT1, letterSpacing: "-0.2px" }}>{name}</div>
+                  <div className="flex items-center gap-1 mt-[2px] text-[10px] font-semibold" style={{ color: RED }}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <line x1="7" y1="7" x2="17" y2="17" />
+                      <polyline points="17 7 17 17 7 17" />
+                    </svg>
+                    <span className="truncate">{s.trigger}</span>
+                  </div>
+                </div>
+                <button type="button"
+                  onClick={(e) => { e.stopPropagation(); navigate('/risks-alerts'); }}
+                  className="flex items-center gap-1 px-3 py-[6px] rounded-full text-[10px] font-bold text-white flex-shrink-0 active:scale-95 transition-transform"
+                  style={{
+                    background: isCritical ? `linear-gradient(135deg, ${RED}, #FF5577)` : "linear-gradient(135deg, #FFAA00, #FFCC22)",
+                    boxShadow: isCritical ? "0 4px 12px rgba(255,51,85,0.32)" : "0 4px 12px rgba(255,170,0,0.32)",
+                  }}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 01-3.46 0" />
+                  </svg>
+                  {isCritical ? "Notify" : "Review"}
+                </button>
               </div>
             );
           })
         )}
       </div>
 
+      {/* ── Daily Overview banner ── */}
+      <div className="mx-5 mt-[14px] rounded-[22px] px-[18px] py-4 relative overflow-hidden"
+        style={{ background: "linear-gradient(135deg, #001040 0%, #001888 35%, #0033CC 70%, #0055FF 100%)", boxShadow: "0 10px 30px rgba(0,8,60,0.3), 0 0 0 0.5px rgba(255,255,255,0.12)" }}>
+        <div className="absolute -top-9 -right-6 w-[160px] h-[160px] rounded-full pointer-events-none"
+          style={{ background: "radial-gradient(circle, rgba(255,255,255,0.14) 0%, transparent 65%)" }} />
+        <div className="mb-[14px] relative z-10">
+          <div className="text-[8px] font-bold uppercase tracking-[0.14em] mb-[6px]" style={{ color: "rgba(255,255,255,0.50)" }}>Daily Overview</div>
+          <div className="text-[22px] font-bold text-white leading-[1.1] mb-[5px]" style={{ letterSpacing: "-0.5px" }}>Keep up the great work 🎯</div>
+          <div className="text-[11px] font-medium" style={{ color: "rgba(255,255,255,0.65)" }}>Real-time data from your classes &amp; students</div>
+        </div>
+        <div className="grid grid-cols-4 gap-[1px] rounded-[14px] overflow-hidden relative z-10" style={{ background: "rgba(255,255,255,0.12)" }}>
+          {[
+            { val: stats.avgAttendance > 0 ? `${stats.avgAttendance}%` : "—", label: "Attend.", color: "#fff", path: "/attendance" },
+            { val: stats.pendingGrading, label: "Grading", color: "#fff", path: "/gradebook" },
+            { val: stats.atRiskCount, label: "At-Risk", color: stats.atRiskCount > 0 ? "#FF99AA" : "#fff", path: "/risks-alerts" },
+            { val: stats.activeClasses, label: "Classes", color: "#C8A4FF", path: "/my-classes" },
+          ].map(({ val, label, color: c, path }) => (
+            <button type="button" key={label}
+              onClick={() => navigate(path)}
+              className="py-[11px] px-[6px] text-center active:brightness-110 transition"
+              style={{ background: "rgba(255,255,255,0.08)" }}>
+              <div className="text-[18px] font-bold leading-none mb-[3px]" style={{ color: c, letterSpacing: "-0.4px" }}>{val}</div>
+              <div className="text-[8px] font-bold uppercase tracking-[0.08em]" style={{ color: "rgba(255,255,255,0.42)" }}>{label}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── AI Teacher Intelligence card ── */}
+      <div className="mx-5 mt-[14px] rounded-[22px] px-5 py-[18px] relative overflow-hidden"
+        style={{ background: "linear-gradient(140deg, #001888 0%, #0033CC 48%, #0055FF 100%)", boxShadow: "0 8px 28px rgba(0,51,204,0.28), 0 0 0 0.5px rgba(255,255,255,0.14)" }}>
+        <div className="absolute -top-[34px] -right-[22px] w-[140px] h-[140px] rounded-full pointer-events-none"
+          style={{ background: "radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 65%)" }} />
+        <div className="flex items-center gap-[6px] mb-[10px] relative z-10">
+          <div className="w-[26px] h-[26px] rounded-[8px] flex items-center justify-center"
+            style={{ background: "rgba(255,255,255,0.18)", border: "0.5px solid rgba(255,255,255,0.26)" }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.90)" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+            </svg>
+          </div>
+          <span className="text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color: "rgba(255,255,255,0.55)" }}>AI Teacher Intelligence</span>
+        </div>
+        <div className="text-[12px] leading-[1.72] relative z-10" style={{ color: "rgba(255,255,255,0.85)" }}>
+          {aiMessage}
+        </div>
+        <div className="grid grid-cols-3 gap-[1px] rounded-[14px] overflow-hidden relative z-10 mt-3" style={{ background: "rgba(255,255,255,0.12)" }}>
+          <button type="button" onClick={() => navigate('/attendance')}
+            className="py-[11px] px-2 text-center active:brightness-110 transition"
+            style={{ background: "rgba(255,255,255,0.08)" }}>
+            <div className="text-[18px] font-bold leading-none mb-[3px]" style={{ color: "#66EE88", letterSpacing: "-0.4px" }}>
+              {stats.avgAttendance > 0 ? `${stats.avgAttendance}%` : "—"}
+            </div>
+            <div className="text-[9px] font-bold uppercase tracking-[0.07em]" style={{ color: "rgba(255,255,255,0.40)" }}>Attend.</div>
+          </button>
+          <button type="button" onClick={() => navigate('/risks-alerts')}
+            className="py-[11px] px-2 text-center active:brightness-110 transition"
+            style={{ background: "rgba(255,255,255,0.08)" }}>
+            <div className="text-[18px] font-bold leading-none mb-[3px]" style={{ color: "#FF99AA", letterSpacing: "-0.4px" }}>{stats.atRiskCount}</div>
+            <div className="text-[9px] font-bold uppercase tracking-[0.07em]" style={{ color: "rgba(255,255,255,0.40)" }}>At-Risk</div>
+          </button>
+          <button type="button" onClick={() => navigate('/my-classes')}
+            className="py-[11px] px-2 text-center active:brightness-110 transition"
+            style={{ background: "rgba(255,255,255,0.08)" }}>
+            <div className="text-[18px] font-bold leading-none mb-[3px] text-white" style={{ letterSpacing: "-0.4px" }}>{stats.activeClasses}</div>
+            <div className="text-[9px] font-bold uppercase tracking-[0.07em]" style={{ color: "rgba(255,255,255,0.40)" }}>Classes</div>
+          </button>
+        </div>
+      </div>
+
+      <div className="h-5" />
       </div>{/* ═══════════ END MOBILE VIEW ═══════════ */}
 
-      {/* ═══════════════════ DESKTOP VIEW ═══════════════════ */}
-      <div className="hidden md:block">
+      {/* ═══════════════════ DESKTOP VIEW — Blue Apple + 3D hover ═══════════════════ */}
+      <div className="hidden md:block animate-in fade-in duration-500 -m-4 sm:-m-6 md:-m-8 min-h-[calc(100vh-64px)]"
+        style={{ background: BG_D }}>
+        <div className="w-full px-6 pt-8 pb-12">
 
-        {/* ── Header row ───────────────────────────────────────────────────── */}
-        <div className="flex items-start justify-between mb-6">
-          <div>
-            <h1 className="text-[28px] font-bold text-slate-900 leading-tight tracking-tight">Dashboard</h1>
-            <p className="text-sm text-slate-500 mt-1">Welcome back! Here's what's happening today.</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 shadow-sm">
-              {new Date().toLocaleDateString("en-US", { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+          {/* ── Toolbar ── */}
+          <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.12em] mb-1 flex items-center gap-[7px]" style={{ color: TT4 }}>
+                <span className="w-[6px] h-[6px] rounded-full animate-pulse" style={{ background: GREEN, boxShadow: "0 0 0 3px rgba(0,200,83,0.2)" }} />
+                Teacher Dashboard
+              </div>
+              <h1 className="text-[32px] font-bold leading-none" style={{ color: TT1, letterSpacing: "-0.8px" }}>Hello, {firstName} 👋</h1>
+              <div className="text-[13px] font-normal mt-[6px]" style={{ color: TT3 }}>Welcome back · {dayLabel}</div>
             </div>
-            <div className="relative" ref={notifRef}>
-              <button type="button"
-                onClick={() => setShowNotifPanel(p => !p)}
-                className="relative w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-colors shadow-sm"
-              >
-                <IcoBell size={18} color={T.ink1} />
-                {unreadNotes.length > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-[11px] font-semibold flex items-center justify-center">
-                    {unreadNotes.length}
-                  </span>
-                )}
-              </button>
-              {showNotifPanel && (
-                <div className="absolute right-0 top-12 w-80 bg-white rounded-2xl shadow-2xl z-50 overflow-hidden border border-slate-200">
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">Notifications</p>
-                      <p className="text-[11px] text-slate-500">{unreadNotes.length > 0 ? `${unreadNotes.length} unread from parents` : "All caught up!"}</p>
+            <div className="flex items-center gap-[10px]">
+              <div className="px-4 py-[9px] rounded-[14px] text-[12px] font-bold flex items-center gap-[6px]"
+                style={{ background: "#fff", color: TT2, border: `0.5px solid ${BLUE_BDR}`, boxShadow: SH_D, letterSpacing: "-0.1px" }}>
+                <IcoCalendar size={13} color={B1} />
+                {new Date().toLocaleDateString("en-US", { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+              </div>
+              <div className="relative" ref={notifRef}>
+                <button type="button" onClick={() => setShowNotifPanel(p => !p)}
+                  className="relative w-10 h-10 rounded-full flex items-center justify-center transition-transform hover:scale-[1.05]"
+                  style={{ background: "#fff", border: `0.5px solid ${BLUE_BDR}`, boxShadow: SH_D }}>
+                  <IcoBell size={17} color="rgba(0,85,255,0.60)" />
+                  {unreadNotes.length > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-[5px] rounded-full text-white text-[11px] font-bold flex items-center justify-center"
+                      style={{ background: RED, boxShadow: "0 2px 6px rgba(255,51,85,0.30)" }}>
+                      {unreadNotes.length}
+                    </span>
+                  )}
+                </button>
+                {showNotifPanel && (
+                  <div className="absolute right-0 top-12 w-80 rounded-[22px] z-50 overflow-hidden"
+                    style={{ background: "#fff", border: `0.5px solid ${BLUE_BDR}`, boxShadow: SH_LG_D }}>
+                    <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: `0.5px solid ${BLUE_BDR}`, background: BG_D }}>
+                      <div>
+                        <p className="text-[14px] font-bold" style={{ color: TT1, letterSpacing: "-0.2px" }}>Notifications</p>
+                        <p className="text-[11px] mt-[1px]" style={{ color: TT3 }}>{unreadNotes.length > 0 ? `${unreadNotes.length} unread from parents` : "All caught up!"}</p>
+                      </div>
+                      <button type="button" onClick={() => setShowNotifPanel(false)}
+                        className="w-7 h-7 rounded-[9px] flex items-center justify-center"
+                        style={{ background: "#fff", border: `0.5px solid ${BLUE_BDR}` }}>
+                        <X size={13} style={{ color: TT3 }} />
+                      </button>
                     </div>
-                    <button type="button" onClick={() => setShowNotifPanel(false)} className="p-1 rounded-lg hover:bg-slate-100">
-                      <X size={14} className="text-slate-400" />
+                    <div className="max-h-72 overflow-y-auto">
+                      {unreadNotes.length === 0 ? (
+                        <div className="py-10 text-center text-[13px]" style={{ color: TT4 }}>No new notifications</div>
+                      ) : (
+                        unreadNotes.map(note => (
+                          <button type="button" key={note.id}
+                            onClick={() => { setShowNotifPanel(false); navigate("/parent-notes"); }}
+                            className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-[color:var(--hv)]"
+                            style={{ borderBottom: `0.5px solid ${SEP_D}`, ["--hv" as any]: BG_D }}>
+                            <div className="w-9 h-9 rounded-[11px] flex items-center justify-center flex-shrink-0"
+                              style={{ background: `linear-gradient(135deg, ${B1}, ${B2})`, boxShadow: "0 2px 8px rgba(0,85,255,0.28)" }}>
+                              <MessageSquare size={15} color="#fff" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[13px] font-bold truncate" style={{ color: TT1, letterSpacing: "-0.1px" }}>{note.studentName || "Parent Message"}</p>
+                              <p className="text-[11px] mt-[2px] truncate" style={{ color: TT3 }}>{(note.content as string) || "New message received"}</p>
+                            </div>
+                            <div className="w-2 h-2 rounded-full mt-2 flex-shrink-0" style={{ background: B1 }} />
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center text-[14px] font-bold text-white"
+                style={{ background: `linear-gradient(140deg, ${B1}, ${B2})`, boxShadow: "0 3px 12px rgba(0,85,255,0.36), 0 0 0 2px rgba(255,255,255,0.8)" }}>
+                {avatarInitial}
+              </div>
+            </div>
+          </div>
+
+          {/* ── 4-col Stat Cards (3D hover) ── */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5" style={{ perspective: "1200px" }}>
+            {[
+              { label: "Attendance Rate", val: stats.avgAttendance > 0 ? `${stats.avgAttendance}%` : "—", color: B1, icon: IcoBarChart, grad: `linear-gradient(135deg, ${B1}, ${B3})`, sh: "0 3px 10px rgba(0,85,255,0.28)", glow: "rgba(0,85,255,0.09)", path: "/attendance", barPct: Math.min(stats.avgAttendance, 100), barGrad: `linear-gradient(90deg, ${B1}, ${B4})` },
+              { label: "Pending Grading", val: `${stats.pendingGrading}`, color: ORANGE, icon: IcoClipboard, grad: `linear-gradient(135deg, ${ORANGE}, #FFCC22)`, sh: "0 3px 10px rgba(255,136,0,0.28)", glow: "rgba(255,136,0,0.09)", path: "/gradebook", barPct: stats.pendingGrading > 0 ? 60 : 0, barGrad: `linear-gradient(90deg, ${ORANGE}, #FFCC44)` },
+              { label: "At-Risk Students", val: `${stats.atRiskCount}`, color: RED, icon: IcoAlert, grad: `linear-gradient(135deg, ${RED}, #FF6688)`, sh: "0 3px 10px rgba(255,51,85,0.28)", glow: "rgba(255,51,85,0.09)", path: "/risks-alerts", barPct: stats.atRiskCount > 0 ? 40 : 0, barGrad: `linear-gradient(90deg, ${RED}, #FF88AA)` },
+              { label: "Classes Today", val: `${stats.activeClasses}`, color: VIOLET, icon: IcoHome, grad: `linear-gradient(135deg, ${VIOLET}, #A87FF8)`, sh: "0 3px 10px rgba(107,33,232,0.28)", glow: "rgba(107,33,232,0.09)", path: "/my-classes", barPct: 75, barGrad: `linear-gradient(90deg, ${VIOLET}, #A87FF8)` },
+            ].map(({ label, val, color, icon: Ico, grad, sh, glow, path, barPct, barGrad }) => (
+              <div key={label}
+                onMouseEnter={handle3DEnter}
+                onMouseMove={handle3DMove}
+                onMouseLeave={handle3DLeave}
+                onClick={() => navigate(path)}
+                role="button"
+                tabIndex={0}
+                className="bg-white rounded-[28px] px-6 py-5 relative overflow-hidden cursor-pointer"
+                style={{ boxShadow: SH_D, border: "0.5px solid rgba(0,85,255,0.10)", transformStyle: "preserve-3d", willChange: "transform" }}>
+                <div data-glow className="absolute inset-0 pointer-events-none transition-opacity duration-300" style={{ opacity: 0 }} />
+                <div className="absolute -top-[20px] -right-[20px] w-[100px] h-[100px] rounded-full pointer-events-none"
+                  style={{ background: `radial-gradient(circle, ${glow} 0%, transparent 70%)` }} />
+                <div className="flex items-center justify-between mb-3 relative">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: TT4 }}>{label}</span>
+                  <div className="w-11 h-11 rounded-[13px] flex items-center justify-center"
+                    style={{ background: grad, boxShadow: sh, transform: "translateZ(18px)" }}>
+                    <Ico size={20} color="#fff" />
+                  </div>
+                </div>
+                <div className="text-[34px] font-bold leading-none relative" style={{ color, letterSpacing: "-1px", transform: "translateZ(10px)" }}>{val}</div>
+                <div className="h-[5px] rounded-[3px] mt-3 relative" style={{ background: BG2_D, overflow: "hidden" }}>
+                  <div className="h-full rounded-[3px]" style={{ width: `${barPct}%`, background: barGrad, transition: "width 0.8s cubic-bezier(0.4,0,0.2,1)" }} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* ── 3-col grid: Today's Classes | Pending Tasks | Needs Attention (3D hover) ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5" style={{ perspective: "1200px" }}>
+
+            {/* Today's Classes */}
+            <div
+              onMouseEnter={handle3DEnter}
+              onMouseMove={handle3DMove}
+              onMouseLeave={handle3DLeave}
+              className="bg-white rounded-[28px] p-6 relative overflow-hidden"
+              style={{ boxShadow: SH_LG_D, border: "0.5px solid rgba(0,85,255,0.10)", transformStyle: "preserve-3d", willChange: "transform" }}>
+              <div data-glow className="absolute inset-0 pointer-events-none transition-opacity duration-300" style={{ opacity: 0 }} />
+              <div className="absolute -top-[30px] -right-[20px] w-[150px] h-[150px] rounded-full pointer-events-none"
+                style={{ background: "radial-gradient(circle, rgba(0,85,255,0.05) 0%, transparent 70%)" }} />
+
+              <div className="flex items-center justify-between mb-5 relative z-10">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-[14px] flex items-center justify-center"
+                    style={{ background: `linear-gradient(135deg, ${B1}, ${B2})`, boxShadow: SH_BTN_D, transform: "translateZ(18px)" }}>
+                    <IcoCalendar size={18} color="#fff" />
+                  </div>
+                  <div>
+                    <div className="text-[15px] font-bold" style={{ color: TT1, letterSpacing: "-0.2px" }}>Today's Classes</div>
+                    <div className="text-[11px] font-normal mt-[2px]" style={{ color: TT3 }}>{todayClasses.length} scheduled</div>
+                  </div>
+                </div>
+                <button type="button" onClick={() => navigate('/my-classes')}
+                  className="text-[12px] font-bold" style={{ color: B1 }}>See all</button>
+              </div>
+
+              {todayClasses.length === 0 ? (
+                <div className="py-10 text-center text-[13px] font-medium" style={{ color: TT4 }}>No classes today</div>
+              ) : (
+                <div className="space-y-2 relative z-10" style={{ transform: "translateZ(6px)" }}>
+                  {todayClasses.map((cls, idx) => (
+                    <button type="button" key={idx} onClick={() => navigate('/my-classes')}
+                      className="w-full flex items-center gap-3 px-3 py-[11px] rounded-[14px] text-left transition-transform hover:scale-[1.01]"
+                      style={{ background: cls.isNow ? "rgba(0,85,255,0.06)" : BG_D, border: `0.5px solid ${cls.isNow ? BLUE_BDR : SEP_D}` }}>
+                      <div className="min-w-[52px] text-[11px] font-bold" style={{ color: cls.isNow ? B1 : TT3 }}>
+                        {cls.time || "—"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-bold truncate" style={{ color: TT1, letterSpacing: "-0.1px" }}>{cls.subject}</p>
+                        <p className="text-[11px] mt-[1px] truncate" style={{ color: TT3 }}>{cls.className} · {cls.students} {cls.students === 1 ? "student" : "students"}</p>
+                      </div>
+                      {cls.isNow && (
+                        <div className="px-[9px] py-[3px] rounded-full text-[10px] font-bold text-white flex items-center gap-[4px]"
+                          style={{ background: `linear-gradient(135deg, ${GREEN}, #22EE66)`, boxShadow: "0 2px 6px rgba(0,200,83,0.28)" }}>
+                          <span className="w-[5px] h-[5px] rounded-full bg-white animate-pulse" /> Now
+                        </div>
+                      )}
                     </button>
-                  </div>
-                  <div className="max-h-72 overflow-y-auto">
-                    {unreadNotes.length === 0 ? (
-                      <div className="py-10 text-center text-sm text-slate-400">No new notifications</div>
-                    ) : (
-                      unreadNotes.map(note => (
-                        <button type="button" key={note.id}
-                          onClick={() => { setShowNotifPanel(false); navigate("/parent-notes"); }}
-                          className="w-full flex items-start gap-3 px-4 py-3 hover:bg-slate-50 text-left border-b border-slate-50">
-                          <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: T.blueL }}>
-                            <MessageSquare size={13} style={{ color: T.blue }} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[13px] font-medium text-slate-900 truncate">{note.studentName || "Parent Message"}</p>
-                            <p className="text-[11px] text-slate-500 truncate mt-0.5">{note.content || "New message received"}</p>
-                          </div>
-                          <div className="w-2 h-2 rounded-full mt-2 flex-shrink-0" style={{ background: T.blue }} />
-                        </button>
-                      ))
-                    )}
-                  </div>
+                  ))}
                 </div>
               )}
             </div>
-          </div>
-        </div>
 
-        {/* ── 4-col Stat Cards ─────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {/* Pending Tasks */}
+            <div
+              onMouseEnter={handle3DEnter}
+              onMouseMove={handle3DMove}
+              onMouseLeave={handle3DLeave}
+              className="bg-white rounded-[28px] p-6 relative overflow-hidden"
+              style={{ boxShadow: SH_LG_D, border: "0.5px solid rgba(0,85,255,0.10)", transformStyle: "preserve-3d", willChange: "transform" }}>
+              <div data-glow className="absolute inset-0 pointer-events-none transition-opacity duration-300" style={{ opacity: 0 }} />
+              <div className="absolute -top-[30px] -right-[20px] w-[150px] h-[150px] rounded-full pointer-events-none"
+                style={{ background: "radial-gradient(circle, rgba(255,136,0,0.05) 0%, transparent 70%)" }} />
 
-          {/* Attendance */}
-          <div
-            onClick={() => navigate('/attendance')}
-            role="button"
-            tabIndex={0}
-            className="clickable-card bg-white border border-slate-200 rounded-2xl p-5 shadow-sm"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: T.blueL }}>
-                <IcoBarChart size={20} color={T.blue} />
+              <div className="flex items-center justify-between mb-5 relative z-10">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-[14px] flex items-center justify-center"
+                    style={{ background: `linear-gradient(135deg, ${ORANGE}, #FFCC22)`, boxShadow: "0 3px 12px rgba(255,136,0,0.28)", transform: "translateZ(18px)" }}>
+                    <IcoCheck size={18} color="#fff" />
+                  </div>
+                  <div>
+                    <div className="text-[15px] font-bold" style={{ color: TT1, letterSpacing: "-0.2px" }}>Pending Tasks</div>
+                    <div className="text-[11px] font-normal mt-[2px]" style={{ color: TT3 }}>{pendingTasks.length} to complete</div>
+                  </div>
+                </div>
+                <button type="button" onClick={() => navigate('/attendance')}
+                  className="text-[12px] font-bold" style={{ color: B1 }}>Add</button>
               </div>
-              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full" style={{ background: atndBadge.bg, color: atndBadge.color }}>{atndBadge.text}</span>
-            </div>
-            <p className="text-[32px] font-bold text-slate-900 leading-none tracking-tight">
-              {stats.avgAttendance > 0 ? `${stats.avgAttendance}%` : "—"}
-            </p>
-            <p className="text-sm text-slate-500 mt-2">Attendance Rate</p>
-          </div>
 
-          {/* Pending Grading */}
-          <div
-            onClick={() => navigate('/gradebook')}
-            role="button"
-            tabIndex={0}
-            className="clickable-card bg-white border border-slate-200 rounded-2xl p-5 shadow-sm"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: T.amberL }}>
-                <IcoClipboard size={20} color={T.amber} />
+              {pendingTasks.length === 0 ? (
+                <div className="py-10 text-center text-[13px] font-medium" style={{ color: TT4 }}>All tasks complete</div>
+              ) : (
+                <div className="space-y-2 relative z-10" style={{ transform: "translateZ(6px)" }}>
+                  {pendingTasks.map((task, idx) => {
+                    const tone = task.status === 'Pending'
+                      ? { bg: "rgba(255,51,85,0.06)", bdr: "rgba(255,51,85,0.18)", accent: RED, chipBg: "rgba(255,51,85,0.10)", chipBdr: "rgba(255,51,85,0.22)", chipColor: RED }
+                      : task.status === 'Todo'
+                      ? { bg: "rgba(255,136,0,0.06)", bdr: "rgba(255,136,0,0.18)", accent: ORANGE, chipBg: "rgba(255,136,0,0.10)", chipBdr: "rgba(255,136,0,0.22)", chipColor: "#884400" }
+                      : { bg: BG_D, bdr: BLUE_BDR, accent: TT3, chipBg: "rgba(0,200,83,0.10)", chipBdr: "rgba(0,200,83,0.22)", chipColor: GREEN_D_COL };
+                    return (
+                      <button type="button" key={idx}
+                        onClick={() => navigate(task.title.includes('Attendance') ? '/attendance' : '/gradebook')}
+                        className="w-full flex items-center gap-3 px-3 py-[11px] rounded-[14px] text-left transition-transform hover:scale-[1.01]"
+                        style={{ background: tone.bg, border: `0.5px solid ${tone.bdr}` }}>
+                        <div className="w-[22px] h-[22px] rounded-[7px] flex items-center justify-center shrink-0"
+                          style={{ background: task.done ? GREEN : "#fff", border: task.done ? "none" : `0.5px solid ${tone.bdr}` }}>
+                          {task.done && <IcoCheckFilled size={11} />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-bold" style={{ color: TT1, letterSpacing: "-0.1px" }}>{task.title}</p>
+                          <p className="text-[11px] mt-[1px]" style={{ color: tone.accent }}>{task.sub}</p>
+                        </div>
+                        <div className="px-[9px] py-[3px] rounded-full text-[10px] font-bold shrink-0"
+                          style={{ background: tone.chipBg, color: tone.chipColor, border: `0.5px solid ${tone.chipBdr}` }}>
+                          {task.status}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Students Needing Attention */}
+            <div
+              onMouseEnter={handle3DEnter}
+              onMouseMove={handle3DMove}
+              onMouseLeave={handle3DLeave}
+              className="bg-white rounded-[28px] p-6 relative overflow-hidden"
+              style={{ boxShadow: SH_LG_D, border: "0.5px solid rgba(0,85,255,0.10)", transformStyle: "preserve-3d", willChange: "transform" }}>
+              <div data-glow className="absolute inset-0 pointer-events-none transition-opacity duration-300" style={{ opacity: 0 }} />
+              <div className="absolute -top-[30px] -right-[20px] w-[150px] h-[150px] rounded-full pointer-events-none"
+                style={{ background: "radial-gradient(circle, rgba(255,51,85,0.05) 0%, transparent 70%)" }} />
+
+              <div className="flex items-center justify-between mb-5 relative z-10">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-[14px] flex items-center justify-center"
+                    style={{ background: `linear-gradient(135deg, ${RED}, #FF6688)`, boxShadow: "0 3px 12px rgba(255,51,85,0.28)", transform: "translateZ(18px)" }}>
+                    <IcoAlert size={18} color="#fff" />
+                  </div>
+                  <div>
+                    <div className="text-[15px] font-bold" style={{ color: TT1, letterSpacing: "-0.2px" }}>Needs Attention</div>
+                    <div className="text-[11px] font-normal mt-[2px]" style={{ color: TT3 }}>{criticalStudents.length} flagged</div>
+                  </div>
+                </div>
+                <button type="button" onClick={() => navigate('/risks-alerts')}
+                  className="text-[12px] font-bold" style={{ color: B1 }}>View all</button>
               </div>
-              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full" style={{ background: gradeBadge.bg, color: gradeBadge.color }}>{gradeBadge.text}</span>
+
+              {criticalStudents.length === 0 ? (
+                <div className="py-10 text-center text-[13px] font-medium" style={{ color: TT4 }}>All students on track</div>
+              ) : (
+                <div className="space-y-2 relative z-10" style={{ transform: "translateZ(6px)" }}>
+                  {criticalStudents.map((s, idx) => {
+                    const name = s.studentName || "Student";
+                    const initStr = (() => { const p = name.trim().split(" "); return (p.length >= 2 ? p[0][0] + p[1][0] : p[0].substring(0, 2)).toUpperCase(); })();
+                    const isCritical = s.level === 'critical';
+                    const avatarGrad = [
+                      `linear-gradient(135deg, ${B1}, ${B3})`,
+                      `linear-gradient(135deg, ${ORANGE}, #FFCC22)`,
+                      `linear-gradient(135deg, ${VIOLET}, #A87FF8)`,
+                    ][idx % 3];
+                    const avatarSh = ["0 3px 10px rgba(0,85,255,0.28)", "0 3px 10px rgba(255,136,0,0.28)", "0 3px 10px rgba(107,33,232,0.28)"][idx % 3];
+                    return (
+                      <div key={idx}
+                        onClick={() => navigate(`/students?studentId=${s.studentId || ''}`)}
+                        role="button"
+                        tabIndex={0}
+                        className="flex items-center gap-3 px-3 py-[11px] rounded-[14px] cursor-pointer transition-transform hover:scale-[1.01]"
+                        style={{ background: isCritical ? "rgba(255,51,85,0.06)" : "rgba(255,136,0,0.06)", border: `0.5px solid ${isCritical ? "rgba(255,51,85,0.18)" : "rgba(255,136,0,0.18)"}` }}>
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-[12px] font-bold text-white shrink-0"
+                          style={{ background: avatarGrad, boxShadow: avatarSh }}>
+                          {initStr}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-bold truncate" style={{ color: TT1, letterSpacing: "-0.1px" }}>{name}</p>
+                          <p className="text-[11px] mt-[1px] truncate" style={{ color: TT3 }}>{s.trigger}</p>
+                        </div>
+                        <button type="button"
+                          onClick={(e) => { e.stopPropagation(); navigate('/risks-alerts'); }}
+                          className="px-3 py-[7px] rounded-[10px] text-[11px] font-bold text-white shrink-0 transition-transform hover:scale-[1.04]"
+                          style={{ background: isCritical ? `linear-gradient(135deg, ${RED}, #FF6688)` : `linear-gradient(135deg, ${ORANGE}, #FFCC22)`, boxShadow: isCritical ? "0 3px 10px rgba(255,51,85,0.28)" : "0 3px 10px rgba(255,136,0,0.28)" }}>
+                          {isCritical ? "Notify" : "Review"}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-            <p className="text-[32px] font-bold text-slate-900 leading-none tracking-tight">{stats.pendingGrading}</p>
-            <p className="text-sm text-slate-500 mt-2">Pending Grading</p>
+
           </div>
 
-          {/* At-Risk */}
+          {/* ── AI Teacher Intelligence card (desktop, 3D hover) ── */}
           <div
-            onClick={() => navigate('/risks-alerts')}
-            role="button"
-            tabIndex={0}
-            className="clickable-card bg-white border border-slate-200 rounded-2xl p-5 shadow-sm"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: T.redL }}>
-                <IcoAlert size={20} color={T.red} />
+            onMouseEnter={handle3DEnter}
+            onMouseMove={handle3DMove}
+            onMouseLeave={handle3DLeave}
+            className="rounded-[28px] px-7 py-6 relative overflow-hidden text-white mb-5"
+            style={{
+              background: "linear-gradient(140deg, #001888 0%, #0033CC 48%, #0055FF 100%)",
+              boxShadow: "0 8px 28px rgba(0,51,204,0.28), 0 0 0 0.5px rgba(255,255,255,0.14)",
+              transformStyle: "preserve-3d",
+              willChange: "transform",
+              perspective: "1200px",
+            }}>
+            <div data-glow className="absolute inset-0 pointer-events-none transition-opacity duration-300" style={{ opacity: 0 }} />
+            <div className="absolute -top-[40px] -right-[25px] w-[220px] h-[220px] rounded-full pointer-events-none"
+              style={{ background: "radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 65%)" }} />
+            <div className="absolute inset-0 pointer-events-none" style={{
+              backgroundImage: "linear-gradient(rgba(255,255,255,0.014) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.014) 1px, transparent 1px)",
+              backgroundSize: "24px 24px",
+            }} />
+            <div className="relative z-10" style={{ transform: "translateZ(14px)" }}>
+              <div className="flex items-center gap-[8px] mb-3">
+                <div className="w-[32px] h-[32px] rounded-[10px] flex items-center justify-center"
+                  style={{ background: "rgba(255,255,255,0.18)", border: "0.5px solid rgba(255,255,255,0.26)" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.92)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                  </svg>
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: "rgba(255,255,255,0.55)" }}>AI Teacher Intelligence</span>
               </div>
-              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full" style={{ background: riskBadge.bg, color: riskBadge.color }}>{riskBadge.text}</span>
+              <div className="text-[14px] leading-[1.7] max-w-[720px]" style={{ color: "rgba(255,255,255,0.88)" }}>
+                {aiMessage}
+              </div>
+              <div className="grid grid-cols-3 rounded-[16px] overflow-hidden mt-4 max-w-[560px]" style={{ gap: "1px", background: "rgba(255,255,255,0.12)" }}>
+                <div className="py-[14px] px-4 text-center" style={{ background: "rgba(255,255,255,0.08)" }}>
+                  <div className="text-[22px] font-bold leading-none mb-1" style={{ color: "#66EE88", letterSpacing: "-0.5px" }}>
+                    {stats.avgAttendance > 0 ? `${stats.avgAttendance}%` : "—"}
+                  </div>
+                  <div className="text-[9px] font-bold uppercase tracking-[0.09em]" style={{ color: "rgba(255,255,255,0.42)" }}>Attend.</div>
+                </div>
+                <div className="py-[14px] px-4 text-center" style={{ background: "rgba(255,255,255,0.08)" }}>
+                  <div className="text-[22px] font-bold leading-none mb-1" style={{ color: "#FF99AA", letterSpacing: "-0.5px" }}>{stats.atRiskCount}</div>
+                  <div className="text-[9px] font-bold uppercase tracking-[0.09em]" style={{ color: "rgba(255,255,255,0.42)" }}>At-Risk</div>
+                </div>
+                <div className="py-[14px] px-4 text-center" style={{ background: "rgba(255,255,255,0.08)" }}>
+                  <div className="text-[22px] font-bold leading-none mb-1 text-white" style={{ letterSpacing: "-0.5px" }}>{stats.activeClasses}</div>
+                  <div className="text-[9px] font-bold uppercase tracking-[0.09em]" style={{ color: "rgba(255,255,255,0.42)" }}>Classes</div>
+                </div>
+              </div>
             </div>
-            <p className="text-[32px] font-bold text-slate-900 leading-none tracking-tight">{stats.atRiskCount}</p>
-            <p className="text-sm text-slate-500 mt-2">At-Risk Students</p>
           </div>
 
-          {/* Classes Today */}
+          {/* ── Bottom dark blue summary ── */}
           <div
-            onClick={() => navigate('/my-classes')}
-            role="button"
-            tabIndex={0}
-            className="clickable-card bg-white border border-slate-200 rounded-2xl p-5 shadow-sm"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: T.purpleL }}>
-                <IcoHome size={20} color={T.purple} />
+            onMouseEnter={handle3DEnter}
+            onMouseMove={handle3DMove}
+            onMouseLeave={handle3DLeave}
+            className="rounded-[28px] px-7 py-6 relative overflow-hidden text-white"
+            style={{
+              background: "linear-gradient(140deg, #001040 0%, #001888 35%, #0033CC 70%, #0055FF 100%)",
+              boxShadow: "0 10px 30px rgba(0,8,60,0.3), 0 0 0 0.5px rgba(255,255,255,0.12)",
+              transformStyle: "preserve-3d",
+              willChange: "transform",
+            }}>
+            <div data-glow className="absolute inset-0 pointer-events-none transition-opacity duration-300" style={{ opacity: 0 }} />
+            <div className="absolute -top-[50px] -right-[35px] w-[260px] h-[260px] rounded-full pointer-events-none"
+              style={{ background: "radial-gradient(circle, rgba(255,255,255,0.14) 0%, transparent 65%)" }} />
+            <div className="absolute inset-0 pointer-events-none" style={{
+              backgroundImage: "linear-gradient(rgba(255,255,255,0.014) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.014) 1px, transparent 1px)",
+              backgroundSize: "24px 24px",
+            }} />
+            <div className="relative z-10 flex items-center justify-between flex-wrap gap-4" style={{ transform: "translateZ(14px)" }}>
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-[0.12em] mb-2" style={{ color: "rgba(255,255,255,0.50)" }}>Daily Overview</div>
+                <div className="text-[22px] font-bold leading-[1.2]" style={{ letterSpacing: "-0.5px" }}>Keep up the great work</div>
+                <div className="text-[12px] mt-1" style={{ color: "rgba(255,255,255,0.65)" }}>Real-time data from your classes &amp; students</div>
               </div>
-              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full" style={{ background: clsBadge.bg, color: clsBadge.color }}>{clsBadge.text}</span>
-            </div>
-            <p className="text-[32px] font-bold text-slate-900 leading-none tracking-tight">{stats.activeClasses}</p>
-            <p className="text-sm text-slate-500 mt-2">Classes Today</p>
-          </div>
-
-        </div>
-
-        {/* ── 3-col grid: Today's Classes | Pending Tasks | Needs Attention ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-          {/* Today's Classes */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-semibold text-slate-900">Today's Classes</h2>
-              <button type="button" onClick={() => navigate('/my-classes')} className="text-xs font-medium text-blue-600 hover:text-blue-700">See all</button>
-            </div>
-            {todayClasses.length === 0 ? (
-              <div className="py-10 text-center text-sm text-slate-400">No classes scheduled today</div>
-            ) : (
-              <div className="space-y-2">
-                {todayClasses.map((cls, idx) => (
-                  <button type="button"
-                    key={idx}
-                    onClick={() => navigate('/my-classes')}
-                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-colors ${cls.isNow ? 'border-l-[3px] pl-[10px]' : 'hover:bg-slate-50'}`}
-                    style={cls.isNow ? { borderLeftColor: T.blue, background: T.blueL } : {}}
-                  >
-                    <div className="min-w-[52px] text-xs font-semibold" style={{ color: cls.isNow ? T.blue : T.ink1 }}>
-                      {cls.time || "—"}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-semibold text-slate-900 truncate">{cls.subject}</p>
-                      <p className="text-[11px] text-slate-500 truncate mt-0.5">{cls.className} · {cls.students} {cls.students === 1 ? "student" : "students"}</p>
-                    </div>
-                    {cls.isNow && (
-                      <span className="text-[10px] font-semibold px-2 py-1 rounded-full" style={{ background: T.blueL, color: T.blue }}>Now</span>
-                    )}
-                  </button>
+              <div className="grid grid-cols-4 rounded-[16px] overflow-hidden min-w-[360px]" style={{ gap: "1px", background: "rgba(255,255,255,0.12)" }}>
+                {[
+                  { val: stats.avgAttendance > 0 ? `${stats.avgAttendance}%` : "—", label: "Attendance" },
+                  { val: stats.pendingGrading, label: "Grading" },
+                  { val: stats.atRiskCount, label: "At-risk" },
+                  { val: stats.activeClasses, label: "Classes" },
+                ].map(({ val, label }) => (
+                  <div key={label} className="py-[14px] px-4 text-center" style={{ background: "rgba(255,255,255,0.08)" }}>
+                    <div className="text-[22px] font-bold text-white leading-none mb-1" style={{ letterSpacing: "-0.5px" }}>{val}</div>
+                    <div className="text-[9px] font-bold uppercase tracking-[0.09em]" style={{ color: "rgba(255,255,255,0.42)" }}>{label}</div>
+                  </div>
                 ))}
               </div>
-            )}
-          </div>
-
-          {/* Pending Tasks */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-semibold text-slate-900">Pending Tasks</h2>
-              <button type="button" onClick={() => navigate('/attendance')} className="text-xs font-medium text-blue-600 hover:text-blue-700">Add</button>
             </div>
-            {pendingTasks.length === 0 ? (
-              <div className="py-10 text-center text-sm text-slate-400">All tasks complete</div>
-            ) : (
-              <div className="space-y-2">
-                {pendingTasks.map((task, idx) => {
-                  const tone =
-                    task.status === 'Pending' ? { bg: T.redL, accent: T.red, dot: T.red } :
-                    task.status === 'Todo'    ? { bg: T.amberL, accent: T.amber, dot: T.amber } :
-                                                { bg: T.surface2, accent: T.ink1, dot: T.ink2 };
-                  return (
-                    <button type="button"
-                      key={idx}
-                      onClick={() => navigate(task.title.includes('Attendance') ? '/attendance' : '/gradebook')}
-                      className="w-full flex items-start gap-3 px-3 py-3 rounded-xl text-left"
-                      style={{ background: tone.bg }}
-                    >
-                      <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style={{ background: tone.dot }} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-semibold text-slate-900">{task.title}</p>
-                        <p className="text-[11px] mt-0.5" style={{ color: tone.accent }}>{task.sub}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Students Needing Attention */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-semibold text-slate-900">Students Needing Attention</h2>
-              <button type="button" onClick={() => navigate('/risks-alerts')} className="text-xs font-medium text-blue-600 hover:text-blue-700">View all</button>
-            </div>
-            {criticalStudents.length === 0 ? (
-              <div className="py-10 text-center text-sm text-slate-400">All students on track</div>
-            ) : (
-              <div className="space-y-2">
-                {criticalStudents.map((s, idx) => {
-                  const av = avatarStyles[idx % avatarStyles.length];
-                  const name = s.studentName || "Student";
-                  const initStr = (() => { const p = name.trim().split(" "); return (p.length >= 2 ? p[0][0] + p[1][0] : p[0].substring(0, 2)).toUpperCase(); })();
-                  const isCritical = s.level === 'critical';
-                  const cardBg = isCritical ? T.redL : T.amberL;
-                  const actionLabel = isCritical ? "Notify" : "Review";
-                  const actionColor = isCritical ? T.red : T.amber;
-                  return (
-                    <div
-                      key={idx}
-                      onClick={() => navigate(`/students?studentId=${s.studentId || ''}`)}
-                      role="button"
-                      tabIndex={0}
-                      className="clickable-card flex items-center gap-3 px-3 py-3 rounded-xl"
-                      style={{ background: cardBg }}
-                    >
-                      <div
-                        className="w-9 h-9 rounded-full flex items-center justify-center text-[12px] font-semibold flex-shrink-0"
-                        style={{ background: av.color, color: '#fff' }}
-                      >
-                        {initStr}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-semibold text-slate-900 truncate">{name}</p>
-                        <p className="text-[11px] text-slate-600 truncate mt-0.5">{s.trigger}</p>
-                      </div>
-                      <button type="button"
-                        onClick={(e) => { e.stopPropagation(); navigate('/risks-alerts'); }}
-                        className="text-[11px] font-semibold px-3 py-1.5 rounded-lg text-white flex-shrink-0"
-                        style={{ background: actionColor }}
-                      >
-                        {actionLabel}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
 
         </div>
       </div>{/* ═══════════ END DESKTOP VIEW ═══════════ */}
 
-      {/* ── Bottom Tab Bar (mobile only) ─────────────────────────────────────── */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40"
-        style={{ background: T.surface0, borderTop: `1px solid ${T.border}`, padding: '10px 24px 20px' }}>
-        <div className="flex items-start justify-around">
-          {tabs.map(tab => {
-            const isActive = tab.path === "/" ? activeTab === "/" : activeTab.startsWith(tab.path);
-            return (
-              <button type="button" key={tab.label} onClick={() => navigate(tab.path)}
-                className="flex flex-col items-center gap-1"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', minWidth: 48 }}>
-                {tab.icon(isActive)}
-                <span style={{
-                  fontSize: 10, fontWeight: 500,
-                  color: isActive ? T.blue : T.ink2
-                }}>
-                  {tab.label}
-                </span>
-                {isActive && (
-                  <div style={{
-                    width: 14, height: 2.5, borderRadius: 2,
-                    background: T.blue, marginTop: 1
-                  }} />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      {/* Global mobile bottom nav is rendered by TeacherLayout — no duplicate here */}
 
     </div>
   );
