@@ -617,14 +617,627 @@ const RisksAlerts = () => {
   return (
     <div style={{ minHeight: "100vh", paddingBottom: 0 }}>
 
-      {/* ═══════════════════ MOBILE VIEW ═══════════════════ */}
-      <div className="md:hidden" style={{ background: T.bg }}>
-
-      {/* ── Dark hero ───────────────────────────────────────────────────────── */}
+      {/* ═══════════════════ MOBILE VIEW (new mockup) ═══════════════════ */}
       <div
-        className="-mx-4 sm:-mx-6 bg-[#162E93] md:bg-[#08090C]"
-        style={{ padding: "0 22px 28px" }}
+        className="md:hidden -mx-4 sm:-mx-6 px-4 sm:px-6 pt-[10px] pb-7"
+        style={{
+          background: "linear-gradient(148deg, #EEF4FF 0%, #DCE6FF 100%)",
+          minHeight: "100vh",
+          fontVariantNumeric: "tabular-nums",
+        }}
       >
+        <style>{`
+          .ra-card3d { transition: transform .35s cubic-bezier(.2,.9,.3,1), box-shadow .35s cubic-bezier(.2,.9,.3,1); transform-style: preserve-3d; will-change: transform; }
+          @media (hover:hover) { .ra-card3d:hover { transform: translateY(-4px) rotateX(4deg) rotateY(-3deg) scale(1.012); box-shadow: 0 1px 2px rgba(9,87,247,.08), 0 24px 44px rgba(9,87,247,.18), 0 8px 16px rgba(9,87,247,.1); } }
+          .ra-card3d:active { transform: translateY(-1px) scale(.985); box-shadow: 0 1px 2px rgba(9,87,247,.1), 0 6px 16px rgba(9,87,247,.14); }
+          .ra-press { transition: transform .18s cubic-bezier(.34,1.56,.64,1); }
+          .ra-press:active { transform: scale(.94); }
+          @keyframes raFadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+          @keyframes raPulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .5; transform: scale(1.25); } }
+          .ra-pulse { animation: raPulse 1.6s ease-in-out infinite; }
+          .ra-enter > * { animation: raFadeUp .5s cubic-bezier(.34,1.56,.64,1) both; }
+          .ra-enter > *:nth-child(1) { animation-delay: .04s; }
+          .ra-enter > *:nth-child(2) { animation-delay: .10s; }
+          .ra-enter > *:nth-child(3) { animation-delay: .16s; }
+          .ra-enter > *:nth-child(4) { animation-delay: .22s; }
+          .ra-enter > *:nth-child(5) { animation-delay: .28s; }
+          .ra-enter > *:nth-child(6) { animation-delay: .34s; }
+          .ra-enter > *:nth-child(7) { animation-delay: .40s; }
+        `}</style>
+
+        {(() => {
+          // ── derived colours / helpers used in mobile JSX ───────────────────
+          const tabColorFor = (type: Alert["type"]) => type === "Attendance" ? "#FF8800" : "#FF3355";
+          const tagClsFor   = (type: Alert["type"]) => type === "Attendance" ? "attendance" : "grade";
+          const timeAgo = (a: Alert): string => {
+            const anyA = a as any;
+            const raw = anyA.createdAt || anyA.timestamp || anyA.resolvedAt;
+            let ms = 0;
+            if (raw?.toMillis) ms = raw.toMillis();
+            else if (raw?.toDate) ms = raw.toDate().getTime();
+            else if (typeof raw === "string") ms = new Date(raw).getTime();
+            else if (typeof raw === "number") ms = raw;
+            if (!ms) {
+              if (a.severity === "Critical") return "2h";
+              if (a.severity === "High Priority") return "5h";
+              return "1d";
+            }
+            const diff = Date.now() - ms;
+            const mins = Math.floor(diff / 60000);
+            if (mins < 60) return `${Math.max(1, mins)}m`;
+            const hrs = Math.floor(mins / 60);
+            if (hrs < 24) return `${hrs}h`;
+            return `${Math.floor(hrs / 24)}d`;
+          };
+          const MOB_AV = ["#7B3FF4", "#0957F7", "#00C853", "#FF8800", "#C2255C", "#00B8D4", "#6741D9"];
+          const mobAvBg = (name: string) => {
+            const sum = (name || "").split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+            return MOB_AV[sum % MOB_AV.length];
+          };
+          const mobClassChipColor = (name: string) => {
+            const lower = (name || "").toLowerCase();
+            if (lower.includes("shaik")) return { bg: "rgba(123,63,244,.12)", color: "#7B3FF4" };
+            return { bg: "rgba(9,87,247,.08)", color: "#0957F7" };
+          };
+          const mobParseCls = (cls: string) => {
+            const parts = (cls || "").split(" — ");
+            return { className: parts[0] || cls || "Class", subject: parts[1] || "" };
+          };
+
+          return (
+            <div className="ra-enter" style={{ display: "flex", flexDirection: "column" }}>
+
+              {/* Page Header */}
+              <div style={{ padding: "8px 2px 14px" }}>
+                <div style={{ fontSize: 9, fontWeight: 800, color: "#5070B0", letterSpacing: "1.8px", textTransform: "uppercase", marginBottom: 6, display: "flex", alignItems: "center", gap: 7 }}>
+                  <span className={criticalCount > 0 ? "ra-pulse" : ""} style={{ width: 5, height: 5, borderRadius: 2, background: "#FF3355", display: "inline-block", boxShadow: "0 0 8px rgba(255,51,85,.5)" }} />
+                  Teacher Dashboard · Alerts
+                </div>
+                <h1 style={{ fontSize: 28, fontWeight: 800, color: "#001040", letterSpacing: "-1.1px", lineHeight: 1.05, margin: 0 }}>Risks &amp; Alerts</h1>
+                <div style={{ fontSize: 12, color: "#5070B0", fontWeight: 500, marginTop: 6, letterSpacing: "-0.15px" }}>
+                  Monitor and respond to student concerns.
+                </div>
+              </div>
+
+              {/* HERO — Dark red gradient */}
+              <div
+                className="ra-card3d"
+                style={{
+                  background: "linear-gradient(135deg, #1A0614 0%, #3D0B1E 35%, #8A1530 72%, #FF3355 100%)",
+                  borderRadius: 26, padding: 22, marginBottom: 14,
+                  position: "relative", overflow: "hidden",
+                  boxShadow: "0 1px 2px rgba(138,21,48,.2), 0 12px 32px rgba(138,21,48,.3)",
+                }}
+              >
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(255,255,255,.09) 0%, transparent 45%)", pointerEvents: "none" }} />
+                <div style={{ position: "relative", zIndex: 2 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+                    <div style={{ width: 42, height: 42, borderRadius: 13, background: "rgba(255,255,255,.16)", backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)", border: "0.5px solid rgba(255,255,255,.24)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 2L2 21h20L12 2z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12" y2="17"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 800, color: "rgba(255,255,255,.8)", letterSpacing: "1.8px", textTransform: "uppercase" }}>Critical Alerts</div>
+                      <div style={{ fontSize: 11, color: "rgba(255,255,255,.55)", marginTop: 2, fontWeight: 500, letterSpacing: "-0.1px" }}>Requires immediate action</div>
+                    </div>
+                    <div style={{ marginLeft: "auto", background: "rgba(255,255,255,.18)", border: "0.5px solid rgba(255,255,255,.28)", color: "#fff", padding: "5px 12px", borderRadius: 100, fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", gap: 6, letterSpacing: "0.3px" }}>
+                      <span className="ra-pulse" style={{ width: 6, height: 6, borderRadius: "50%", background: "#fff", boxShadow: "0 0 8px #fff" }} />
+                      Live
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 60, fontWeight: 800, color: "#fff", letterSpacing: "-2.8px", lineHeight: 1, marginBottom: 8, display: "flex", alignItems: "baseline", gap: 8 }}>
+                    {criticalCount}
+                    <span style={{ fontSize: 22, fontWeight: 700, color: "rgba(255,255,255,.7)", letterSpacing: "-0.4px" }}>active</span>
+                  </div>
+                  <div style={{ fontSize: 13, color: "rgba(255,255,255,.78)", marginBottom: 20, fontWeight: 500, letterSpacing: "-0.15px" }}>
+                    {criticalCount === 0 ? (
+                      <><b style={{ color: "#fff", fontWeight: 700 }}>All clear</b> — no critical alerts right now.</>
+                    ) : (
+                      <><b style={{ color: "#fff", fontWeight: 700 }}>{criticalCount} student{criticalCount === 1 ? "" : "s"}</b> need your outreach — flagged critical.</>
+                    )}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 1, background: "rgba(255,255,255,.12)", borderRadius: 14, padding: 1, overflow: "hidden" }}>
+                    <div style={{ background: "rgba(40,6,16,.7)", padding: "12px 4px", textAlign: "center" }}>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: "#fff", letterSpacing: "-0.5px" }}>{gradesCount}</div>
+                      <div style={{ fontSize: 8, fontWeight: 700, color: "rgba(255,255,255,.6)", letterSpacing: "1.1px", textTransform: "uppercase", marginTop: 3 }}>Grades</div>
+                    </div>
+                    <div style={{ background: "rgba(40,6,16,.7)", padding: "12px 4px", textAlign: "center" }}>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: "#FFD060", letterSpacing: "-0.5px" }}>{attCount}</div>
+                      <div style={{ fontSize: 8, fontWeight: 700, color: "rgba(255,255,255,.6)", letterSpacing: "1.1px", textTransform: "uppercase", marginTop: 3 }}>Attend.</div>
+                    </div>
+                    <div style={{ background: "rgba(40,6,16,.7)", padding: "12px 4px", textAlign: "center" }}>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: "#6FFFAA", letterSpacing: "-0.5px" }}>{resolvedCount}</div>
+                      <div style={{ fontSize: 8, fontWeight: 700, color: "rgba(255,255,255,.6)", letterSpacing: "1.1px", textTransform: "uppercase", marginTop: 3 }}>Resolved</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stats 2x2 */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+                {[
+                  { key: "Critical", label: "Critical", count: criticalCount, color: "#FF3355",
+                    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 21h20L12 2z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12" y2="17"/></svg>,
+                    sub: count => count > 0
+                      ? <span style={{ color: "#FF3355", fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}><span className="ra-pulse" style={{ width: 5, height: 5, borderRadius: "50%", background: "#FF3355" }} />Act now</span>
+                      : <span style={{ color: "#5070B0", fontWeight: 600 }}>All clear</span>,
+                    onClick: () => { setActiveTab("All"); window.scrollTo({ top: 300, behavior: "smooth" }); } },
+                  { key: "High Priority", label: "High Priority", count: highCount, color: "#FF8800",
+                    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12" y2="16"/></svg>,
+                    sub: count => count > 0
+                      ? <span style={{ color: "#FF8800", fontWeight: 700 }}>Priority</span>
+                      : <span style={{ color: "#5070B0", fontWeight: 600 }}>All clear</span>,
+                    onClick: () => setActiveTab("All") },
+                  { key: "Medium", label: "Medium", count: mediumCount, color: "#0957F7",
+                    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12" y2="16"/></svg>,
+                    sub: count => count > 0
+                      ? <span style={{ color: "#0957F7", fontWeight: 700 }}>Watching</span>
+                      : <span style={{ color: "#5070B0", fontWeight: 600 }}>Low risk</span>,
+                    onClick: () => setActiveTab("All") },
+                  { key: "Resolved", label: "Resolved This Week", count: resolvedCount, color: "#00C853",
+                    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+                    sub: count => count > 0
+                      ? <span style={{ color: "#00C853", fontWeight: 700 }}>{count} closed</span>
+                      : <span style={{ color: "#5070B0", fontWeight: 600 }}>None yet</span>,
+                    onClick: () => navigate("/reports") },
+                ].map(s => (
+                  <button
+                    key={s.key}
+                    type="button"
+                    onClick={s.onClick}
+                    className="ra-card3d"
+                    style={{
+                      background: "#fff", borderRadius: 20, padding: 16,
+                      display: "flex", flexDirection: "column",
+                      boxShadow: "0 0.5px 1px rgba(9,87,247,.04), 0 4px 14px rgba(9,87,247,.08)",
+                      textAlign: "left", border: "none", cursor: "pointer", fontFamily: "inherit",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 18, minHeight: 40 }}>
+                      <div style={{ flex: 1, minWidth: 0, fontSize: 10, fontWeight: 700, color: "#5070B0", letterSpacing: "1.0px", textTransform: "uppercase", lineHeight: 1.4, paddingTop: 3 }}>{s.label}</div>
+                      <div style={{ flexShrink: 0, width: 38, height: 38, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", background: s.color }}>{s.icon}</div>
+                    </div>
+                    <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-1.3px", lineHeight: 1, color: s.color }}>{s.count}</div>
+                    <div style={{ fontSize: 11, fontWeight: 600, marginTop: 7, letterSpacing: "-0.15px" }}>{s.sub(s.count)}</div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Filter Tabs */}
+              <div
+                className="ra-card3d"
+                style={{
+                  display: "flex", gap: 6, background: "#fff",
+                  padding: 5, borderRadius: 14, marginBottom: 12,
+                  boxShadow: "0 0.5px 1px rgba(9,87,247,.04), 0 2px 10px rgba(9,87,247,.06)",
+                }}
+              >
+                {[
+                  { id: "All", label: "All", count: totalCount },
+                  { id: "Attendance", label: "Attendance", count: attCount },
+                  { id: "Grades", label: "Grades", count: gradesCount },
+                ].map(tab => {
+                  const active = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActiveTab(tab.id)}
+                      aria-pressed={active}
+                      className="ra-press"
+                      style={{
+                        flex: 1, padding: "9px 8px", borderRadius: 10,
+                        background: active ? "#0957F7" : "transparent",
+                        color: active ? "#fff" : "#5070B0",
+                        fontSize: 12, fontWeight: 700, letterSpacing: "-0.2px",
+                        border: "none", cursor: "pointer", fontFamily: "inherit",
+                        display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+                        transition: "all .22s cubic-bezier(.2,.9,.3,1)",
+                        boxShadow: active ? "0 1px 2px rgba(9,87,247,.2), 0 3px 10px rgba(9,87,247,.25)" : "none",
+                      }}
+                    >
+                      {tab.label}
+                      <span style={{
+                        background: active ? "rgba(255,255,255,.22)" : "#F4F7FE",
+                        color: active ? "#fff" : "#5070B0",
+                        fontSize: 10, fontWeight: 800, padding: "1px 7px", borderRadius: 100,
+                      }}>{tab.count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Alerts list */}
+              {loading ? (
+                <div className="ra-card3d" style={{ background: "#fff", borderRadius: 20, padding: "40px 14px", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, boxShadow: "0 0.5px 1px rgba(9,87,247,.04), 0 4px 14px rgba(9,87,247,.08)" }}>
+                  <Loader2 className="w-5 h-5 animate-spin" style={{ color: "#5070B0" }} />
+                  <span style={{ fontSize: 12, color: "#5070B0" }}>Loading alerts…</span>
+                </div>
+              ) : visible.length === 0 ? (
+                <div className="ra-card3d" style={{
+                  background: "#fff", borderRadius: 20, padding: "32px 20px", textAlign: "center",
+                  boxShadow: "0 0.5px 1px rgba(9,87,247,.04), 0 4px 14px rgba(9,87,247,.08)",
+                }}>
+                  <div style={{
+                    width: 78, height: 78, borderRadius: 24,
+                    background: "linear-gradient(145deg, rgba(0,232,102,.14) 0%, rgba(0,200,83,.08) 100%)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    margin: "0 auto 16px", color: "#00C853",
+                    boxShadow: "0 0 0 8px rgba(0,200,83,.06), 0 0 0 16px rgba(0,200,83,.03), inset 0 1px 0 rgba(255,255,255,.6)",
+                  }}>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  </div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: "#001040", marginBottom: 6, letterSpacing: "-0.4px" }}>
+                    {activeTab === "All" ? "All students on track" : activeTab === "Attendance" ? "No attendance concerns" : "No grade concerns"}
+                  </div>
+                  <div style={{ fontSize: 12, color: "#5070B0", fontWeight: 500, letterSpacing: "-0.15px", lineHeight: 1.5 }}>
+                    {activeTab === "All"
+                      ? <>No alerts in any category. <b style={{ color: "#00C853", fontWeight: 700 }}>Keep up the great work!</b></>
+                      : activeTab === "Attendance"
+                      ? "All students have good attendance records this week."
+                      : "All students are performing within acceptable grade ranges."}
+                  </div>
+                </div>
+              ) : visible.map(a => {
+                const isAttendance = a.type === "Attendance";
+                const accentColor = tabColorFor(a.type);
+                const tagCls = tagClsFor(a.type);
+                const avatarBgC = mobAvBg(a.name);
+                const { className: clsName, subject } = mobParseCls(a.cls);
+                const classChip = mobClassChipColor(clsName);
+                const time = timeAgo(a);
+                const contactAction = isAttendance
+                  ? { label: "Contact Parent", color: "#FF8800" }
+                  : a.type === "Grades"
+                  ? { label: "Contact Parent", color: "#FF3355" }
+                  : { label: "Contact Parent", color: accentColor };
+
+                return (
+                  <div
+                    key={a.id}
+                    className="ra-card3d"
+                    onClick={() => navigate(`/students?studentId=${a.studentId || ""}`)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate(`/students?studentId=${a.studentId || ""}`); } }}
+                    style={{
+                      background: "#fff", borderRadius: 20, padding: 14, marginBottom: 10,
+                      position: "relative", overflow: "hidden", cursor: "pointer",
+                      boxShadow: "0 0.5px 1px rgba(9,87,247,.04), 0 4px 14px rgba(9,87,247,.08)",
+                    }}
+                  >
+                    <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: accentColor }} />
+
+                    {/* head */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 12 }}>
+                      <div style={{
+                        width: 42, height: 42, borderRadius: 13,
+                        background: avatarBgC, color: "#fff",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 12, fontWeight: 800, letterSpacing: "0.3px", flexShrink: 0, position: "relative",
+                      }}>
+                        {getInitials(a.name)}
+                        <div style={{
+                          position: "absolute", bottom: -4, right: -4,
+                          width: 18, height: 18, borderRadius: "50%",
+                          background: accentColor, border: "2.5px solid #fff",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          color: "#fff",
+                          boxShadow: `0 2px 5px ${accentColor}66`,
+                        }}>
+                          {isAttendance ? (
+                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                            </svg>
+                          ) : (
+                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                              <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12" y2="17"/>
+                            </svg>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                          <div style={{ fontSize: 14, fontWeight: 800, color: "#001040", letterSpacing: "-0.3px", lineHeight: 1.2 }}>{a.name}</div>
+                          <div style={{
+                            background: accentColor, color: "#fff",
+                            fontSize: 9, fontWeight: 900, padding: "3px 8px", borderRadius: 100,
+                            letterSpacing: "0.4px", textTransform: "uppercase",
+                            display: "flex", alignItems: "center", gap: 4,
+                            boxShadow: `0 1px 2px ${accentColor}33, 0 2px 6px ${accentColor}40`,
+                          }}>
+                            <span className="ra-pulse" style={{ width: 4, height: 4, borderRadius: "50%", background: "#fff" }} />
+                            {a.severity}
+                          </div>
+                        </div>
+                        <div style={{ fontSize: 11, color: "#5070B0", marginTop: 3, fontWeight: 500, letterSpacing: "-0.1px", display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+                          <span style={{ background: classChip.bg, color: classChip.color, padding: "2px 7px", borderRadius: 6, fontSize: 10, fontWeight: 800 }}>{clsName}</span>
+                          {subject && <><span style={{ color: "#99AACC" }}>·</span><span>{subject}</span></>}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#99AACC", letterSpacing: "-0.1px", flexShrink: 0 }}>{time}</div>
+                    </div>
+
+                    {/* body */}
+                    <div style={{
+                      background: isAttendance ? "rgba(255,136,0,.04)" : "rgba(255,51,85,.04)",
+                      border: `0.5px solid ${isAttendance ? "rgba(255,136,0,.18)" : "rgba(255,51,85,.15)"}`,
+                      borderRadius: 13, padding: 12, marginBottom: 12, position: "relative",
+                    }}>
+                      <div style={{
+                        display: "inline-flex", alignItems: "center", gap: 5,
+                        padding: "3px 8px", borderRadius: 6,
+                        fontSize: 9, fontWeight: 900, letterSpacing: "0.8px", textTransform: "uppercase",
+                        marginBottom: 8,
+                        background: tagCls === "attendance" ? "rgba(255,136,0,.12)" : "rgba(255,51,85,.12)",
+                        color: accentColor,
+                      }}>
+                        {isAttendance ? (
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                          </svg>
+                        ) : (
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+                          </svg>
+                        )}
+                        {a.type === "Attendance" ? "Attendance Alert" : a.type === "Grades" ? "Grade Alert" : `${a.type} Alert`}
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "#001040", letterSpacing: "-0.25px", lineHeight: 1.4, marginBottom: 8 }}>
+                        {a.issue.split(/(\b\d+%|\b\d+\b)/g).map((part, i) =>
+                          /^\d+%?$/.test(part) && part !== "0" && part !== ""
+                            ? <b key={i} style={{ color: accentColor, fontWeight: 900 }}>{part}</b>
+                            : <span key={i}>{part}</span>
+                        )}
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {a.details.slice(0, 3).map((d, i) => {
+                          const [k, v] = d.split(":").map(s => s.trim());
+                          const hasKV = v !== undefined;
+                          const isTrend = /trend/i.test(k || "");
+                          const isAbsence = /absence/i.test(k || "");
+                          const chipStyle = isTrend
+                            ? { bg: "rgba(9,87,247,.06)", bdr: "rgba(9,87,247,.15)", vColor: "#0957F7" }
+                            : isAbsence
+                            ? { bg: "rgba(255,51,85,.08)", bdr: "rgba(255,51,85,.2)", vColor: "#FF3355" }
+                            : { bg: "#fff", bdr: "rgba(9,87,247,.08)", vColor: "#001040" };
+                          return (
+                            <div key={i} style={{
+                              background: chipStyle.bg,
+                              padding: "4px 9px", borderRadius: 100,
+                              fontSize: 10, fontWeight: 700, color: "#5070B0",
+                              letterSpacing: "-0.1px", display: "flex", alignItems: "center", gap: 4,
+                              border: `0.5px solid ${chipStyle.bdr}`,
+                            }}>
+                              {hasKV ? (
+                                <>
+                                  <span style={{ color: "#99AACC", fontWeight: 600 }}>{k}</span>
+                                  <span style={{ color: chipStyle.vColor, fontWeight: 800 }}>{v}</span>
+                                </>
+                              ) : d}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* actions */}
+                    <div style={{ display: "flex", gap: 7 }}>
+                      <button
+                        type="button"
+                        onClick={e => { e.stopPropagation(); fetchContact(a.studentId, a.name); }}
+                        className="ra-press"
+                        style={{
+                          flex: 1, height: 40, borderRadius: 12,
+                          background: contactAction.color, color: "#fff",
+                          fontSize: 12, fontWeight: 700, letterSpacing: "-0.2px",
+                          border: "none", cursor: "pointer", fontFamily: "inherit",
+                          display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+                          boxShadow: `0 1px 2px ${contactAction.color}40, 0 4px 12px ${contactAction.color}4D`,
+                        }}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/>
+                        </svg>
+                        Contact Parent
+                      </button>
+                      <button
+                        type="button"
+                        onClick={e => { e.stopPropagation(); handleResolve(a); }}
+                        disabled={resolving === a.id}
+                        className="ra-press"
+                        style={{
+                          flex: 1, height: 40, borderRadius: 12,
+                          background: "rgba(0,200,83,.1)", color: "#00C853",
+                          fontSize: 12, fontWeight: 700, letterSpacing: "-0.2px",
+                          border: "0.5px solid rgba(0,200,83,.22)",
+                          cursor: resolving === a.id ? "wait" : "pointer", fontFamily: "inherit",
+                          display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+                          opacity: resolving === a.id ? 0.7 : 1,
+                        }}
+                      >
+                        {resolving === a.id ? (
+                          <><Loader2 className="w-3 h-3 animate-spin" /> Resolving…</>
+                        ) : (
+                          <>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                            Resolve
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* AI Risk Intelligence */}
+              {!loading && alerts.length > 0 && (() => {
+                // Find student appearing in multiple alerts
+                const nameCount = new Map<string, number>();
+                alerts.forEach(a => nameCount.set(a.name, (nameCount.get(a.name) || 0) + 1));
+                const multi = Array.from(nameCount.entries()).filter(([, n]) => n > 1).sort((a, b) => b[1] - a[1])[0];
+                const attAlert = alerts.find(a => a.type === "Attendance");
+                return (
+                  <div
+                    className="ra-card3d"
+                    style={{
+                      background: "linear-gradient(140deg, #000820 0%, #001888 28%, #0033CC 64%, #0957F7 100%)",
+                      borderRadius: 24, padding: 20, marginTop: 14,
+                      position: "relative", overflow: "hidden",
+                      boxShadow: "0 1px 2px rgba(0,8,60,.18), 0 12px 32px rgba(0,8,60,.3)",
+                    }}
+                  >
+                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(255,255,255,.09) 0%, transparent 45%)", pointerEvents: "none" }} />
+                    <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 12, position: "relative", zIndex: 2 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 13, background: "rgba(255,255,255,.14)", backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)", border: "0.5px solid rgba(255,255,255,.22)", display: "flex", alignItems: "center", justifyContent: "center", color: "#FFDD55", fontSize: 19 }}>⚡</div>
+                      <div style={{ fontSize: 10, fontWeight: 900, color: "rgba(255,255,255,.95)", letterSpacing: "1.8px", textTransform: "uppercase" }}>AI Risk Intelligence</div>
+                      <div style={{ marginLeft: "auto", background: "rgba(255,51,85,.25)", border: "0.5px solid rgba(255,51,85,.5)", color: "#FFB5BF", padding: "4px 10px", borderRadius: 100, fontSize: 9, fontWeight: 800, letterSpacing: "0.5px", display: "flex", alignItems: "center", gap: 5 }}>
+                        <span className="ra-pulse" style={{ width: 5, height: 5, borderRadius: "50%", background: "#FF9AA9" }} />
+                        {criticalCount > 0 ? "Critical" : "Insight"}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 13, lineHeight: 1.6, color: "rgba(255,255,255,.85)", letterSpacing: "-0.15px", marginBottom: 14, position: "relative", zIndex: 2 }}>
+                      {multi ? (
+                        <><strong style={{ color: "#fff", fontWeight: 700 }}>{multi[0]}</strong> appears in <strong style={{ color: "#fff", fontWeight: 700 }}>{multi[1]} alerts</strong> — consolidate outreach with one parent call covering all classes. </>
+                      ) : (
+                        <>You have <strong style={{ color: "#fff", fontWeight: 700 }}>{alerts.length}</strong> active alert{alerts.length === 1 ? "" : "s"}. </>
+                      )}
+                      {attAlert ? (
+                        <><strong style={{ color: "#fff", fontWeight: 700 }}>{attAlert.name}</strong>'s attendance is the highest risk — act today.</>
+                      ) : criticalCount > 0 ? (
+                        <>Prioritise <strong style={{ color: "#fff", fontWeight: 700 }}>{criticalCount} critical</strong> case{criticalCount === 1 ? "" : "s"} first.</>
+                      ) : (
+                        <>Keep monitoring — no critical cases right now.</>
+                      )}
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", background: "rgba(255,255,255,.1)", borderRadius: 12, padding: 1, gap: 1, overflow: "hidden", position: "relative", zIndex: 2 }}>
+                      <div style={{ background: "rgba(0,20,80,.55)", padding: "11px 4px", textAlign: "center" }}>
+                        <div style={{ fontSize: 17, fontWeight: 800, color: "#FF9AA9", letterSpacing: "-0.4px" }}>{criticalCount}</div>
+                        <div style={{ fontSize: 8, fontWeight: 700, color: "rgba(255,255,255,.6)", letterSpacing: "1px", textTransform: "uppercase", marginTop: 3 }}>Critical</div>
+                      </div>
+                      <div style={{ background: "rgba(0,20,80,.55)", padding: "11px 4px", textAlign: "center" }}>
+                        <div style={{ fontSize: 17, fontWeight: 800, color: "#FFD060", letterSpacing: "-0.4px" }}>{attCount}</div>
+                        <div style={{ fontSize: 8, fontWeight: 700, color: "rgba(255,255,255,.6)", letterSpacing: "1px", textTransform: "uppercase", marginTop: 3 }}>Attend.</div>
+                      </div>
+                      <div style={{ background: "rgba(0,20,80,.55)", padding: "11px 4px", textAlign: "center" }}>
+                        <div style={{ fontSize: 17, fontWeight: 800, color: "#fff", letterSpacing: "-0.4px" }}>{gradesCount}</div>
+                        <div style={{ fontSize: 8, fontWeight: 700, color: "rgba(255,255,255,.6)", letterSpacing: "1px", textTransform: "uppercase", marginTop: 3 }}>Grade</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+            </div>
+          );
+        })()}
+
+      {/* ── Contact modal (rendered on mobile; pre-existing desktop behaviour preserved) ── */}
+      {(selectedContact || fetchingContact) && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+          onClick={() => setSelectedContact(null)}
+        >
+          <div
+            style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 360, boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: `1px solid ${T.s2}` }}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: "#001040", margin: 0, letterSpacing: "-0.3px" }}>Contact Parent</h3>
+              <button
+                type="button"
+                aria-label="Close contact panel"
+                onClick={() => setSelectedContact(null)}
+                style={{ width: 28, height: 28, border: "none", background: "#F4F7FE", borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#5070B0" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                  <line x1="2" y1="2" x2="12" y2="12" /><line x1="12" y1="2" x2="2" y2="12" />
+                </svg>
+              </button>
+            </div>
+            {fetchingContact ? (
+              <div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}>
+                <Loader2 style={{ width: 24, height: 24, color: "#5070B0" }} className="animate-spin" />
+              </div>
+            ) : selectedContact && (
+              <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 12, background: avBg(selectedContact.name), display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 13, fontWeight: 700 }}>
+                    {getInitials(selectedContact.name)}
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: "#001040", margin: 0 }}>{selectedContact.name}</p>
+                    <p style={{ fontSize: 11, color: "#5070B0", margin: "3px 0 0" }}>{selectedContact.parent}</p>
+                  </div>
+                </div>
+                <div style={{ background: "#F4F7FE", borderRadius: 12, padding: "12px 14px" }}>
+                  <p style={{ fontSize: 10, color: "#5070B0", margin: "0 0 4px", fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase" }}>Contact Number</p>
+                  {selectedContact.phone ? (
+                    <p style={{ fontSize: 17, fontWeight: 800, color: "#0957F7", margin: 0, letterSpacing: "-0.3px" }}>{selectedContact.phone}</p>
+                  ) : (
+                    <p style={{ fontSize: 13, fontWeight: 500, color: "#99AACC", margin: 0, fontStyle: "italic" }}>
+                      Not available — add parent phone in Students
+                    </p>
+                  )}
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  {(() => {
+                    const p = (selectedContact.phone || "").trim();
+                    const sanitized = p.replace(/[^+\d]/g, "");
+                    const waNum = sanitized.replace(/^\+/, "");
+                    const disabled = !p;
+                    return (
+                      <>
+                        <a
+                          href={disabled ? undefined : `tel:${sanitized}`}
+                          onClick={(e) => { if (disabled) { e.preventDefault(); toast.error("No phone number on file."); } }}
+                          style={{
+                            padding: "12px 0", background: disabled ? "#EAF0FB" : "#0957F7", color: disabled ? "#99AACC" : "#fff",
+                            borderRadius: 12, fontSize: 13, fontWeight: 700,
+                            textDecoration: "none", cursor: disabled ? "not-allowed" : "pointer",
+                            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                            boxShadow: disabled ? "none" : "0 1px 2px rgba(9,87,247,.2), 0 4px 10px rgba(9,87,247,.25)",
+                          }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={disabled ? "#99AACC" : "#fff"} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/>
+                          </svg>
+                          Call
+                        </a>
+                        <a
+                          href={disabled ? undefined : `https://wa.me/${waNum}`}
+                          target="_blank" rel="noopener noreferrer"
+                          onClick={(e) => { if (disabled) { e.preventDefault(); toast.error("No phone number on file."); } }}
+                          style={{
+                            padding: "12px 0", background: disabled ? "#EAF0FB" : "#25D366", color: disabled ? "#99AACC" : "#fff",
+                            borderRadius: 12, fontSize: 13, fontWeight: 700,
+                            textDecoration: "none", cursor: disabled ? "not-allowed" : "pointer",
+                            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                            boxShadow: disabled ? "none" : "0 1px 2px rgba(37,211,102,.2), 0 4px 10px rgba(37,211,102,.25)",
+                          }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={disabled ? "#99AACC" : "#fff"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>
+                          </svg>
+                          WhatsApp
+                        </a>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Hidden stub — kept for JSX balance; legacy content removed */}
+      <div style={{ display: "none" }}>
         <div style={{ paddingTop: 20 }}>
           <p style={{ fontSize: 10, fontWeight: 500, color: "rgba(255,255,255,0.3)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>
             {hc.eyebrow}

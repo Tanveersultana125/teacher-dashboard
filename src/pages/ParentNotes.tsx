@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, X, Send } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { db } from "../lib/firebase";
 import {
@@ -9,6 +9,35 @@ import {
 import { auditedAdd, auditedUpdate } from "../lib/auditedWrites";
 import { useAuth } from "../lib/AuthContext";
 import { toast } from "sonner";
+
+// ── Quick Templates ───────────────────────────────────────────────────────────
+const TEMPLATES = [
+  {
+    title: "Grade Concern",
+    desc:  "Inform parent about declining grades",
+    body:  "Hello, I wanted to share that your child's recent grades have been declining. Could we schedule a short meeting to discuss ways we can support their progress together? Please let me know a convenient time.",
+  },
+  {
+    title: "Good Performance",
+    desc:  "Share positive progress update",
+    body:  "Hello! I wanted to let you know that your child has been doing excellent work recently. Their effort and engagement in class are truly impressive. Thank you for your continued support at home.",
+  },
+  {
+    title: "Attendance Issue",
+    desc:  "Report frequent absences",
+    body:  "Hello, I wanted to bring to your attention that your child has been absent frequently in recent weeks. Regular attendance is important for their learning. Please reach out if there are any concerns we can help address.",
+  },
+  {
+    title: "Missing Assignments",
+    desc:  "Notify about pending work",
+    body:  "Hello, your child has a few pending assignments that are overdue. Could you please help ensure they are completed and submitted at the earliest? I am happy to provide extra support if needed.",
+  },
+  {
+    title: "Meeting Request",
+    desc:  "Schedule parent-teacher meeting",
+    body:  "Hello, I would like to schedule a parent-teacher meeting to discuss your child's progress. Please share a few time slots that work for you and I will confirm at the earliest.",
+  },
+];
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const T = {
@@ -27,6 +56,7 @@ const T = {
   grn2:    "#2F9E44",
   glBg:    "#EBFBEE",
   red:     "#C92A2A",
+  rlBg:    "#FFF5F5",
   amb:     "#C87014",
   alBg:    "#FFF9DB",
   tea:     "#0C8599",
@@ -67,6 +97,13 @@ const ParentNotes = () => {
   const [messageContent, setMessageContent]   = useState("");
   const chatEndRef  = useRef<HTMLDivElement>(null);
   const searchRef   = useRef<HTMLInputElement>(null);
+
+  // ── Compose modal state (New Message + Quick Templates) ────────────────
+  const [showCompose, setShowCompose]             = useState(false);
+  const [composeStudentKey, setComposeStudentKey] = useState<string>("");
+  const [composeText, setComposeText]             = useState("");
+  const [composeSearch, setComposeSearch]         = useState("");
+  const [composeSending, setComposeSending]       = useState(false);
 
   // ── Firebase listeners ──────────────────────────────────────────────────
   useEffect(() => {
@@ -230,6 +267,66 @@ const ParentNotes = () => {
     }
   };
 
+  // ── Compose modal handlers ──────────────────────────────────────────────
+  const openCompose = (templateBody?: string) => {
+    setComposeText(templateBody || "");
+    setComposeSearch("");
+    // Default to selected student if open, else first in roster
+    const defaultKey = selectedStudent
+      ? (selectedStudent.studentId || selectedStudent.studentEmail)
+      : (roster[0]?.studentId || roster[0]?.studentEmail || "");
+    setComposeStudentKey(defaultKey || "");
+    setShowCompose(true);
+  };
+
+  const closeCompose = () => {
+    setShowCompose(false);
+    setComposeText("");
+    setComposeStudentKey("");
+    setComposeSearch("");
+  };
+
+  const applyTemplate = (body: string) => {
+    if (!showCompose) {
+      openCompose(body);
+      return;
+    }
+    setComposeText((prev) => (prev.trim() ? prev + "\n\n" + body : body));
+  };
+
+  const handleSendCompose = async () => {
+    const content = composeText.trim();
+    if (!content) { toast.error("Write a message first."); return; }
+    const recipient = roster.find(
+      (s) => (s.studentId || s.studentEmail) === composeStudentKey
+    );
+    if (!recipient) { toast.error("Select a parent to send to."); return; }
+
+    setComposeSending(true);
+    try {
+      await auditedAdd(collection(db, "parent_notes"), {
+        schoolId:     teacherData?.schoolId || "",
+        branchId:     teacherData?.branchId || "",
+        teacherId:    teacherData?.id   || "",
+        teacherName:  teacherData?.name || "Teacher",
+        studentId:    recipient.studentId    || "",
+        studentEmail: recipient.studentEmail?.toLowerCase() || "",
+        studentName:  recipient.studentName  || "",
+        parentName:   `Parent of ${recipient.studentName}`,
+        content, from: "teacher", status: "Sent",
+        createdAt: serverTimestamp(),
+      });
+      toast.success(`Message sent to parent of ${recipient.studentName}`);
+      setSelectedStudent(recipient);
+      closeCompose();
+    } catch (e) {
+      console.error("[ParentNotes] compose send failed", e);
+      toast.error("Failed to send. Try again.");
+    } finally {
+      setComposeSending(false);
+    }
+  };
+
   // ── Helpers ─────────────────────────────────────────────────────────────
   const fmtTime = (ts: any) =>
     new Date(ts?.toDate?.() || Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -239,8 +336,12 @@ const ParentNotes = () => {
   }, [studentMessages]);
 
   // ── Render ──────────────────────────────────────────────────────────────
-  if (selectedStudent) return <ChatView />;
-  return <ListView />;
+  return (
+    <>
+      {selectedStudent ? <ChatView /> : <ListView />}
+      {showCompose && <ComposeModal />}
+    </>
+  );
 
   // ═══════════════════════════════════════════════════════════════════════════
   // LIST VIEW
@@ -428,8 +529,8 @@ const ParentNotes = () => {
           {/* Compose button */}
           <button
             type="button"
-            aria-label="Focus search"
-            onClick={() => { searchRef.current?.focus(); }}
+            aria-label="Compose new message"
+            onClick={() => openCompose()}
             style={{
               width: "100%", padding: 12, borderRadius: 12,
               background: T.blue, border: "none", color: "#fff",
@@ -458,8 +559,8 @@ const ParentNotes = () => {
             </div>
             <button
               type="button"
-              aria-label="Focus search"
-              onClick={() => { searchRef.current?.focus(); }}
+              aria-label="Compose new message"
+              onClick={() => openCompose()}
               className="h-11 px-5 rounded-lg bg-[#1e3272] text-white text-sm font-semibold hover:bg-[#162552] flex items-center gap-2 shadow-sm"
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
@@ -546,17 +647,11 @@ const ParentNotes = () => {
                 <h2 className="text-base font-semibold text-slate-900">Quick Templates</h2>
               </div>
               <div className="p-4 space-y-2">
-                {[
-                  { title: 'Grade Concern', desc: 'Inform parent about declining grades' },
-                  { title: 'Good Performance', desc: 'Share positive progress update' },
-                  { title: 'Attendance Issue', desc: 'Report frequent absences' },
-                  { title: 'Missing Assignments', desc: 'Notify about pending work' },
-                  { title: 'Meeting Request', desc: 'Schedule parent-teacher meeting' },
-                ].map(tpl => (
+                {TEMPLATES.map(tpl => (
                   <button
                     key={tpl.title}
                     type="button"
-                    onClick={() => { searchRef.current?.focus(); toast.info(`Template: ${tpl.title}`); }}
+                    onClick={() => applyTemplate(tpl.body)}
                     className="w-full text-left px-3 py-3 rounded-lg border border-slate-100 hover:bg-slate-50 hover:border-slate-200"
                   >
                     <p className="text-sm font-semibold text-slate-900">{tpl.title}</p>

@@ -365,9 +365,752 @@ const Syllabus = () => {
     }
   };
 
+  // ── Mobile-specific state & helpers ─────────────────────────────────────────
+  const [activeFilter, setActiveFilter] = useState<string>("all"); // 'all' | classId | 'syllabus' | 'notes'
+  const [mobileSelClassId, setMobileSelClassId] = useState<string>("");
+
+  const openMobileSheet = (preselectClassId?: string) => {
+    if (classes.length === 0) {
+      toast.error("No classes assigned yet. Ask your principal to assign classes first.");
+      return;
+    }
+    setMobileSelClassId(preselectClassId || classes[0].classId);
+    setSelClassId(preselectClassId || classes[0].classId);
+    setTitle("");
+    setPickedFile(null);
+    setProgress(0);
+    setModalOpen(true);
+  };
+
+  const keywordMatch = (t: string, kw: string) => (t || "").toLowerCase().includes(kw);
+  const totalBytes = docs.reduce((a, d) => a + (d.fileSize || 0), 0);
+
+  const filterDocs = (list: SyllabusDoc[]) => {
+    if (activeFilter === "all") return list;
+    if (activeFilter === "syllabus") return list.filter(d => keywordMatch(d.title, "syllabus"));
+    if (activeFilter === "notes") return list.filter(d => keywordMatch(d.title, "note"));
+    return list.filter(d => d.classId === activeFilter);
+  };
+
+  const filterChips = [
+    { key: "all", label: "All", count: docs.length },
+    ...classes.map(c => ({ key: c.classId, label: c.className, count: (docsByClass.get(c.classId) || []).length })),
+    { key: "syllabus", label: "Syllabus", count: docs.filter(d => keywordMatch(d.title, "syllabus")).length },
+    { key: "notes", label: "Notes", count: docs.filter(d => keywordMatch(d.title, "note")).length },
+  ];
+
+  const MOB_CLASS_COLORS = ["#0957F7", "#7B3FF4", "#00C853", "#FF8800", "#C2255C", "#00B8D4", "#6741D9"];
+  const classColor = (id: string) => {
+    const sum = (id || "").split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+    return MOB_CLASS_COLORS[sum % MOB_CLASS_COLORS.length];
+  };
+
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="text-left min-h-[60vh]">
+    <>
+
+    {/* ═══════════════════ MOBILE VIEW ═══════════════════ */}
+    <div
+      className="md:hidden -mx-4 sm:-mx-6 px-4 sm:px-6 pt-[10px] pb-7 text-left"
+      style={{
+        background: "linear-gradient(148deg, #EEF4FF 0%, #DCE6FF 100%)",
+        minHeight: "100vh",
+        fontVariantNumeric: "tabular-nums",
+      }}
+    >
+      <style>{`
+        .syl-card3d { transition: transform .35s cubic-bezier(.2,.9,.3,1), box-shadow .35s cubic-bezier(.2,.9,.3,1); transform-style: preserve-3d; will-change: transform; }
+        @media (hover:hover) { .syl-card3d:hover { transform: translateY(-4px) rotateX(4deg) rotateY(-3deg) scale(1.012); box-shadow: 0 1px 2px rgba(9,87,247,.08), 0 24px 44px rgba(9,87,247,.18), 0 8px 16px rgba(9,87,247,.1); } }
+        .syl-card3d:active { transform: translateY(-1px) scale(.985); box-shadow: 0 1px 2px rgba(9,87,247,.1), 0 6px 16px rgba(9,87,247,.14); }
+        .syl-press { transition: transform .18s cubic-bezier(.34,1.56,.64,1); }
+        .syl-press:active { transform: scale(.94); }
+        @keyframes sylFadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+        .syl-enter > * { animation: sylFadeUp .5s cubic-bezier(.34,1.56,.64,1) both; }
+        .syl-enter > *:nth-child(1) { animation-delay: .04s; }
+        .syl-enter > *:nth-child(2) { animation-delay: .10s; }
+        .syl-enter > *:nth-child(3) { animation-delay: .16s; }
+        .syl-enter > *:nth-child(4) { animation-delay: .22s; }
+        .syl-enter > *:nth-child(5) { animation-delay: .28s; }
+        .syl-enter > *:nth-child(6) { animation-delay: .34s; }
+        .syl-chip-scroll::-webkit-scrollbar { display: none; }
+        .syl-chip-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes sylSheetIn { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        @keyframes sylBackdropIn { from { opacity: 0; } to { opacity: 1; } }
+      `}</style>
+
+      <div className="syl-enter" style={{ display: "flex", flexDirection: "column" }}>
+
+        {/* Page header with Upload pill */}
+        <div style={{ padding: "8px 2px 14px", display: "flex", alignItems: "flex-end", gap: 10 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 9, fontWeight: 800, color: "#5070B0", letterSpacing: "1.8px", textTransform: "uppercase", marginBottom: 6, display: "flex", alignItems: "center", gap: 7 }}>
+              <span style={{ width: 5, height: 5, borderRadius: 2, background: "#0957F7", display: "inline-block" }} />
+              Teacher Dashboard · Documents
+            </div>
+            <h1 style={{ fontSize: 26, fontWeight: 800, color: "#001040", letterSpacing: "-1.1px", lineHeight: 1.05, margin: 0 }}>Syllabus &amp; Documents</h1>
+            <div style={{ fontSize: 12, color: "#5070B0", fontWeight: 500, marginTop: 6, letterSpacing: "-0.15px" }}>
+              Upload PDFs — syllabus, notes, resources — for your classes.
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => openMobileSheet()}
+            disabled={loading || classes.length === 0}
+            className="syl-press"
+            style={{
+              height: 34, padding: "0 13px", borderRadius: 11,
+              background: "#0957F7", color: "#fff",
+              fontSize: 12, fontWeight: 700, letterSpacing: "-0.2px",
+              display: "flex", alignItems: "center", gap: 5, border: "none",
+              boxShadow: "0 1px 2px rgba(9,87,247,.2), 0 4px 10px rgba(9,87,247,.3)",
+              cursor: loading || classes.length === 0 ? "not-allowed" : "pointer",
+              opacity: loading || classes.length === 0 ? 0.5 : 1,
+              fontFamily: "inherit", flexShrink: 0,
+            }}
+          >
+            <Upload className="w-3 h-3" strokeWidth={2.8} />
+            Upload
+          </button>
+        </div>
+
+        {/* HERO */}
+        <div
+          className="syl-card3d"
+          style={{
+            background: "linear-gradient(135deg, #000820 0%, #001466 32%, #0033CC 68%, #0957F7 100%)",
+            borderRadius: 26, padding: 22, marginBottom: 14,
+            position: "relative", overflow: "hidden",
+            boxShadow: "0 1px 2px rgba(0,8,60,.15), 0 12px 32px rgba(0,8,60,.28)",
+          }}
+        >
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(255,255,255,.09) 0%, transparent 45%)", pointerEvents: "none" }} />
+          <div style={{ position: "relative", zIndex: 2 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+              <div style={{ width: 42, height: 42, borderRadius: 13, background: "rgba(255,255,255,.14)", backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)", border: "0.5px solid rgba(255,255,255,.22)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>
+                <FileText className="w-5 h-5" strokeWidth={2.2} />
+              </div>
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 800, color: "rgba(255,255,255,.72)", letterSpacing: "1.8px", textTransform: "uppercase" }}>Total Documents</div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,.5)", marginTop: 2, fontWeight: 500, letterSpacing: "-0.1px" }}>Across all classes</div>
+              </div>
+              <div style={{ marginLeft: "auto", background: "rgba(0,232,102,.18)", border: "0.5px solid rgba(0,232,102,.5)", color: "#6FFFAA", padding: "5px 12px", borderRadius: 100, fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", gap: 6, letterSpacing: "0.3px" }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#00FF88", boxShadow: "0 0 8px #00FF88" }} />
+                Synced
+              </div>
+            </div>
+            <div style={{ fontSize: 56, fontWeight: 800, color: "#fff", letterSpacing: "-2.6px", lineHeight: 1, marginBottom: 8, display: "flex", alignItems: "baseline", gap: 8 }}>
+              {docs.length}
+              <span style={{ fontSize: 22, fontWeight: 700, color: "rgba(255,255,255,.65)", letterSpacing: "-0.4px" }}>
+                {docs.length === 1 ? "document" : "documents"}
+              </span>
+            </div>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,.72)", marginBottom: 20, fontWeight: 500, letterSpacing: "-0.15px" }}>
+              <b style={{ color: "#fff", fontWeight: 700 }}>{formatBytes(totalBytes)} stored</b>
+              {docs.length === 0 ? " — upload your first resource to get started." : " — plenty of space for more resources."}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 1, background: "rgba(255,255,255,.1)", borderRadius: 14, padding: 1, overflow: "hidden" }}>
+              <div style={{ background: "rgba(0,20,80,.55)", padding: "12px 4px", textAlign: "center" }}>
+                <div style={{ fontSize: 18, fontWeight: 800, color: "#fff", letterSpacing: "-0.5px" }}>{classes.length}</div>
+                <div style={{ fontSize: 8, fontWeight: 700, color: "rgba(255,255,255,.58)", letterSpacing: "1.1px", textTransform: "uppercase", marginTop: 3 }}>Classes</div>
+              </div>
+              <div style={{ background: "rgba(0,20,80,.55)", padding: "12px 4px", textAlign: "center" }}>
+                <div style={{ fontSize: 18, fontWeight: 800, color: "#FF9AA9", letterSpacing: "-0.5px" }}>{docs.length}</div>
+                <div style={{ fontSize: 8, fontWeight: 700, color: "rgba(255,255,255,.58)", letterSpacing: "1.1px", textTransform: "uppercase", marginTop: 3 }}>{docs.length === 1 ? "PDF" : "PDFs"}</div>
+              </div>
+              <div style={{ background: "rgba(0,20,80,.55)", padding: "12px 4px", textAlign: "center" }}>
+                <div style={{ fontSize: 18, fontWeight: 800, color: "#6FFFAA", letterSpacing: "-0.5px" }}>{formatBytes(totalBytes)}</div>
+                <div style={{ fontSize: 8, fontWeight: 700, color: "rgba(255,255,255,.58)", letterSpacing: "1.1px", textTransform: "uppercase", marginTop: 3 }}>Storage</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Filter chips */}
+        <div className="syl-chip-scroll" style={{ display: "flex", gap: 7, overflowX: "auto", margin: "0 -16px 14px", padding: "2px 16px 6px" }}>
+          {filterChips.map(ch => {
+            const active = activeFilter === ch.key;
+            return (
+              <button
+                key={ch.key}
+                type="button"
+                onClick={() => setActiveFilter(ch.key)}
+                className="syl-press"
+                style={{
+                  flexShrink: 0, padding: "8px 14px", borderRadius: 100,
+                  background: active ? "#0957F7" : "#fff",
+                  color: active ? "#fff" : "#5070B0",
+                  fontSize: 12, fontWeight: 700, letterSpacing: "-0.2px",
+                  boxShadow: active ? "0 1px 2px rgba(9,87,247,.2), 0 3px 10px rgba(9,87,247,.3)" : "0 0.5px 1px rgba(9,87,247,.04), 0 2px 6px rgba(9,87,247,.06)",
+                  display: "flex", alignItems: "center", gap: 5, border: "none",
+                  cursor: "pointer", fontFamily: "inherit",
+                }}
+              >
+                {ch.label}
+                <span style={{
+                  background: active ? "rgba(255,255,255,.22)" : "#F4F7FE",
+                  color: active ? "#fff" : "#5070B0",
+                  fontSize: 10, fontWeight: 800, padding: "1px 7px", borderRadius: 100,
+                }}>
+                  {ch.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Body */}
+        {loading ? (
+          <div className="syl-card3d" style={{ background: "#fff", borderRadius: 20, padding: "40px 14px", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, boxShadow: "0 0.5px 1px rgba(9,87,247,.04), 0 4px 14px rgba(9,87,247,.08)" }}>
+            <Loader2 className="w-5 h-5 animate-spin" style={{ color: "#5070B0" }} />
+            <span style={{ fontSize: 12, color: "#5070B0" }}>Loading documents…</span>
+          </div>
+        ) : classes.length === 0 ? (
+          <div className="syl-card3d" style={{ background: "#fff", borderRadius: 20, padding: "24px 20px", textAlign: "center", boxShadow: "0 0.5px 1px rgba(9,87,247,.04), 0 4px 14px rgba(9,87,247,.08)" }}>
+            <div style={{
+              width: 68, height: 68, borderRadius: 20,
+              background: "linear-gradient(145deg, rgba(9,87,247,.08) 0%, rgba(123,63,244,.08) 100%)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              margin: "0 auto 14px", color: "#0957F7",
+              boxShadow: "0 0 0 7px rgba(9,87,247,.04), inset 0 1px 0 rgba(255,255,255,.6)",
+            }}>
+              <Library className="w-7 h-7" />
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: "#001040", marginBottom: 5, letterSpacing: "-0.3px" }}>No classes assigned yet</div>
+            <div style={{ fontSize: 12, color: "#5070B0", fontWeight: 500, letterSpacing: "-0.1px", lineHeight: 1.5 }}>
+              Once your principal assigns you classes, you'll be able to upload documents here.
+            </div>
+          </div>
+        ) : classes.map(c => {
+          const all = docsByClass.get(c.classId) || [];
+          const visible = filterDocs(all);
+          // Hide a class entirely if the active filter is another class
+          const isThisClassFilter = activeFilter === c.classId;
+          const isOtherClassFilter = classes.some(cc => cc.classId === activeFilter) && !isThisClassFilter;
+          if (isOtherClassFilter) return null;
+          // For syllabus/notes/all: if class has no docs AND filter isn't "all", skip unless it's the "all" filter
+          if (activeFilter !== "all" && !isThisClassFilter && visible.length === 0) return null;
+
+          const clsColor = classColor(c.classId);
+
+          return (
+            <div key={c.classId} style={{ marginBottom: 14 }}>
+              {/* Class group head */}
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 4px 10px" }}>
+                <div style={{ width: 30, height: 30, borderRadius: 10, background: clsColor, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/>
+                  </svg>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "#001040", letterSpacing: "-0.3px", display: "flex", alignItems: "center", gap: 7 }}>
+                    <span style={{ background: `${clsColor}1F`, color: clsColor, padding: "2px 8px", borderRadius: 6, fontSize: 10, fontWeight: 800, letterSpacing: "-0.1px" }}>{c.className}</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: "#5070B0", fontWeight: 600, marginTop: 2, letterSpacing: "-0.1px" }}>
+                    {all.length} {all.length === 1 ? "document" : "documents"}
+                    {all.length > 0 && ` · ${formatBytes(all.reduce((a, d) => a + (d.fileSize || 0), 0))}`}
+                  </div>
+                </div>
+                {activeFilter !== "all" && isThisClassFilter && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveFilter("all")}
+                    className="syl-press"
+                    style={{
+                      fontSize: 11, fontWeight: 700, color: "#0957F7",
+                      letterSpacing: "-0.1px", background: "none", border: "none",
+                      display: "flex", alignItems: "center", cursor: "pointer",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    All <span style={{ fontSize: 16, opacity: 0.8, marginLeft: 2, marginTop: -3 }}>›</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Cards */}
+              {visible.length === 0 ? (
+                <div className="syl-card3d" style={{ background: "#fff", borderRadius: 20, padding: "24px 20px", textAlign: "center", boxShadow: "0 0.5px 1px rgba(9,87,247,.04), 0 4px 14px rgba(9,87,247,.08)" }}>
+                  <div style={{
+                    width: 68, height: 68, borderRadius: 20,
+                    background: "linear-gradient(145deg, rgba(9,87,247,.08) 0%, rgba(123,63,244,.08) 100%)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    margin: "0 auto 14px", color: "#0957F7", position: "relative",
+                    boxShadow: "0 0 0 7px rgba(9,87,247,.04), inset 0 1px 0 rgba(255,255,255,.6)",
+                  }}>
+                    <FileText className="w-7 h-7" strokeWidth={2} />
+                    <div style={{
+                      position: "absolute", top: -4, right: -4,
+                      width: 24, height: 24, background: "#0957F7",
+                      borderRadius: "50%", border: "3px solid #fff",
+                      boxShadow: "0 2px 6px rgba(9,87,247,.35)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      color: "#fff", fontSize: 13, fontWeight: 800, lineHeight: 1,
+                    }}>+</div>
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "#001040", marginBottom: 5, letterSpacing: "-0.3px" }}>No documents yet</div>
+                  <div style={{ fontSize: 12, color: "#5070B0", fontWeight: 500, letterSpacing: "-0.1px", lineHeight: 1.5, marginBottom: 12 }}>
+                    Upload syllabus or notes for {c.className} class.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openMobileSheet(c.classId)}
+                    className="syl-press"
+                    style={{
+                      background: "#0957F7", color: "#fff",
+                      padding: "8px 14px", borderRadius: 10,
+                      fontSize: 11, fontWeight: 700, border: "none",
+                      boxShadow: "0 1px 2px rgba(9,87,247,.2), 0 3px 10px rgba(9,87,247,.3)",
+                      cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5,
+                      letterSpacing: "-0.2px", fontFamily: "inherit",
+                    }}
+                  >
+                    <Upload className="w-3 h-3" strokeWidth={2.8} />
+                    Upload PDF
+                  </button>
+                </div>
+              ) : visible.map(d => (
+                <div
+                  key={d.id}
+                  className="syl-card3d"
+                  style={{
+                    background: "#fff", borderRadius: 18, padding: 14, marginBottom: 10,
+                    position: "relative", overflow: "hidden",
+                    boxShadow: "0 0.5px 1px rgba(9,87,247,.04), 0 4px 14px rgba(9,87,247,.08)",
+                  }}
+                >
+                  <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: "#FF3355" }} />
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 12 }}>
+                    {/* PDF icon */}
+                    <div style={{
+                      width: 44, height: 52, borderRadius: 10,
+                      background: "linear-gradient(145deg, #FFF5F7 0%, #FFE1E6 100%)",
+                      border: "0.5px solid rgba(255,51,85,.25)",
+                      display: "flex", alignItems: "flex-end", justifyContent: "center",
+                      paddingBottom: 6, position: "relative", flexShrink: 0,
+                      boxShadow: "0 2px 6px rgba(255,51,85,.1)",
+                    }}>
+                      <div style={{
+                        position: "absolute", top: 0, right: 0,
+                        width: 12, height: 12, background: "#fff",
+                        borderLeft: "0.5px solid rgba(255,51,85,.25)",
+                        borderBottom: "0.5px solid rgba(255,51,85,.25)",
+                        borderRadius: "0 10px 0 4px",
+                        boxShadow: "-1px 1px 2px rgba(255,51,85,.05)",
+                      }} />
+                      <div style={{ fontSize: 9, fontWeight: 900, color: "#FF3355", letterSpacing: "0.5px", lineHeight: 1, position: "relative", zIndex: 2 }}>PDF</div>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "#001040", letterSpacing: "-0.3px", lineHeight: 1.25, marginBottom: 4, wordBreak: "break-word" }}>{d.title}</div>
+                      <div style={{ fontSize: 11, color: "#5070B0", fontWeight: 500, letterSpacing: "-0.1px", marginBottom: 6, wordBreak: "break-all", lineHeight: 1.4 }}>{d.fileName}</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 10, fontWeight: 700, color: "#99AACC", letterSpacing: "0.2px" }}>
+                        <span style={{ background: "rgba(255,51,85,.08)", color: "#FF3355", padding: "2px 7px", borderRadius: 6, fontSize: 10, fontWeight: 800 }}>{formatBytes(d.fileSize)}</span>
+                        <span style={{ color: "#99AACC" }}>·</span>
+                        <span>{formatRelative(d.uploadedAt)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Actions */}
+                  <div style={{ display: "flex", gap: 7 }}>
+                    {isHttpUrl(d.fileUrl) ? (
+                      <a
+                        href={d.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="syl-press"
+                        style={{
+                          flex: 1, height: 38, borderRadius: 11,
+                          background: "#0957F7", color: "#fff",
+                          fontSize: 12, fontWeight: 700, letterSpacing: "-0.2px",
+                          display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+                          textDecoration: "none",
+                          boxShadow: "0 1px 2px rgba(9,87,247,.2), 0 3px 10px rgba(9,87,247,.25)",
+                        }}
+                      >
+                        <Eye className="w-3 h-3" strokeWidth={2.6} />
+                        View PDF
+                      </a>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled
+                        style={{
+                          flex: 1, height: 38, borderRadius: 11,
+                          background: "#EAF0FB", color: "#99AACC",
+                          fontSize: 12, fontWeight: 700, letterSpacing: "-0.2px",
+                          display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+                          border: "none", cursor: "not-allowed", fontFamily: "inherit",
+                        }}
+                      >
+                        <Eye className="w-3 h-3" /> Invalid URL
+                      </button>
+                    )}
+                    {isHttpUrl(d.fileUrl) && (
+                      <a
+                        href={d.fileUrl}
+                        download={d.fileName}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="syl-press"
+                        style={{
+                          flex: 1, height: 38, borderRadius: 11,
+                          background: "#F4F7FE", color: "#002080",
+                          fontSize: 12, fontWeight: 700, letterSpacing: "-0.2px",
+                          display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+                          textDecoration: "none",
+                        }}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Save
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(d)}
+                      aria-label={`Delete ${d.title}`}
+                      className="syl-press"
+                      style={{
+                        flex: "0 0 42px", height: 38, borderRadius: 11,
+                        background: "rgba(255,51,85,.08)", color: "#FF3355",
+                        border: "none", cursor: "pointer", fontFamily: "inherit",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" strokeWidth={2.6} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })}
+
+        {/* AI Documents Intelligence */}
+        {!loading && classes.length > 0 && (
+          <div
+            className="syl-card3d"
+            style={{
+              background: "linear-gradient(140deg, #000820 0%, #001888 28%, #0033CC 64%, #0957F7 100%)",
+              borderRadius: 24, padding: 20, marginTop: 14,
+              position: "relative", overflow: "hidden",
+              boxShadow: "0 1px 2px rgba(0,8,60,.18), 0 12px 32px rgba(0,8,60,.3)",
+            }}
+          >
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(255,255,255,.09) 0%, transparent 45%)", pointerEvents: "none" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 12, position: "relative", zIndex: 2 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 13, background: "rgba(255,255,255,.14)", backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)", border: "0.5px solid rgba(255,255,255,.22)", display: "flex", alignItems: "center", justifyContent: "center", color: "#FFDD55", fontSize: 19 }}>⚡</div>
+              <div style={{ fontSize: 10, fontWeight: 900, color: "rgba(255,255,255,.95)", letterSpacing: "1.8px", textTransform: "uppercase" }}>AI Documents Intelligence</div>
+              <div style={{ marginLeft: "auto", background: "rgba(123,63,244,.3)", border: "0.5px solid rgba(155,95,255,.5)", color: "#DCC8FF", padding: "4px 10px", borderRadius: 100, fontSize: 9, fontWeight: 800, letterSpacing: "0.5px" }}>Tip</div>
+            </div>
+            <div style={{ fontSize: 13, lineHeight: 1.6, color: "rgba(255,255,255,.85)", letterSpacing: "-0.15px", marginBottom: 14, position: "relative", zIndex: 2 }}>
+              {(() => {
+                const emptyClasses = classes.filter(c => (docsByClass.get(c.classId) || []).length === 0);
+                if (docs.length === 0) return <>You have <strong style={{ color: "#fff", fontWeight: 700 }}>no documents uploaded yet</strong>. Start by uploading a <strong style={{ color: "#fff", fontWeight: 700 }}>syllabus PDF</strong> and <strong style={{ color: "#fff", fontWeight: 700 }}>lesson notes</strong> so students can access learning material anytime.</>;
+                if (emptyClasses.length > 0) return <>You have <strong style={{ color: "#fff", fontWeight: 700 }}>{docs.length} document{docs.length === 1 ? "" : "s"}</strong> uploaded. Consider adding a <strong style={{ color: "#fff", fontWeight: 700 }}>syllabus PDF</strong> and lesson notes for <strong style={{ color: "#fff", fontWeight: 700 }}>{emptyClasses.map(c => c.className).join(", ")}</strong> so students there can access learning material.</>;
+                return <>All your classes have documents. Great job — keep material fresh by uploading updates as new units begin.</>;
+              })()}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", background: "rgba(255,255,255,.1)", borderRadius: 12, padding: 1, gap: 1, overflow: "hidden", position: "relative", zIndex: 2 }}>
+              <div style={{ background: "rgba(0,20,80,.55)", padding: "11px 4px", textAlign: "center" }}>
+                <div style={{ fontSize: 17, fontWeight: 800, color: "#fff", letterSpacing: "-0.4px" }}>{docs.length}</div>
+                <div style={{ fontSize: 8, fontWeight: 700, color: "rgba(255,255,255,.6)", letterSpacing: "1px", textTransform: "uppercase", marginTop: 3 }}>Uploaded</div>
+              </div>
+              <div style={{ background: "rgba(0,20,80,.55)", padding: "11px 4px", textAlign: "center" }}>
+                <div style={{ fontSize: 17, fontWeight: 800, color: "#fff", letterSpacing: "-0.4px" }}>{classes.length}</div>
+                <div style={{ fontSize: 8, fontWeight: 700, color: "rgba(255,255,255,.6)", letterSpacing: "1px", textTransform: "uppercase", marginTop: 3 }}>Classes</div>
+              </div>
+              <div style={{ background: "rgba(0,20,80,.55)", padding: "11px 4px", textAlign: "center" }}>
+                <div style={{ fontSize: 17, fontWeight: 800, color: "#6FFFAA", letterSpacing: "-0.4px" }}>{formatBytes(totalBytes)}</div>
+                <div style={{ fontSize: 8, fontWeight: 700, color: "rgba(255,255,255,.6)", letterSpacing: "1px", textTransform: "uppercase", marginTop: 3 }}>Used</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+      </div>
+
+      {/* ── Mobile Upload Bottom Sheet ────────────────────────────────── */}
+      {modalOpen && (
+        <>
+          <div
+            onClick={() => !uploading && closeModal()}
+            style={{
+              position: "fixed", inset: 0, zIndex: 200,
+              background: "rgba(0,10,40,.5)",
+              backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)",
+              animation: "sylBackdropIn .35s cubic-bezier(.2,.9,.3,1) both",
+            }}
+          />
+          <div
+            style={{
+              position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 201,
+              background: "#fff",
+              borderRadius: "26px 26px 0 0",
+              maxHeight: "90vh",
+              display: "flex", flexDirection: "column",
+              boxShadow: "0 -20px 60px rgba(0,8,60,.3)",
+              animation: "sylSheetIn .45s cubic-bezier(.34,1.56,.64,1) both",
+              fontFamily: "inherit",
+            }}
+          >
+            <div style={{ width: 40, height: 5, background: "rgba(9,87,247,.2)", borderRadius: 100, margin: "10px auto 6px", flexShrink: 0 }} />
+
+            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 18px 14px", borderBottom: "0.5px solid rgba(9,87,247,.08)", flexShrink: 0 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 13, background: "#0957F7", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Upload className="w-5 h-5" strokeWidth={2.2} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 17, fontWeight: 800, color: "#001040", letterSpacing: "-0.4px" }}>Upload Document</div>
+                <div style={{ fontSize: 11, color: "#5070B0", fontWeight: 500, marginTop: 2, letterSpacing: "-0.1px" }}>PDF only · Max 50 MB</div>
+              </div>
+              <button
+                type="button"
+                onClick={closeModal}
+                disabled={uploading}
+                className="syl-press"
+                aria-label="Close"
+                style={{
+                  width: 30, height: 30, borderRadius: 10, background: "#F4F7FE",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: "#002080", flexShrink: 0, cursor: "pointer",
+                  border: "none", fontFamily: "inherit",
+                  opacity: uploading ? 0.5 : 1,
+                }}
+              >
+                <X className="w-4 h-4" strokeWidth={2.4} />
+              </button>
+            </div>
+
+            <div style={{ flex: 1, overflowY: "auto", padding: 18 }}>
+              {/* Class segmented */}
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 9, fontWeight: 800, color: "#5070B0", letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 9, display: "flex", alignItems: "center", gap: 6 }}>
+                  Class
+                  <span style={{ color: "#FF3355", fontSize: 11, fontWeight: 900 }}>*</span>
+                </div>
+                <div style={{
+                  display: "flex", gap: 4,
+                  background: "#F4F7FE", padding: 3, borderRadius: 11,
+                  flexWrap: classes.length > 3 ? "wrap" : "nowrap",
+                }}>
+                  {classes.map(c => {
+                    const active = mobileSelClassId === c.classId;
+                    return (
+                      <button
+                        key={c.classId}
+                        type="button"
+                        disabled={uploading}
+                        onClick={() => { setMobileSelClassId(c.classId); setSelClassId(c.classId); }}
+                        style={{
+                          flex: classes.length > 3 ? "1 1 45%" : 1,
+                          padding: "9px 10px", borderRadius: 8,
+                          fontSize: 13, fontWeight: active ? 800 : 700,
+                          color: active ? "#0957F7" : "#5070B0",
+                          background: active ? "#fff" : "transparent",
+                          boxShadow: active ? "0 1px 2px rgba(0,0,0,.04), 0 2px 6px rgba(9,87,247,.12)" : "none",
+                          textAlign: "center", letterSpacing: "-0.2px",
+                          border: "none", cursor: uploading ? "not-allowed" : "pointer",
+                          fontFamily: "inherit",
+                          transition: "all .22s cubic-bezier(.2,.9,.3,1)",
+                        }}
+                      >
+                        {c.className}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Title */}
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 9, fontWeight: 800, color: "#5070B0", letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 9, display: "flex", alignItems: "center", gap: 6 }}>
+                  Title
+                  <span style={{ color: "#FF3355", fontSize: 11, fontWeight: 900 }}>*</span>
+                </div>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  maxLength={100}
+                  disabled={uploading}
+                  placeholder="e.g. Term 1 Syllabus, Unit 3 Notes"
+                  style={{
+                    width: "100%", padding: "13px 14px",
+                    background: title ? "#fff" : "#F4F7FE",
+                    border: "0.5px solid rgba(9,87,247,.08)",
+                    borderRadius: 12,
+                    fontSize: 14, fontWeight: title ? 600 : 500, color: "#001040",
+                    fontFamily: "inherit", letterSpacing: "-0.2px", outline: "none",
+                  }}
+                />
+                <div style={{ fontSize: 10, color: "#99AACC", marginTop: 6, fontWeight: 500, letterSpacing: "-0.1px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span>Students will see this title</span>
+                  <span style={{ color: "#5070B0", fontWeight: 600 }}>{title.length} / 100</span>
+                </div>
+              </div>
+
+              {/* File picker / preview */}
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 9, fontWeight: 800, color: "#5070B0", letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 9, display: "flex", alignItems: "center", gap: 6 }}>
+                  PDF File
+                  <span style={{ color: "#FF3355", fontSize: 11, fontWeight: 900 }}>*</span>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="application/pdf"
+                  onChange={onFileChosen}
+                  disabled={uploading}
+                  style={{ display: "none" }}
+                />
+                {pickedFile ? (
+                  <div style={{
+                    background: "#fff",
+                    border: "0.5px solid rgba(255,51,85,.2)",
+                    borderRadius: 14, padding: 12,
+                    display: "flex", alignItems: "center", gap: 12,
+                    boxShadow: "0 0.5px 1px rgba(255,51,85,.04), 0 2px 8px rgba(255,51,85,.06)",
+                  }}>
+                    <div style={{
+                      width: 36, height: 44, borderRadius: 10,
+                      background: "linear-gradient(145deg, #FFF5F7 0%, #FFE1E6 100%)",
+                      border: "0.5px solid rgba(255,51,85,.25)",
+                      display: "flex", alignItems: "flex-end", justifyContent: "center",
+                      paddingBottom: 5, position: "relative", flexShrink: 0,
+                    }}>
+                      <div style={{ fontSize: 8, fontWeight: 900, color: "#FF3355", letterSpacing: "0.5px" }}>PDF</div>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#001040", letterSpacing: "-0.2px", wordBreak: "break-all", lineHeight: 1.3, marginBottom: 3 }}>{pickedFile.name}</div>
+                      <div style={{ fontSize: 10, color: "#5070B0", fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ background: "rgba(0,200,83,.12)", color: "#00C853", padding: "1px 7px", borderRadius: 5, fontSize: 9, fontWeight: 800, display: "flex", alignItems: "center", gap: 4 }}>
+                          <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#00C853" }} />
+                          {formatBytes(pickedFile.size)}
+                        </span>
+                        <span>Ready to upload</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      className="syl-press"
+                      style={{
+                        fontSize: 11, fontWeight: 700, color: "#0957F7",
+                        letterSpacing: "-0.1px", padding: "6px 10px",
+                        borderRadius: 9, background: "rgba(9,87,247,.08)",
+                        border: "none", cursor: "pointer", fontFamily: "inherit",
+                        flexShrink: 0,
+                      }}
+                    >
+                      Change
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    style={{
+                      width: "100%",
+                      border: "1.5px dashed rgba(9,87,247,.3)",
+                      background: "rgba(9,87,247,.03)",
+                      borderRadius: 14, padding: "22px 14px",
+                      textAlign: "center", cursor: "pointer",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    <div style={{
+                      width: 46, height: 46, borderRadius: 14,
+                      background: "rgba(9,87,247,.1)", color: "#0957F7",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      margin: "0 auto 10px",
+                    }}>
+                      <Upload className="w-5 h-5" strokeWidth={2.2} />
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#001040", letterSpacing: "-0.2px", marginBottom: 4 }}>Choose PDF file</div>
+                    <div style={{ fontSize: 11, color: "#5070B0", fontWeight: 500 }}>Tap to browse · PDF only · max 50 MB</div>
+                  </button>
+                )}
+              </div>
+
+              {/* Upload progress */}
+              {uploading && (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 11, color: "#5070B0", marginBottom: 6, fontWeight: 600 }}>
+                    <span>Uploading…</span>
+                    <span style={{ color: "#0957F7", fontWeight: 800 }}>{progress.toFixed(0)}%</span>
+                  </div>
+                  <div style={{ height: 6, borderRadius: 100, background: "#EAF0FB", overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${progress}%`, background: "linear-gradient(90deg, #7B3FF4, #0957F7)", transition: "width .2s linear" }} />
+                  </div>
+                  <div style={{ fontSize: 10, color: "#99AACC", marginTop: 6, fontWeight: 500 }}>Please don't close this sheet.</div>
+                </div>
+              )}
+
+              {/* Info callout */}
+              <div style={{
+                background: "rgba(9,87,247,.06)",
+                border: "0.5px solid rgba(9,87,247,.18)",
+                borderRadius: 14, padding: "12px 14px",
+                display: "flex", gap: 10, alignItems: "flex-start",
+              }}>
+                <div style={{ width: 26, height: 26, borderRadius: 9, background: "#0957F7", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="8"/>
+                  </svg>
+                </div>
+                <div style={{ flex: 1, fontSize: 11, color: "#002080", lineHeight: 1.5, fontWeight: 500, letterSpacing: "-0.1px" }}>
+                  <b style={{ color: "#001040", fontWeight: 700 }}>Students will be notified</b> once this document is uploaded. They can view and download it from their portal.
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 10, padding: "14px 18px 18px", borderTop: "0.5px solid rgba(9,87,247,.08)", background: "#fff", flexShrink: 0 }}>
+              <button
+                type="button"
+                onClick={closeModal}
+                disabled={uploading}
+                className="syl-press"
+                style={{
+                  flex: "0 0 100px", height: 46, borderRadius: 14,
+                  background: "#F4F7FE", color: "#002080",
+                  fontSize: 13, fontWeight: 700, border: "none",
+                  letterSpacing: "-0.2px", cursor: uploading ? "not-allowed" : "pointer",
+                  fontFamily: "inherit", opacity: uploading ? 0.5 : 1,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleUpload}
+                disabled={uploading || !title.trim() || !pickedFile || !selClassId}
+                className="syl-press"
+                style={{
+                  flex: 1, height: 46, borderRadius: 14,
+                  background: "#0957F7", color: "#fff",
+                  fontSize: 14, fontWeight: 800, border: "none",
+                  letterSpacing: "-0.2px",
+                  cursor: (uploading || !title.trim() || !pickedFile || !selClassId) ? "not-allowed" : "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                  boxShadow: "0 1px 2px rgba(9,87,247,.25), 0 6px 16px rgba(9,87,247,.35)",
+                  fontFamily: "inherit",
+                  opacity: (uploading || !title.trim() || !pickedFile || !selClassId) ? 0.5 : 1,
+                }}
+              >
+                {uploading ? <><Loader2 className="w-4 h-4 animate-spin" /> Uploading…</> : <><Upload className="w-4 h-4" strokeWidth={2.8} /> Upload</>}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+    {/* ═══════════════════ END MOBILE VIEW ═══════════════════ */}
+
+    {/* ═══════════════════ DESKTOP VIEW ═══════════════════ */}
+    <div className="hidden md:block text-left min-h-[60vh]">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
         <div>
@@ -482,10 +1225,10 @@ const Syllabus = () => {
         </div>
       )}
 
-      {/* ── Upload Modal ─────────────────────────────────────────── */}
+      {/* ── Upload Modal (Desktop only) ─────────────────────────────── */}
       {modalOpen && (
         <div
-          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+          className="hidden md:flex fixed inset-0 z-50 bg-black/50 items-center justify-center p-4"
           onClick={closeModal}
         >
           <div
@@ -617,6 +1360,8 @@ const Syllabus = () => {
         </div>
       )}
     </div>
+    {/* ═══════════════════ END DESKTOP VIEW ═══════════════════ */}
+    </>
   );
 };
 

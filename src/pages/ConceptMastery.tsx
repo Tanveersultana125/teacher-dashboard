@@ -38,6 +38,13 @@ const getInitials = (name: string) => {
   return (p.length >= 2 ? p[0][0] + p[1][0] : (p[0]?.[0] || '?')).toUpperCase();
 };
 
+// Mobile avatar color palette (mockup design)
+const MOB_AV_PALETTE = ['#7B3FF4', '#00C853', '#0957F7', '#FF8800', '#00B8D4', '#C2255C', '#6741D9'];
+const mobAvatarColor = (name: string) => {
+  const sum = (name || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  return MOB_AV_PALETTE[sum % MOB_AV_PALETTE.length];
+};
+
 // Legacy avatar colors (kept for roster build — not used in render)
 const avatarColors = [
   "bg-blue-600", "bg-indigo-600", "bg-violet-600", "bg-teal-600",
@@ -73,6 +80,7 @@ const ConceptMastery = () => {
   const [selectedClassId, setSelectedClassId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
 
   // ── 1. Fetch Teacher's Active Assignments ─────────────────────────────────
   useEffect(() => {
@@ -341,245 +349,507 @@ const ConceptMastery = () => {
     <div style={{ fontFamily: 'inherit', minHeight: '100vh' }} className="text-left pb-24">
 
       {/* ═══════════════════ MOBILE VIEW ═══════════════════ */}
-      <div className="md:hidden" style={{ background: T.s1 }}>
+      <div
+        className="md:hidden -mx-4 sm:-mx-6 px-4 sm:px-6 pt-[10px] pb-7"
+        style={{
+          background: 'linear-gradient(148deg, #EEF4FF 0%, #DCE6FF 100%)',
+          minHeight: '100vh',
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
+        <style>{`
+          .cm-card3d { transition: transform .35s cubic-bezier(.2,.9,.3,1), box-shadow .35s cubic-bezier(.2,.9,.3,1); transform-style: preserve-3d; will-change: transform; }
+          @media (hover:hover) {
+            .cm-card3d:hover { transform: translateY(-4px) rotateX(4deg) rotateY(-3deg) scale(1.012); box-shadow: 0 1px 2px rgba(9,87,247,.08), 0 24px 44px rgba(9,87,247,.18), 0 8px 16px rgba(9,87,247,.1); }
+          }
+          .cm-card3d:active { transform: translateY(-1px) scale(.985); box-shadow: 0 1px 2px rgba(9,87,247,.1), 0 6px 16px rgba(9,87,247,.14); }
+          .cm-press { transition: transform .18s cubic-bezier(.34,1.56,.64,1); }
+          .cm-press:active { transform: scale(.94); }
+          @keyframes cmFadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+          @keyframes cmPulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+          .cm-enter > * { animation: cmFadeUp .5s cubic-bezier(.34,1.56,.64,1) both; }
+          .cm-enter > *:nth-child(1) { animation-delay: .04s; }
+          .cm-enter > *:nth-child(2) { animation-delay: .10s; }
+          .cm-enter > *:nth-child(3) { animation-delay: .16s; }
+          .cm-enter > *:nth-child(4) { animation-delay: .22s; }
+          .cm-enter > *:nth-child(5) { animation-delay: .28s; }
+          .cm-enter > *:nth-child(6) { animation-delay: .34s; }
+          .cm-enter > *:nth-child(7) { animation-delay: .40s; }
+          .cm-enter > *:nth-child(8) { animation-delay: .46s; }
+          .cm-pulse-dot { animation: cmPulse 2s ease-in-out infinite; }
+          .cm-unit-fill { transition: width 1s cubic-bezier(.2,.9,.3,1); }
+          .cm-search-enter { animation: cmFadeUp .3s cubic-bezier(.34,1.56,.64,1) both; }
+        `}</style>
 
-      {/* ── Dark hero ─────────────────────────────────────────────────────── */}
-      <div className="-mx-4 sm:-mx-6 px-[22px] pb-6 bg-[#162E93] md:bg-[#08090C]">
-        <div style={{ fontSize: 9, fontWeight: 500, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 5, paddingTop: 16 }}>
-          Concept mastery
-        </div>
-        <div style={{ fontSize: 22, fontWeight: 500, color: '#fff', letterSpacing: '-0.5px', lineHeight: 1.1, marginBottom: 4 }}>
-          Student<br />understanding
-        </div>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.30)', lineHeight: 1.4 }}>
-          Track concept mastery across all assessed topics.
-        </div>
-        <div style={{ display: 'flex', gap: 7, marginTop: 14, flexWrap: 'wrap' }}>
-          {[
-            { ico: <svg viewBox="0 0 10 10" width="9" height="9" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 8.5c0 0 1.5-2 4-2s4 2 4 2"/><circle cx="5" cy="4" r="2"/></svg>, strong: String(filtered.length), label: ' Students' },
-            { ico: <svg viewBox="0 0 10 10" width="9" height="9" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="1" width="8" height="8" rx="1.5"/><line x1="3" y1="5" x2="7" y2="5"/></svg>, strong: String(dynamicHeaders.length), label: ' Concepts' },
-            { ico: <svg viewBox="0 0 10 10" width="9" height="9" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="5" cy="5" r="4"/><line x1="5" y1="3" x2="5" y2="5.5"/><circle cx="5" cy="7" r=".6" fill="rgba(255,255,255,.4)" stroke="none"/></svg>, label: heroStatus },
-          ].map((chip, i) => (
-            <div key={i} style={{ padding: '5px 10px', borderRadius: 20, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.06)', fontSize: 10, color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', gap: 4 }}>
-              {chip.ico}
-              {chip.strong && <strong style={{ color: '#fff', fontWeight: 500 }}>{chip.strong}</strong>}
-              {chip.label}
+        <div className="cm-enter" style={{ display: 'flex', flexDirection: 'column' }}>
+
+          {/* Page Header */}
+          <div style={{ padding: '8px 2px 14px' }}>
+            <div style={{ fontSize: 9, fontWeight: 800, color: '#5070B0', letterSpacing: '1.8px', textTransform: 'uppercase', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span style={{ width: 5, height: 5, borderRadius: 2, background: '#0957F7', display: 'inline-block' }} />
+              Teacher Dashboard · Mastery
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Body ──────────────────────────────────────────────────────────── */}
-      <div className="pt-4 flex flex-col gap-3">
-
-        {/* Toolbar */}
-        <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
-          <div style={{ position: 'relative', flex: 1 }}>
-            <svg style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 13, height: 13, stroke: T.ink2, fill: 'none', strokeWidth: 1.5, strokeLinecap: 'round', pointerEvents: 'none' }} viewBox="0 0 14 14">
-              <circle cx="6" cy="6" r="4"/><line x1="9" y1="9" x2="12.5" y2="12.5"/>
-            </svg>
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search student..."
-              style={{ width: '100%', padding: '10px 10px 10px 28px', borderRadius: 11, border: `1px solid ${T.bdr}`, background: T.s0, fontSize: 12, color: T.ink0, fontFamily: 'inherit', outline: 'none' }}
-            />
+            <h1 style={{ fontSize: 26, fontWeight: 800, color: '#001040', letterSpacing: '-1.1px', lineHeight: 1.05, margin: 0 }}>Concept Mastery</h1>
+            <div style={{ fontSize: 12, color: '#5070B0', fontWeight: 500, marginTop: 6, letterSpacing: '-0.15px' }}>
+              Track student understanding across assessed concepts.
+            </div>
           </div>
-          <button type="button"
-            onClick={exportCSV}
-            disabled={masteryData.length === 0}
-            style={{ padding: '9px 13px', borderRadius: 11, background: T.ink0, border: 'none', color: '#fff', fontSize: 11, fontWeight: 500, cursor: masteryData.length === 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', opacity: masteryData.length === 0 ? 0.5 : 1 }}
-          >
-            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="6,2 6,9"/><polyline points="3,7 6,10 9,7"/><line x1="2" y1="10" x2="10" y2="10"/>
-            </svg>
-            Export
-          </button>
-        </div>
 
-        {/* Class selector */}
-        <div style={{ position: 'relative' }}>
-          <svg style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, stroke: T.blue, fill: 'none', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round', pointerEvents: 'none' }} viewBox="0 0 14 14">
-            <path d="M2 11V7L7 4l5 3v4"/><rect x="5" y="8" width="4" height="3" rx=".5"/>
-          </svg>
-          <select
-            value={selectedClassId}
-            onChange={e => setSelectedClassId(e.target.value)}
-            style={{ width: '100%', padding: '10px 34px 10px 34px', borderRadius: 12, border: `1px solid ${T.bdr}`, background: T.s0, fontSize: 13, color: T.ink0, fontFamily: 'inherit', outline: 'none', appearance: 'none', WebkitAppearance: 'none', fontWeight: 500, cursor: 'pointer' }}
-          >
-            {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-          <svg style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, stroke: T.ink2, fill: 'none', strokeWidth: 1.5, strokeLinecap: 'round', pointerEvents: 'none' }} viewBox="0 0 14 14">
-            <polyline points="3,5 7,9 11,5"/>
-          </svg>
-        </div>
-
-        {/* Legend */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 14px', padding: '10px 13px', background: T.s0, border: `1px solid ${T.bdr}`, borderRadius: 13 }}>
-          {[
-            { dot: T.green2, lbl: 'Mastered (80%+)' },
-            { dot: T.amber,  lbl: 'Developing (50–79%)' },
-            { dot: T.red,    lbl: 'Weak (<50%)' },
-            { dot: T.s2,     lbl: 'Not assessed', border: T.bdr },
-          ].map((l, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <div style={{ width: 7, height: 7, borderRadius: '50%', background: l.dot, flexShrink: 0, border: l.border ? `1px solid ${l.border}` : 'none' }} />
-              <div style={{ fontSize: 10, color: T.ink2 }}>{l.lbl}</div>
+          {/* Class picker + Search */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+            <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+              <div className="cm-card3d" style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '10px 12px', background: '#fff', borderRadius: 13,
+                boxShadow: '0 0.5px 1px rgba(9,87,247,.04), 0 2px 8px rgba(9,87,247,.06)',
+                cursor: 'pointer', minWidth: 0,
+              }}>
+                <div style={{ width: 30, height: 30, borderRadius: 10, background: '#7B3FF4', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>
+                  </svg>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 8, fontWeight: 800, color: '#5070B0', letterSpacing: '1.2px', textTransform: 'uppercase', lineHeight: 1 }}>Viewing</div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: '#001040', letterSpacing: '-0.2px', marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {selectedClass ? selectedClass.name : (classes.length === 0 ? 'No classes' : 'Select class')}
+                  </div>
+                </div>
+                <div style={{ color: '#99AACC', fontSize: 20, fontWeight: 400, lineHeight: 1, marginTop: -3, flexShrink: 0 }}>›</div>
+              </div>
+              <select
+                value={selectedClassId}
+                onChange={e => setSelectedClassId(e.target.value)}
+                aria-label="Select class"
+                style={{
+                  position: 'absolute', inset: 0, width: '100%', height: '100%',
+                  opacity: 0, cursor: 'pointer', border: 'none', background: 'transparent',
+                  appearance: 'none', WebkitAppearance: 'none',
+                }}
+              >
+                {classes.length === 0 && <option value="">No classes</option>}
+                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
             </div>
-          ))}
-        </div>
+            <button
+              type="button"
+              onClick={() => setShowSearch(v => !v)}
+              aria-label="Toggle search"
+              aria-pressed={showSearch}
+              className="cm-press"
+              style={{
+                width: 42, height: 42, borderRadius: 12,
+                background: showSearch ? '#0957F7' : '#fff',
+                color: showSearch ? '#fff' : '#0957F7',
+                border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0, cursor: 'pointer',
+                boxShadow: '0 0.5px 1px rgba(9,87,247,.04), 0 2px 8px rgba(9,87,247,.06)',
+              }}
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/>
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={exportCSV}
+              disabled={masteryData.length === 0}
+              aria-label="Export CSV"
+              className="cm-press"
+              style={{
+                width: 42, height: 42, borderRadius: 12,
+                background: '#fff', color: '#0957F7',
+                border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0, cursor: masteryData.length === 0 ? 'not-allowed' : 'pointer',
+                opacity: masteryData.length === 0 ? 0.45 : 1,
+                boxShadow: '0 0.5px 1px rgba(9,87,247,.04), 0 2px 8px rgba(9,87,247,.06)',
+              }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+            </button>
+          </div>
 
-        {/* Overall mastery ring card */}
-        <div style={{ background: T.s0, border: `1px solid ${T.bdr}`, borderRadius: 17, padding: '16px 14px', display: 'flex', alignItems: 'center', gap: 14 }}>
-          {/* SVG Ring */}
-          <div style={{ position: 'relative', width: 70, height: 70, flexShrink: 0 }}>
-            <svg width="70" height="70" viewBox="0 0 70 70">
-              {/* Track */}
-              <circle cx="35" cy="35" r="28" fill="none" stroke={T.s2} strokeWidth="6" />
-              {/* Progress */}
-              <circle
-                cx="35" cy="35" r="28" fill="none"
-                stroke={ringColor} strokeWidth="6"
-                strokeLinecap="round"
-                strokeDasharray={circumference}
-                strokeDashoffset={dashOffset}
-                transform="rotate(-90 35 35)"
-                style={{ transition: 'stroke-dashoffset 0.7s ease, stroke 0.3s' }}
+          {/* Search input — toggled */}
+          {showSearch && (
+            <div className="cm-search-enter" style={{ position: 'relative', marginBottom: 12 }}>
+              <svg style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#5070B0' }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/>
+              </svg>
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search student..."
+                autoFocus
+                style={{
+                  width: '100%', padding: '10px 12px 10px 32px', borderRadius: 12,
+                  border: 'none', background: '#fff',
+                  fontSize: 13, color: '#001040', fontFamily: 'inherit', outline: 'none',
+                  boxShadow: '0 0.5px 1px rgba(9,87,247,.04), 0 2px 8px rgba(9,87,247,.06)',
+                }}
               />
-            </svg>
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ fontSize: 14, fontWeight: 500, color: classMasteryPct === null ? T.ink2 : T.ink0, letterSpacing: '-0.3px' }}>
-                {classMasteryPct === null ? 'N/A' : `${classMasteryPct}%`}
-              </div>
-              <div style={{ fontSize: 8, color: T.ink2, marginTop: 1 }}>mastery</div>
             </div>
-          </div>
-          {/* Ring info */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 500, color: T.ink0, marginBottom: 3 }}>Class mastery</div>
-            <div style={{ fontSize: 11, color: T.ink2, lineHeight: 1.4 }}>{ringDesc}</div>
-            <div style={{ display: 'flex', gap: 5, marginTop: 8, flexWrap: 'wrap' }}>
-              <span style={{ padding: '3px 8px', borderRadius: 20, background: masteredConceptCount > 0 ? T.greenL : T.s2, color: masteredConceptCount > 0 ? T.green : T.ink2, fontSize: 10, fontWeight: 500 }}>
-                {masteredConceptCount} mastered
-              </span>
-              <span style={{ padding: '3px 8px', borderRadius: 20, background: developingConceptCount > 0 ? T.amberL : T.s2, color: developingConceptCount > 0 ? T.amber : T.ink2, fontSize: 10, fontWeight: 500 }}>
-                {developingConceptCount} developing
-              </span>
-            </div>
-          </div>
-        </div>
+          )}
 
-        {/* Student table */}
-        {loading ? (
-          <div style={{ background: T.s0, border: `1px solid ${T.bdr}`, borderRadius: 17, padding: '40px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-            <Loader2 className="w-5 h-5 animate-spin" style={{ color: T.ink2 }} />
-            <span style={{ fontSize: 12, color: T.ink2 }}>Loading concept data…</span>
-          </div>
-        ) : (
-          <div style={{ background: T.s0, border: `1px solid ${T.bdr}`, borderRadius: 17, overflow: 'hidden' }}>
-            {/* Header row */}
-            <div style={{ display: 'flex', alignItems: 'center', padding: '9px 13px', background: T.s1, borderBottom: `1px solid ${T.bdr}` }}>
-              <div style={{ flex: 1, fontSize: 9, fontWeight: 500, color: T.ink2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Student</div>
-              <div style={{ width: 90, textAlign: 'center', fontSize: 9, fontWeight: 500, color: T.ink2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Status</div>
-              <div style={{ width: 52, textAlign: 'right', fontSize: 9, fontWeight: 500, color: T.ink2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Mastery</div>
-            </div>
-
-            {/* Student rows */}
-            {filtered.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 14px', color: T.ink2, fontSize: 12 }}>
-                {masteryData.length === 0 ? 'No students enrolled' : 'No students match your search'}
-              </div>
-            ) : filtered.map((s, idx) => {
-              const av = avStyle(s.name || '');
-              const initials = getInitials(s.name || '');
-              const masteryPct = getStudentMastery(s);
-              const st = getMasteryStatus(masteryPct);
-              return (
-                <div
-                  key={s.id}
-                  onClick={() => setSelectedStudent(s)}
-                  style={{
-                    display: 'flex', alignItems: 'center', padding: '11px 13px',
-                    borderBottom: idx < filtered.length - 1 ? `1px solid ${T.s2}` : 'none',
-                    cursor: 'pointer', transition: 'background 80ms',
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.background = T.s1)}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                >
-                  {/* Name cell */}
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
-                    <div style={{ width: 34, height: 34, borderRadius: 10, background: av.bg, color: av.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 500, flexShrink: 0 }}>
-                      {initials}
+          {/* HERO — Class Mastery */}
+          <div
+            className="cm-card3d"
+            style={{
+              background: 'linear-gradient(135deg, #000820 0%, #001466 32%, #0033CC 68%, #0957F7 100%)',
+              borderRadius: 26, padding: 22, marginBottom: 14,
+              position: 'relative', overflow: 'hidden',
+              boxShadow: '0 1px 2px rgba(0,8,60,.15), 0 12px 32px rgba(0,8,60,.28)',
+            }}
+          >
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(255,255,255,.09) 0%, transparent 45%)', pointerEvents: 'none' }} />
+            <div style={{ position: 'relative', zIndex: 2 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+                <div style={{ width: 42, height: 42, borderRadius: 13, background: 'rgba(255,255,255,.14)', backdropFilter: 'blur(22px)', WebkitBackdropFilter: 'blur(22px)', border: '0.5px solid rgba(255,255,255,.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 11H3v8h6v-8zM15 3h-6v16h6V3zM21 13h-6v6h6v-6z"/>
+                  </svg>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,.72)', letterSpacing: '1.8px', textTransform: 'uppercase' }}>Class Mastery</div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,.5)', marginTop: 2, fontWeight: 500, letterSpacing: '-0.1px' }}>
+                    {dynamicHeaders.length > 0 ? `${dynamicHeaders.length} ${dynamicHeaders.length === 1 ? 'concept' : 'concepts'} · ${selectedClass?.name || ''}` : 'Not yet assessed'}
+                  </div>
+                </div>
+                {(() => {
+                  const label = classMasteryPct === null ? 'N/A' : classMasteryPct >= 80 ? 'Mastered' : classMasteryPct >= 50 ? 'Developing' : 'Weak';
+                  const color = classMasteryPct === null ? '#99AACC' : classMasteryPct >= 80 ? '#6FFFAA' : classMasteryPct >= 50 ? '#FFD060' : '#FF9AA9';
+                  return (
+                    <div style={{ marginLeft: 'auto', background: `${color}33`, border: `0.5px solid ${color}88`, color, padding: '5px 12px', borderRadius: 100, fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6, letterSpacing: '0.3px' }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, boxShadow: `0 0 8px ${color}` }} />
+                      {label}
                     </div>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 500, color: T.ink0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</div>
-                      <div style={{ fontSize: 10, color: T.ink2, marginTop: 1 }}>
-                        {s.rollNo ? `Roll ${s.rollNo} · ` : ''}{selectedClass?.name}
+                  );
+                })()}
+              </div>
+              <div style={{ fontSize: 56, fontWeight: 800, color: '#fff', letterSpacing: '-2.6px', lineHeight: 1, marginBottom: 8, display: 'flex', alignItems: 'baseline', gap: 2 }}>
+                {classMasteryPct === null ? '—' : classMasteryPct}
+                <span style={{ fontSize: 28, fontWeight: 700, color: 'rgba(255,255,255,.65)', letterSpacing: '-0.8px' }}>%</span>
+              </div>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,.72)', marginBottom: 20, fontWeight: 500, letterSpacing: '-0.15px' }}>
+                {(() => {
+                  if (classMasteryPct === null) return 'No assessments yet — add scores to see mastery.';
+                  const weakCount = filtered.filter(s => { const m = getStudentMastery(s); return m !== null && m < 50; }).length;
+                  const masterCount = filtered.filter(s => { const m = getStudentMastery(s); return m !== null && m >= 80; }).length;
+                  if (weakCount > 0 && masterCount > 0) return <><b style={{ color: '#fff', fontWeight: 700 }}>Mixed performance</b> — {weakCount} at risk, {masterCount} mastering unit.</>;
+                  if (weakCount > 0) return <><b style={{ color: '#fff', fontWeight: 700 }}>Needs attention</b> — {weakCount} student{weakCount === 1 ? '' : 's'} at risk.</>;
+                  if (masterCount === filtered.length && filtered.length > 0) return <><b style={{ color: '#fff', fontWeight: 700 }}>Excellent</b> — entire class mastering concepts.</>;
+                  return <><b style={{ color: '#fff', fontWeight: 700 }}>On track</b> — class is progressing well.</>;
+                })()}
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {[
+                  { c: '#00FF88', l: 'Mastered 80+' },
+                  { c: '#FFAA00', l: 'Developing 50–79' },
+                  { c: '#FF3355', l: 'Weak <50' },
+                  { c: 'rgba(255,255,255,.4)', l: 'Not Assessed', glow: false },
+                ].map(item => (
+                  <div key={item.l} style={{
+                    background: 'rgba(255,255,255,.12)',
+                    backdropFilter: 'blur(12px)',
+                    padding: '5px 10px', borderRadius: 100,
+                    fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,.85)',
+                    letterSpacing: '-0.1px', display: 'flex', alignItems: 'center', gap: 5,
+                    border: '0.5px solid rgba(255,255,255,.15)',
+                  }}>
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: item.c, boxShadow: item.glow === false ? 'none' : `0 0 6px ${item.c}` }} />
+                    {item.l}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Section head */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 4px 10px' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <span style={{ fontSize: 15, fontWeight: 800, color: '#001040', letterSpacing: '-0.35px' }}>Students</span>
+              <span style={{ fontSize: 11, color: '#5070B0', fontWeight: 600, letterSpacing: '-0.1px' }}>
+                {filtered.length} assessed · {dynamicHeaders.length} {dynamicHeaders.length === 1 ? 'concept' : 'concepts'}
+              </span>
+            </div>
+          </div>
+
+          {/* Student cards / loading / empty */}
+          {loading ? (
+            <div className="cm-card3d" style={{ background: '#fff', borderRadius: 20, padding: '40px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, boxShadow: '0 0.5px 1px rgba(9,87,247,.04), 0 4px 14px rgba(9,87,247,.08)' }}>
+              <Loader2 className="w-5 h-5 animate-spin" style={{ color: '#5070B0' }} />
+              <span style={{ fontSize: 12, color: '#5070B0' }}>Loading concept data…</span>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="cm-card3d" style={{ background: '#fff', borderRadius: 20, padding: '40px 14px', textAlign: 'center', color: '#5070B0', fontSize: 12, boxShadow: '0 0.5px 1px rgba(9,87,247,.04), 0 4px 14px rgba(9,87,247,.08)' }}>
+              {masteryData.length === 0 ? 'No students enrolled yet.' : 'No students match your search.'}
+            </div>
+          ) : filtered.map(s => {
+            const masteryPct = getStudentMastery(s);
+            const bandCls = masteryPct === null ? 'developing' : masteryPct >= 80 ? 'mastered' : masteryPct >= 50 ? 'developing' : 'weak';
+            const bandColor = bandCls === 'mastered' ? '#00C853' : bandCls === 'developing' ? '#FF8800' : '#FF3355';
+            const bandLabel = masteryPct === null ? 'N/A' : masteryPct >= 80 ? 'Mastered' : masteryPct >= 50 ? 'Developing' : 'Weak';
+            const avatarColor = mobAvatarColor(s.name || '');
+            const assessedCount = s.concepts.filter((c: number) => c > 0).length;
+
+            return (
+              <div
+                key={s.id}
+                onClick={() => setSelectedStudent(s)}
+                className="cm-card3d"
+                role="button"
+                tabIndex={0}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedStudent(s); } }}
+                style={{
+                  background: '#fff', borderRadius: 20, padding: 16, marginBottom: 10,
+                  position: 'relative', overflow: 'hidden', cursor: 'pointer',
+                  boxShadow: '0 0.5px 1px rgba(9,87,247,.04), 0 4px 14px rgba(9,87,247,.08)',
+                }}
+              >
+                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: bandColor }} />
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+                  <div style={{
+                    width: 42, height: 42, borderRadius: 13, background: avatarColor, color: '#fff',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 12, fontWeight: 800, letterSpacing: '0.3px', flexShrink: 0,
+                  }}>{getInitials(s.name || '')}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: '#001040', letterSpacing: '-0.35px', lineHeight: 1.2 }}>{s.name}</div>
+                    <div style={{ fontSize: 11, color: '#5070B0', marginTop: 3, fontWeight: 500, letterSpacing: '-0.1px', display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span>{selectedClass?.name || ''}</span>
+                      <span style={{ color: '#99AACC' }}>·</span>
+                      <span>{assessedCount} {assessedCount === 1 ? 'concept' : 'concepts'} assessed</span>
+                    </div>
+                  </div>
+                  <div style={{
+                    padding: '4px 10px', borderRadius: 100,
+                    background: `${bandColor}1F`, color: bandColor,
+                    fontSize: 10, fontWeight: 800, letterSpacing: '0.3px', flexShrink: 0,
+                    display: 'flex', alignItems: 'center', gap: 5,
+                  }}>
+                    <span className={bandCls !== 'mastered' && masteryPct !== null ? 'cm-pulse-dot' : ''} style={{ width: 5, height: 5, borderRadius: '50%', background: bandColor }} />
+                    {bandLabel}
+                  </div>
+                </div>
+
+                {dynamicHeaders.length === 0 ? (
+                  <div style={{ fontSize: 11, color: '#99AACC', textAlign: 'center', padding: '8px 0', fontWeight: 600 }}>
+                    No concepts tracked yet.
+                  </div>
+                ) : dynamicHeaders.map((h, i) => {
+                  const pct = s.concepts[i] || 0;
+                  const cls = pct >= 80 ? 'good' : pct >= 50 ? 'warn' : pct > 0 ? 'bad' : 'na';
+                  const color = cls === 'good' ? '#00C853' : cls === 'warn' ? '#FF8800' : cls === 'bad' ? '#FF3355' : '#99AACC';
+                  const gradient = cls === 'good' ? 'linear-gradient(90deg, #00E866, #00C853)' : cls === 'warn' ? 'linear-gradient(90deg, #FFAA00, #FF8800)' : cls === 'bad' ? 'linear-gradient(90deg, #FF5577, #FF3355)' : '#EAF0FB';
+                  return (
+                    <div key={h} style={{
+                      background: '#F4F7FE', borderRadius: 14, padding: 12,
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      marginBottom: i < dynamicHeaders.length - 1 ? 8 : 0,
+                    }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                          <div style={{ fontSize: 12, fontWeight: 800, color: '#002080', letterSpacing: '-0.2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{h}</div>
+                          <div style={{ fontSize: 16, fontWeight: 800, color, letterSpacing: '-0.4px', lineHeight: 1, flexShrink: 0 }}>
+                            {pct > 0 ? `${pct}%` : '—'}
+                          </div>
+                        </div>
+                        <div style={{ height: 6, background: '#EAF0FB', borderRadius: 100, overflow: 'hidden' }}>
+                          <div className="cm-unit-fill" style={{ height: '100%', borderRadius: 100, background: gradient, width: `${Math.max(0, Math.min(100, pct))}%` }} />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+
+          {/* Class Average card */}
+          {!loading && filtered.length > 0 && dynamicHeaders.length > 0 && (
+            <div
+              className="cm-card3d"
+              style={{
+                background: '#fff', borderRadius: 20, padding: 16,
+                border: '0.5px solid rgba(9,87,247,.12)',
+                boxShadow: '0 0.5px 1px rgba(9,87,247,.04), 0 4px 14px rgba(9,87,247,.08)',
+                marginBottom: 14,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 13, background: '#0957F7', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+                  </svg>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: '#001040', letterSpacing: '-0.3px' }}>Class Average</div>
+                  <div style={{ fontSize: 11, color: '#5070B0', fontWeight: 600, marginTop: 2, letterSpacing: '-0.1px' }}>
+                    {dynamicHeaders.length} {dynamicHeaders.length === 1 ? 'concept' : 'concepts'} · {filtered.length} students
+                  </div>
+                </div>
+                <div style={{ fontSize: 26, fontWeight: 900, color: classMasteryPct === null ? '#99AACC' : classMasteryPct >= 80 ? '#00C853' : classMasteryPct >= 50 ? '#FF8800' : '#FF3355', letterSpacing: '-0.9px', lineHeight: 1 }}>
+                  {classMasteryPct === null ? '—' : `${classMasteryPct}%`}
+                </div>
+              </div>
+              {dynamicHeaders.map((h, i) => {
+                const avg = classAverages[i] || 0;
+                const cls = avg >= 80 ? 'good' : avg >= 50 ? 'warn' : avg > 0 ? 'bad' : 'na';
+                const color = cls === 'good' ? '#00C853' : cls === 'warn' ? '#FF8800' : cls === 'bad' ? '#FF3355' : '#99AACC';
+                const gradient = cls === 'good' ? 'linear-gradient(90deg, #00E866, #00C853)' : cls === 'warn' ? 'linear-gradient(90deg, #FFAA00, #FF8800)' : cls === 'bad' ? 'linear-gradient(90deg, #FF5577, #FF3355)' : '#EAF0FB';
+                return (
+                  <div key={h} style={{
+                    background: cls === 'warn' ? 'rgba(255,170,0,.06)' : '#F4F7FE', borderRadius: 14, padding: 12,
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    marginBottom: i < dynamicHeaders.length - 1 ? 8 : 0,
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <div style={{ fontSize: 12, fontWeight: 800, color: '#002080', letterSpacing: '-0.2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 8 }}>{h} overall</div>
+                        <div style={{ fontSize: 14, fontWeight: 800, color, letterSpacing: '-0.3px', flexShrink: 0 }}>{avg > 0 ? `${avg}%` : '—'}</div>
+                      </div>
+                      <div style={{ height: 6, background: '#EAF0FB', borderRadius: 100, overflow: 'hidden' }}>
+                        <div className="cm-unit-fill" style={{ height: '100%', borderRadius: 100, background: gradient, width: `${Math.max(0, Math.min(100, avg))}%` }} />
                       </div>
                     </div>
                   </div>
-                  {/* Status cell */}
-                  <div style={{ width: 90, display: 'flex', justifyContent: 'center' }}>
-                    <div style={{ padding: '4px 9px', borderRadius: 20, background: st.bg, color: st.color, fontSize: 10, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
-                      <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', flexShrink: 0 }} />
-                      {st.label}
-                    </div>
-                  </div>
-                  {/* Score cell */}
-                  <div style={{ width: 52, textAlign: 'right', fontSize: 12, fontWeight: 500, color: masteryPct === null ? T.ink2 : masteryPct >= 80 ? T.green : masteryPct >= 50 ? T.amber : T.red }}>
-                    {masteryPct === null ? '—' : `${masteryPct}%`}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+          )}
 
-            {/* Class avg row */}
-            {filtered.length > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', padding: '10px 13px', background: T.s2, borderTop: `1px solid ${T.bdr}` }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 10, color: T.ink2, fontWeight: 400, marginBottom: 1 }}>Class average</div>
-                  <div style={{ fontSize: 12, fontWeight: 500, color: T.ink1 }}>{selectedClass?.name}</div>
+          {/* Weak Concepts Callout */}
+          {!loading && dynamicHeaders.length > 0 && (() => {
+            const weak = dynamicHeaders
+              .map((h, i) => ({ name: h, avg: classAverages[i] || 0 }))
+              .filter(c => c.avg > 0 && c.avg < 75)
+              .sort((a, b) => a.avg - b.avg);
+            if (weak.length === 0) return null;
+            return (
+              <div
+                className="cm-card3d"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255,51,85,.08) 0%, rgba(255,51,85,.04) 100%)',
+                  border: '0.5px solid rgba(255,51,85,.25)',
+                  borderRadius: 20, padding: 16, position: 'relative', overflow: 'hidden', marginBottom: 14,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 12 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 12, background: '#FF3355', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 2px rgba(255,51,85,.25), 0 4px 10px rgba(255,51,85,.3)' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 2L2 21h20L12 2z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12" y2="17"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: '#001040', letterSpacing: '-0.3px' }}>Weak Concepts</div>
+                    <div style={{ fontSize: 11, color: '#FF3355', fontWeight: 700, marginTop: 2, letterSpacing: '-0.1px' }}>
+                      {weak.length} {weak.length === 1 ? 'area' : 'areas'} requiring attention
+                    </div>
+                  </div>
                 </div>
-                <div style={{ width: 90, display: 'flex', justifyContent: 'center' }}>
-                  {classAvgMastery !== null ? (
-                    <div style={{ padding: '4px 9px', borderRadius: 20, background: getMasteryStatus(classAvgMastery).bg, color: getMasteryStatus(classAvgMastery).color, fontSize: 10, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor' }} />
-                      {getMasteryStatus(classAvgMastery).label}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                  {weak.slice(0, 5).map(c => (
+                    <div
+                      key={c.name}
+                      className="cm-press"
+                      onClick={() => setSearch(c.name)}
+                      role="button"
+                      tabIndex={0}
+                      style={{
+                        background: '#fff', color: '#FF3355',
+                        padding: '7px 12px', borderRadius: 100,
+                        fontSize: 11, fontWeight: 800, letterSpacing: '-0.1px',
+                        display: 'flex', alignItems: 'center', gap: 5,
+                        border: '0.5px solid rgba(255,51,85,.2)',
+                        boxShadow: '0 1px 2px rgba(255,51,85,.06)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <span style={{ background: 'rgba(255,51,85,.12)', color: '#FF3355', padding: '2px 7px', borderRadius: 6, fontSize: 10, fontWeight: 900 }}>{c.name}</span>
+                      <span>Class Avg</span>
+                      <span style={{ color: '#FF3355', fontWeight: 900 }}>{c.avg}%</span>
                     </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* AI Intelligence */}
+          {!loading && dynamicHeaders.length > 0 && filtered.length > 0 && (() => {
+            const masteredStu = filtered.filter(s => { const m = getStudentMastery(s); return m !== null && m >= 80; });
+            const weakStu = filtered.filter(s => { const m = getStudentMastery(s); return m !== null && m < 50; });
+            return (
+              <div
+                className="cm-card3d"
+                style={{
+                  background: 'linear-gradient(140deg, #000820 0%, #001888 28%, #0033CC 64%, #0957F7 100%)',
+                  borderRadius: 24, padding: 20,
+                  position: 'relative', overflow: 'hidden',
+                  boxShadow: '0 1px 2px rgba(0,8,60,.18), 0 12px 32px rgba(0,8,60,.3)',
+                }}
+              >
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(255,255,255,.09) 0%, transparent 45%)', pointerEvents: 'none' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 12, position: 'relative', zIndex: 2 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 13, background: 'rgba(255,255,255,.14)', backdropFilter: 'blur(22px)', WebkitBackdropFilter: 'blur(22px)', border: '0.5px solid rgba(255,255,255,.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFDD55', fontSize: 19 }}>⚡</div>
+                  <div style={{ fontSize: 10, fontWeight: 900, color: 'rgba(255,255,255,.95)', letterSpacing: '1.8px', textTransform: 'uppercase' }}>AI Mastery Intelligence</div>
+                  <div style={{ marginLeft: 'auto', background: 'rgba(123,63,244,.3)', border: '0.5px solid rgba(155,95,255,.5)', color: '#DCC8FF', padding: '4px 10px', borderRadius: 100, fontSize: 9, fontWeight: 800, letterSpacing: '0.5px' }}>Insight</div>
+                </div>
+                <div style={{ fontSize: 13, lineHeight: 1.6, color: 'rgba(255,255,255,.85)', letterSpacing: '-0.15px', marginBottom: 14, position: 'relative', zIndex: 2 }}>
+                  {masteredStu.length > 0 && weakStu.length > 0 ? (
+                    <>
+                      <strong style={{ color: '#fff', fontWeight: 700 }}>{masteredStu[0].name}</strong> is mastering concepts at <strong style={{ color: '#fff', fontWeight: 700 }}>{getStudentMastery(masteredStu[0])}%</strong> while <strong style={{ color: '#fff', fontWeight: 700 }}>{weakStu[0].name}</strong> is weak at <strong style={{ color: '#fff', fontWeight: 700 }}>{getStudentMastery(weakStu[0])}%</strong>. Large spread suggests pairing them for peer learning — or running a targeted remediation session.
+                    </>
+                  ) : weakStu.length > 0 ? (
+                    <><strong style={{ color: '#fff', fontWeight: 700 }}>{weakStu.length}</strong> student{weakStu.length === 1 ? '' : 's'} at risk across tracked concepts. Schedule a <strong style={{ color: '#fff', fontWeight: 700 }}>remediation session</strong> before the next assessment.</>
                   ) : (
-                    <div style={{ padding: '4px 9px', borderRadius: 20, background: T.s2, color: T.ink2, fontSize: 10, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor' }} />
-                      No data
-                    </div>
+                    <>Class is <strong style={{ color: '#fff', fontWeight: 700 }}>on track</strong> across tracked concepts. Consider enrichment or advanced practice to keep momentum.</>
                   )}
                 </div>
-                <div style={{ width: 52, textAlign: 'right', fontSize: 12, fontWeight: 500, color: T.ink2 }}>
-                  {classAvgMastery !== null ? `${classAvgMastery}%` : '—'}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', background: 'rgba(255,255,255,.1)', borderRadius: 12, padding: 1, gap: 1, overflow: 'hidden', position: 'relative', zIndex: 2 }}>
+                  <div style={{ background: 'rgba(0,20,80,.55)', padding: '11px 4px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 17, fontWeight: 800, color: '#6FFFAA', letterSpacing: '-0.4px' }}>{masteredStu.length}</div>
+                    <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(255,255,255,.6)', letterSpacing: '1px', textTransform: 'uppercase', marginTop: 3 }}>Mastered</div>
+                  </div>
+                  <div style={{ background: 'rgba(0,20,80,.55)', padding: '11px 4px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 17, fontWeight: 800, color: '#FFD060', letterSpacing: '-0.4px' }}>{classMasteryPct === null ? '—' : `${classMasteryPct}%`}</div>
+                    <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(255,255,255,.6)', letterSpacing: '1px', textTransform: 'uppercase', marginTop: 3 }}>Class Avg</div>
+                  </div>
+                  <div style={{ background: 'rgba(0,20,80,.55)', padding: '11px 4px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 17, fontWeight: 800, color: '#FF9AA9', letterSpacing: '-0.4px' }}>{weakStu.length}</div>
+                    <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(255,255,255,.6)', letterSpacing: '1px', textTransform: 'uppercase', marginTop: 3 }}>Weak</div>
+                  </div>
                 </div>
               </div>
-            )}
-          </div>
-        )}
+            );
+          })()}
 
-        {/* Info / empty state banner */}
-        {!loading && dynamicHeaders.length === 0 && (
-          <div style={{ background: T.blueL, border: `1px solid ${T.blueB}`, borderRadius: 14, padding: '13px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(59,91,219,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke={T.blue} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="7" cy="7" r="5.5"/><line x1="7" y1="4.5" x2="7" y2="7.5"/><circle cx="7" cy="9.5" r=".7" fill={T.blue} stroke="none"/>
-              </svg>
-            </div>
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 500, color: T.blue }}>No concepts tracked yet</div>
-              <div style={{ fontSize: 10, color: T.blue, opacity: 0.7, marginTop: 2, lineHeight: 1.4 }}>
-                Add concept scores from the Tests &amp; Exams section to see mastery data here.
+          {/* Empty state — no concepts */}
+          {!loading && dynamicHeaders.length === 0 && (
+            <div className="cm-card3d" style={{
+              background: '#fff',
+              borderRadius: 20, padding: '20px 16px',
+              display: 'flex', alignItems: 'center', gap: 12,
+              boxShadow: '0 0.5px 1px rgba(9,87,247,.04), 0 4px 14px rgba(9,87,247,.08)',
+              border: '0.5px solid rgba(9,87,247,.1)',
+            }}>
+              <div style={{ width: 36, height: 36, borderRadius: 12, background: 'rgba(9,87,247,.1)', color: '#0957F7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/>
+                </svg>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#001040', letterSpacing: '-0.2px' }}>No concepts tracked yet</div>
+                <div style={{ fontSize: 11, color: '#5070B0', marginTop: 2, lineHeight: 1.4, fontWeight: 500 }}>
+                  Add concept scores from the Tests &amp; Exams section to see mastery data here.
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-      </div>
-
+        </div>
       </div>{/* ═══════════ END MOBILE VIEW ═══════════ */}
 
       {/* ═══════════════════ DESKTOP VIEW ═══════════════════ */}
