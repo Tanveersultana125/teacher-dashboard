@@ -317,7 +317,7 @@ export default function EnterScores({ test, onBack }: EnterScoresProps) {
     <div style={{ minHeight: "100vh", background: "#EEF4FF" }}>
 
       {/* ═══ DARK HERO ═══════════════════════════════════════════════════ */}
-      <div className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 bg-[#162E93] md:bg-[#08090C]">
+      <div className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 bg-[#001A66] md:bg-[#08090C]">
         <div style={{ padding: "10px 22px 0" }}>
           {/* Back */}
           <button type="button" onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", marginBottom: 10, padding: 0 }}>

@@ -399,7 +399,7 @@ const Syllabus = () => {
     { key: "notes", label: "Notes", count: docs.filter(d => keywordMatch(d.title, "note")).length },
   ];
 
-  const MOB_CLASS_COLORS = ["#0957F7", "#7B3FF4", "#00C853", "#FF8800", "#C2255C", "#00B8D4", "#6741D9"];
+  const MOB_CLASS_COLORS = ["#0055FF", "#7B3FF4", "#00C853", "#FF8800", "#C2255C", "#00B8D4", "#6741D9"];
   const classColor = (id: string) => {
     const sum = (id || "").split("").reduce((a, c) => a + c.charCodeAt(0), 0);
     return MOB_CLASS_COLORS[sum % MOB_CLASS_COLORS.length];
@@ -444,7 +444,7 @@ const Syllabus = () => {
         <div style={{ padding: "8px 2px 14px", display: "flex", alignItems: "flex-end", gap: 10 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 9, fontWeight: 800, color: "#5070B0", letterSpacing: "1.8px", textTransform: "uppercase", marginBottom: 6, display: "flex", alignItems: "center", gap: 7 }}>
-              <span style={{ width: 5, height: 5, borderRadius: 2, background: "#0957F7", display: "inline-block" }} />
+              <span style={{ width: 5, height: 5, borderRadius: 2, background: "#0055FF", display: "inline-block" }} />
               Teacher Dashboard · Documents
             </div>
             <h1 style={{ fontSize: 26, fontWeight: 800, color: "#001040", letterSpacing: "-1.1px", lineHeight: 1.05, margin: 0 }}>Syllabus &amp; Documents</h1>
@@ -459,7 +459,7 @@ const Syllabus = () => {
             className="syl-press"
             style={{
               height: 34, padding: "0 13px", borderRadius: 11,
-              background: "#0957F7", color: "#fff",
+              background: "#0055FF", color: "#fff",
               fontSize: 12, fontWeight: 700, letterSpacing: "-0.2px",
               display: "flex", alignItems: "center", gap: 5, border: "none",
               boxShadow: "0 1px 2px rgba(9,87,247,.2), 0 4px 10px rgba(9,87,247,.3)",
@@ -477,7 +477,7 @@ const Syllabus = () => {
         <div
           className="syl-card3d"
           style={{
-            background: "linear-gradient(135deg, #000820 0%, #001466 32%, #0033CC 68%, #0957F7 100%)",
+            background: "linear-gradient(135deg, #000A33 0%, #001A66 32%, #0044CC 68%, #0055FF 100%)",
             borderRadius: 26, padding: 22, marginBottom: 14,
             position: "relative", overflow: "hidden",
             boxShadow: "0 1px 2px rgba(0,8,60,.15), 0 12px 32px rgba(0,8,60,.28)",
@@ -537,7 +537,7 @@ const Syllabus = () => {
                 className="syl-press"
                 style={{
                   flexShrink: 0, padding: "8px 14px", borderRadius: 100,
-                  background: active ? "#0957F7" : "#fff",
+                  background: active ? "#0055FF" : "#fff",
                   color: active ? "#fff" : "#5070B0",
                   fontSize: 12, fontWeight: 700, letterSpacing: "-0.2px",
                   boxShadow: active ? "0 1px 2px rgba(9,87,247,.2), 0 3px 10px rgba(9,87,247,.3)" : "0 0.5px 1px rgba(9,87,247,.04), 0 2px 6px rgba(9,87,247,.06)",
@@ -570,7 +570,7 @@ const Syllabus = () => {
               width: 68, height: 68, borderRadius: 20,
               background: "linear-gradient(145deg, rgba(9,87,247,.08) 0%, rgba(123,63,244,.08) 100%)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              margin: "0 auto 14px", color: "#0957F7",
+              margin: "0 auto 14px", color: "#0055FF",
               boxShadow: "0 0 0 7px rgba(9,87,247,.04), inset 0 1px 0 rgba(255,255,255,.6)",
             }}>
               <Library className="w-7 h-7" />
@@ -616,7 +616,7 @@ const Syllabus = () => {
                     onClick={() => setActiveFilter("all")}
                     className="syl-press"
                     style={{
-                      fontSize: 11, fontWeight: 700, color: "#0957F7",
+                      fontSize: 11, fontWeight: 700, color: "#0055FF",
                       letterSpacing: "-0.1px", background: "none", border: "none",
                       display: "flex", alignItems: "center", cursor: "pointer",
                       fontFamily: "inherit",
@@ -634,13 +634,13 @@ const Syllabus = () => {
                     width: 68, height: 68, borderRadius: 20,
                     background: "linear-gradient(145deg, rgba(9,87,247,.08) 0%, rgba(123,63,244,.08) 100%)",
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    margin: "0 auto 14px", color: "#0957F7", position: "relative",
+                    margin: "0 auto 14px", color: "#0055FF", position: "relative",
                     boxShadow: "0 0 0 7px rgba(9,87,247,.04), inset 0 1px 0 rgba(255,255,255,.6)",
                   }}>
                     <FileText className="w-7 h-7" strokeWidth={2} />
                     <div style={{
                       position: "absolute", top: -4, right: -4,
-                      width: 24, height: 24, background: "#0957F7",
+                      width: 24, height: 24, background: "#0055FF",
                       borderRadius: "50%", border: "3px solid #fff",
                       boxShadow: "0 2px 6px rgba(9,87,247,.35)",
                       display: "flex", alignItems: "center", justifyContent: "center",
@@ -656,7 +656,7 @@ const Syllabus = () => {
                     onClick={() => openMobileSheet(c.classId)}
                     className="syl-press"
                     style={{
-                      background: "#0957F7", color: "#fff",
+                      background: "#0055FF", color: "#fff",
                       padding: "8px 14px", borderRadius: 10,
                       fontSize: 11, fontWeight: 700, border: "none",
                       boxShadow: "0 1px 2px rgba(9,87,247,.2), 0 3px 10px rgba(9,87,247,.3)",
@@ -719,7 +719,7 @@ const Syllabus = () => {
                         className="syl-press"
                         style={{
                           flex: 1, height: 38, borderRadius: 11,
-                          background: "#0957F7", color: "#fff",
+                          background: "#0055FF", color: "#fff",
                           fontSize: 12, fontWeight: 700, letterSpacing: "-0.2px",
                           display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
                           textDecoration: "none",
@@ -791,7 +791,7 @@ const Syllabus = () => {
           <div
             className="syl-card3d"
             style={{
-              background: "linear-gradient(140deg, #000820 0%, #001888 28%, #0033CC 64%, #0957F7 100%)",
+              background: "linear-gradient(140deg, #000A33 0%, #001A66 28%, #0044CC 64%, #0055FF 100%)",
               borderRadius: 24, padding: 20, marginTop: 14,
               position: "relative", overflow: "hidden",
               boxShadow: "0 1px 2px rgba(0,8,60,.18), 0 12px 32px rgba(0,8,60,.3)",
@@ -857,7 +857,7 @@ const Syllabus = () => {
             <div style={{ width: 40, height: 5, background: "rgba(9,87,247,.2)", borderRadius: 100, margin: "10px auto 6px", flexShrink: 0 }} />
 
             <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 18px 14px", borderBottom: "0.5px solid rgba(9,87,247,.08)", flexShrink: 0 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 13, background: "#0957F7", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 13, background: "#0055FF", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <Upload className="w-5 h-5" strokeWidth={2.2} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -906,7 +906,7 @@ const Syllabus = () => {
                           flex: classes.length > 3 ? "1 1 45%" : 1,
                           padding: "9px 10px", borderRadius: 8,
                           fontSize: 13, fontWeight: active ? 800 : 700,
-                          color: active ? "#0957F7" : "#5070B0",
+                          color: active ? "#0055FF" : "#5070B0",
                           background: active ? "#fff" : "transparent",
                           boxShadow: active ? "0 1px 2px rgba(0,0,0,.04), 0 2px 6px rgba(9,87,247,.12)" : "none",
                           textAlign: "center", letterSpacing: "-0.2px",
@@ -997,7 +997,7 @@ const Syllabus = () => {
                       disabled={uploading}
                       className="syl-press"
                       style={{
-                        fontSize: 11, fontWeight: 700, color: "#0957F7",
+                        fontSize: 11, fontWeight: 700, color: "#0055FF",
                         letterSpacing: "-0.1px", padding: "6px 10px",
                         borderRadius: 9, background: "rgba(9,87,247,.08)",
                         border: "none", cursor: "pointer", fontFamily: "inherit",
@@ -1023,7 +1023,7 @@ const Syllabus = () => {
                   >
                     <div style={{
                       width: 46, height: 46, borderRadius: 14,
-                      background: "rgba(9,87,247,.1)", color: "#0957F7",
+                      background: "rgba(9,87,247,.1)", color: "#0055FF",
                       display: "flex", alignItems: "center", justifyContent: "center",
                       margin: "0 auto 10px",
                     }}>
@@ -1040,10 +1040,10 @@ const Syllabus = () => {
                 <div style={{ marginBottom: 14 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 11, color: "#5070B0", marginBottom: 6, fontWeight: 600 }}>
                     <span>Uploading…</span>
-                    <span style={{ color: "#0957F7", fontWeight: 800 }}>{progress.toFixed(0)}%</span>
+                    <span style={{ color: "#0055FF", fontWeight: 800 }}>{progress.toFixed(0)}%</span>
                   </div>
                   <div style={{ height: 6, borderRadius: 100, background: "#EAF0FB", overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${progress}%`, background: "linear-gradient(90deg, #7B3FF4, #0957F7)", transition: "width .2s linear" }} />
+                    <div style={{ height: "100%", width: `${progress}%`, background: "linear-gradient(90deg, #7B3FF4, #0055FF)", transition: "width .2s linear" }} />
                   </div>
                   <div style={{ fontSize: 10, color: "#99AACC", marginTop: 6, fontWeight: 500 }}>Please don't close this sheet.</div>
                 </div>
@@ -1056,7 +1056,7 @@ const Syllabus = () => {
                 borderRadius: 14, padding: "12px 14px",
                 display: "flex", gap: 10, alignItems: "flex-start",
               }}>
-                <div style={{ width: 26, height: 26, borderRadius: 9, background: "#0957F7", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <div style={{ width: 26, height: 26, borderRadius: 9, background: "#0055FF", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="8"/>
                   </svg>
@@ -1090,7 +1090,7 @@ const Syllabus = () => {
                 className="syl-press"
                 style={{
                   flex: 1, height: 46, borderRadius: 14,
-                  background: "#0957F7", color: "#fff",
+                  background: "#0055FF", color: "#fff",
                   fontSize: 14, fontWeight: 800, border: "none",
                   letterSpacing: "-0.2px",
                   cursor: (uploading || !title.trim() || !pickedFile || !selClassId) ? "not-allowed" : "pointer",

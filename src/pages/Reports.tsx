@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import GenerateReport from "@/components/GenerateReport";
 import { useAuth } from "../lib/AuthContext";
 import { db } from "../lib/firebase";
@@ -230,206 +230,19 @@ const Reports = () => {
       onDownloadHistory={handleDownloadHistory}
     />
 
-    {/* ═══════════════════ DESKTOP VIEW (unchanged) ═══════════════════ */}
-    <div className="hidden md:block" style={{ minHeight: "100vh", background: "#EEF4FF" }}>
-
-      {/* ═══ DARK HERO ═══════════════════════════════════════════════════ */}
-      <div className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 bg-[#162E93] md:bg-[#08090C]" style={{ padding: "18px 22px 22px" }}>
-        <p style={{ fontSize: 9, fontWeight: 500, color: "rgba(255,255,255,0.28)", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 5 }}>
-          Academic documents
-        </p>
-        <h1 style={{ fontSize: 21, fontWeight: 500, color: "#fff", letterSpacing: "-0.4px", lineHeight: 1.1 }}>
-          Reports
-        </h1>
-        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>
-          Generate and download academic reports.
-        </p>
-        <div style={{ display: "flex", gap: 7, marginTop: 13, flexWrap: "wrap" }}>
-          <span style={{ padding: "5px 10px", borderRadius: 20, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.07)", fontSize: 10, color: "rgba(255,255,255,0.45)", fontWeight: 500 }}>
-            {teacherData?.schoolName || "Edullent Main"}
-          </span>
-          <span style={{ padding: "5px 10px", borderRadius: 20, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.07)", fontSize: 10, color: "rgba(255,255,255,0.45)", fontWeight: 500 }}>
-            {REPORTS.length} report types
-          </span>
-        </div>
-      </div>
-
-      {/* ═══ BODY ════════════════════════════════════════════════════════ */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 11, paddingTop: 14 }}>
-
-        {/* Filter pills */}
-        <div style={{ display: "flex", gap: 6 }}>
-          {FILTERS.map(f => (
-            <button type="button"
-              key={f}
-              onClick={() => setFilter(f)}
-              style={{
-                padding: "7px 13px", borderRadius: 20,
-                fontSize: 11, fontFamily: "inherit", cursor: "pointer",
-                border: filter === f ? "1px solid #08090C" : `1px solid ${T.bdr}`,
-                background: filter === f ? "#08090C" : T.white,
-                color: filter === f ? "#fff" : T.ink2,
-                fontWeight: filter === f ? 500 : 400,
-                transition: "all 80ms",
-              }}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
-
-        {/* Report cards */}
-        {filtered.map(r => (
-          <div key={r.id} style={{ background: T.white, border: `1px solid ${T.bdr}`, borderRadius: 18, overflow: "hidden" }}>
-            {/* Color band */}
-            <div style={{ height: 3, background: r.band }} />
-
-            <div style={{ padding: 14 }}>
-              {/* Top: icon + badge */}
-              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
-                <div style={{ width: 44, height: 44, borderRadius: 13, background: r.iconBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {r.icon(r.iconCol)}
-                </div>
-                <span style={{ padding: "4px 9px", borderRadius: 20, background: r.badgeBg, color: r.badgeCol, fontSize: 10, fontWeight: 500 }}>
-                  {r.badge}
-                </span>
-              </div>
-
-              {/* Title + desc */}
-              <p style={{ fontSize: 15, fontWeight: 500, color: T.ink1, letterSpacing: "-0.2px", marginBottom: 5 }}>{r.title}</p>
-              <p style={{ fontSize: 11, color: T.ink3, lineHeight: 1.55, marginBottom: 12 }}>{r.desc}</p>
-
-              {/* Format pills */}
-              <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
-                {r.formats.map(f => (
-                  <span key={f} style={{ padding: "4px 10px", borderRadius: 20, border: `1px solid ${T.bdr}`, background: T.s1, fontSize: 10, fontWeight: 500, color: T.ink3 }}>
-                    {f}
-                  </span>
-                ))}
-              </div>
-
-              {/* Action buttons */}
-              <div style={{ display: "flex", gap: 8, borderTop: `1px solid ${T.s2}`, paddingTop: 13 }}>
-                <button type="button"
-                  onClick={() => handleOpenGenerate(r)}
-                  style={{
-                    flex: 1, padding: 10, borderRadius: 11,
-                    background: r.band, border: "none", color: "#fff",
-                    fontSize: 12, fontWeight: 500, cursor: "pointer",
-                    fontFamily: "inherit",
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-                  }}
-                >
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="1.5" strokeLinecap="round">
-                    <polyline points="6,2 6,8" /><polyline points="3.5,5.5 6,8.5 8.5,5.5" /><line x1="1.5" y1="10.5" x2="10.5" y2="10.5" />
-                  </svg>
-                  Generate Report
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
-
-        {/* ── HISTORY ────────────────────────────────────────────────────── */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginTop: 6 }}>
-          <div>
-            <p style={{ fontSize: 16, fontWeight: 500, color: T.ink1, letterSpacing: "-0.3px" }}>Intelligence output history</p>
-            <p style={{ fontSize: 9, fontWeight: 500, color: T.ink3, letterSpacing: "0.07em", textTransform: "uppercase", marginTop: 2 }}>
-              {history.length === 0 ? "Audit trail of generated documents" : `${history.length} report${history.length !== 1 ? "s" : ""} on record`}
-            </p>
-          </div>
-          {history.length > 10 && (
-            <button type="button"
-              onClick={() => setShowAllHistory(v => !v)}
-              style={{
-                display: "flex", alignItems: "center", gap: 4,
-                fontSize: 11, color: T.blue, fontWeight: 500,
-                background: "none", border: "none", cursor: "pointer",
-                marginTop: 4, fontFamily: "inherit",
-              }}
-            >
-              {showAllHistory ? "Show less" : "View full audit"}
-              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke={T.blue} strokeWidth="1.5" strokeLinecap="round">
-                <polyline points="2,9 9,2" /><polyline points="5,2 9,2 9,6" />
-              </svg>
-            </button>
-          )}
-        </div>
-
-        {/* History list */}
-        <div style={{ background: T.white, border: `1px solid ${T.bdr}`, borderRadius: 17, overflow: "hidden" }}>
-          {history.length === 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: "36px 14px", textAlign: "center" }}>
-              <div style={{ width: 48, height: 48, borderRadius: 15, background: T.s2, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="20" height="20" viewBox="0 0 14 14" fill="none" stroke={T.ink3} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="2" y="1" width="10" height="12" rx="1.5" /><line x1="4.5" y1="5" x2="9.5" y2="5" /><line x1="4.5" y1="7.5" x2="7.5" y2="7.5" />
-                </svg>
-              </div>
-              <p style={{ fontSize: 13, fontWeight: 500, color: T.ink2 }}>No reports generated yet</p>
-              <p style={{ fontSize: 10, color: T.ink3, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 500 }}>
-                Generated reports will appear here
-              </p>
-            </div>
-          ) : (
-            (showAllHistory ? history : history.slice(0, 10)).map((h, idx, arr) => {
-              const col = h.type === "at_risk" ? T.red : h.type === "attendance_summary" ? T.amb : h.type === "individual_progress" ? T.tea : T.blue;
-              const dotCol = statusDotColor(h.status, T);
-              return (
-                <div key={h.id} style={{
-                  display: "flex", alignItems: "flex-start", gap: 10,
-                  padding: "12px 13px",
-                  borderBottom: idx < arr.length - 1 ? `1px solid ${T.s2}` : "none",
-                }}>
-                  {/* Icon */}
-                  <div style={{
-                    width: 34, height: 34, borderRadius: 10,
-                    background: `${col}18`, border: `1px solid ${col}35`,
-                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                  }}>
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke={col} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="2" y="1" width="10" height="12" rx="1.5" /><line x1="4.5" y1="5" x2="9.5" y2="5" /><line x1="4.5" y1="7.5" x2="7.5" y2="7.5" />
-                    </svg>
-                  </div>
-
-                  {/* Content */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 12, fontWeight: 500, color: T.ink1, lineHeight: 1.3, margin: 0 }}>
-                      {h.title || "Report"} — {h.grade || h.className || "N/A"}
-                    </p>
-                    <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 4 }}>
-                      <div style={{ width: 5, height: 5, borderRadius: "50%", background: dotCol }} />
-                      <span style={{ fontSize: 10, color: T.ink3 }}>
-                        {h.status || "Draft"} · {(h.format || "PDF").toUpperCase()} Format
-                      </span>
-                    </div>
-                    <p style={{ fontSize: 10, color: T.ink3, marginTop: 2 }}>
-                      {h.createdAt?.toDate?.().toLocaleString("en-US", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) || ""}
-                    </p>
-                  </div>
-
-                  {/* Download btn — exports stored report JSON */}
-                  <button type="button"
-                    onClick={() => handleDownloadHistory(h)}
-                    title="Download report snapshot"
-                    style={{
-                      width: 26, height: 26, borderRadius: 8,
-                      background: T.s1, border: `1px solid ${T.bdr}`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      flexShrink: 0, cursor: "pointer", padding: 0,
-                    }}
-                  >
-                    <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke={T.ink3} strokeWidth="1.5" strokeLinecap="round">
-                      <polyline points="5.5,2 5.5,8" /><polyline points="3,5.5 5.5,8.5 8,5.5" />
-                    </svg>
-                  </button>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </div>
-
-    </div>
+    {/* ═══════════════════ DESKTOP VIEW — Mobile design, widescreen grid ═══════════════════ */}
+    <DesktopReports
+      reports={REPORTS}
+      filtered={filtered}
+      filter={filter}
+      setFilter={setFilter}
+      history={history}
+      showAllHistory={showAllHistory}
+      setShowAllHistory={setShowAllHistory}
+      schoolName={teacherData?.schoolName}
+      onGenerate={handleOpenGenerate}
+      onDownloadHistory={handleDownloadHistory}
+    />
     {/* ═══════════════════ END DESKTOP VIEW ═══════════════════ */}
 
     {/* ═══ GENERATE REPORT MODAL (shared between mobile + desktop) ═══════════ */}
@@ -948,6 +761,462 @@ const MobileReports = ({
                 </div>
               );
             })}
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Desktop-only Reports view — mirrors mobile design in a widescreen grid
+// ─────────────────────────────────────────────────────────────────────────────
+const DesktopReports = ({
+  reports, filtered, filter, setFilter, history,
+  showAllHistory, setShowAllHistory, schoolName,
+  onGenerate, onDownloadHistory,
+}: MobileReportsProps) => {
+  const generatedThisWeek = (() => {
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    return history.filter(h => {
+      const ms = h.createdAt?.toMillis?.() || 0;
+      return ms >= weekAgo;
+    }).length;
+  })();
+
+  const counts = {
+    all: reports.length,
+    pdf: reports.filter(r => r.formats.includes("PDF")).length,
+    excel: reports.filter(r => r.formats.includes("Excel")).length,
+  };
+
+  const fmtHistoryDate = (ts: any): string => {
+    const d: Date | null = ts?.toDate?.() || (ts instanceof Date ? ts : null);
+    if (!d) return "";
+    return d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  };
+
+  return (
+    <div
+      className="hidden md:block -mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 px-8 pt-8 pb-12 text-left"
+      style={{
+        background: "#EEF4FF",
+        minHeight: "100vh",
+        fontVariantNumeric: "tabular-nums",
+      }}
+    >
+      <style>{`
+        .rpd-card3d { transition: transform .35s cubic-bezier(.2,.9,.3,1), box-shadow .35s cubic-bezier(.2,.9,.3,1); transform-style: preserve-3d; will-change: transform; }
+        @media (hover:hover) { .rpd-card3d:hover { transform: translateY(-3px) scale(1.004); box-shadow: 0 1px 2px rgba(0,85,255,.08), 0 24px 44px rgba(0,85,255,.18), 0 8px 16px rgba(0,85,255,.1); } }
+        .rpd-press { transition: transform .18s cubic-bezier(.34,1.56,.64,1); }
+        .rpd-press:active { transform: scale(.96); }
+        @keyframes rpdPulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+        .rpd-pulse { animation: rpdPulse 1.5s ease-in-out infinite; }
+      `}</style>
+
+      <div style={{ maxWidth: 1600, margin: "0 auto" }}>
+
+        {/* Page header row */}
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 24, marginBottom: 24, flexWrap: "wrap" }}>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 800, color: "#5070B0", letterSpacing: "1.8px", textTransform: "uppercase", marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ width: 6, height: 6, borderRadius: 2, background: "#0055FF", display: "inline-block" }} />
+              Academic Documents
+            </div>
+            <h1 style={{ fontSize: 40, fontWeight: 800, color: "#001040", letterSpacing: "-1.4px", lineHeight: 1.05, margin: 0 }}>Reports</h1>
+            <div style={{ fontSize: 14, color: "#5070B0", fontWeight: 500, marginTop: 8, letterSpacing: "-0.15px" }}>
+              Generate and download academic reports.
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <div style={{
+              padding: "7px 14px", background: "rgba(0,85,255,.08)", color: "#0055FF",
+              fontSize: 11, fontWeight: 800, borderRadius: 100, letterSpacing: "0.2px",
+              display: "flex", alignItems: "center", gap: 6,
+              border: "0.5px solid rgba(0,85,255,.15)",
+            }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/>
+              </svg>
+              {schoolName || "Edullent Main"}
+            </div>
+            <div style={{
+              padding: "7px 14px", background: "rgba(0,85,255,.08)", color: "#0055FF",
+              fontSize: 11, fontWeight: 800, borderRadius: 100, letterSpacing: "0.2px",
+              display: "flex", alignItems: "center", gap: 6,
+              border: "0.5px solid rgba(0,85,255,.15)",
+            }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>
+              </svg>
+              {reports.length} report types
+            </div>
+          </div>
+        </div>
+
+        {/* HERO — full width */}
+        <div
+          className="rpd-card3d"
+          style={{
+            background: "linear-gradient(135deg, #000A33 0%, #001A66 32%, #0044CC 68%, #0055FF 100%)",
+            borderRadius: 28, padding: 32, marginBottom: 18,
+            position: "relative", overflow: "hidden",
+            boxShadow: "0 1px 2px rgba(0,26,102,.2), 0 12px 32px rgba(0,26,102,.32)",
+          }}
+        >
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(255,255,255,.1) 0%, transparent 45%)", pointerEvents: "none" }} />
+          <div style={{ position: "relative", zIndex: 2 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
+              <div style={{ width: 52, height: 52, borderRadius: 15, background: "rgba(255,255,255,.16)", backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)", border: "0.5px solid rgba(255,255,255,.24)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>
+                </svg>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,.8)", letterSpacing: "1.8px", textTransform: "uppercase" }}>Report Center</div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,.55)", marginTop: 3, fontWeight: 500, letterSpacing: "-0.1px" }}>Academic year {new Date().getFullYear()}-{String((new Date().getFullYear() + 1) % 100).padStart(2, "0")}</div>
+              </div>
+              <div style={{
+                marginLeft: "auto",
+                background: "rgba(255,255,255,.18)",
+                border: "0.5px solid rgba(255,255,255,.3)",
+                color: "#fff",
+                padding: "7px 14px", borderRadius: 100,
+                fontSize: 11, fontWeight: 800,
+                display: "flex", alignItems: "center", gap: 7, letterSpacing: "0.3px",
+              }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#00E866", boxShadow: "0 0 8px #00E866" }} />
+                Ready
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 32, flexWrap: "wrap" }}>
+              <div>
+                <div style={{ fontSize: 84, fontWeight: 800, color: "#fff", letterSpacing: "-3.8px", lineHeight: 1, marginBottom: 10, display: "flex", alignItems: "baseline", gap: 10 }}>
+                  {reports.length}
+                  <span style={{ fontSize: 32, fontWeight: 700, color: "rgba(255,255,255,.7)", letterSpacing: "-0.6px" }}>types</span>
+                </div>
+                <div style={{ fontSize: 14, color: "rgba(255,255,255,.78)", fontWeight: 500, letterSpacing: "-0.15px" }}>
+                  <b style={{ color: "#fff", fontWeight: 700 }}>{generatedThisWeek} generated</b> this week · all formats supported.
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 1, background: "rgba(255,255,255,.12)", borderRadius: 14, padding: 1, overflow: "hidden", minWidth: 380 }}>
+                <div style={{ background: "rgba(0,10,51,.7)", padding: "16px 20px", textAlign: "center" }}>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: "#fff", letterSpacing: "-0.7px" }}>{reports.length}</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,.6)", letterSpacing: "1.1px", textTransform: "uppercase", marginTop: 4 }}>Types</div>
+                </div>
+                <div style={{ background: "rgba(0,10,51,.7)", padding: "16px 20px", textAlign: "center" }}>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: "#6FFFAA", letterSpacing: "-0.7px" }}>{history.length}</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,.6)", letterSpacing: "1.1px", textTransform: "uppercase", marginTop: 4 }}>Generated</div>
+                </div>
+                <div style={{ background: "rgba(0,10,51,.7)", padding: "16px 20px", textAlign: "center" }}>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: "#FFDD55", letterSpacing: "-0.7px" }}>~6s</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,.6)", letterSpacing: "1.1px", textTransform: "uppercase", marginTop: 4 }}>Avg Time</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Filter tabs + section head row */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, marginBottom: 16, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+            <span style={{ fontSize: 17, fontWeight: 800, color: "#001040", letterSpacing: "-0.4px" }}>Available Reports</span>
+            <span style={{ fontSize: 12, color: "#5070B0", fontWeight: 600, letterSpacing: "-0.1px" }}>Click to generate</span>
+          </div>
+          <div
+            style={{
+              display: "flex", gap: 6, background: "#fff", padding: 5,
+              borderRadius: 14,
+              boxShadow: "0 0.5px 1px rgba(0,85,255,.04), 0 2px 10px rgba(0,85,255,.08)",
+              border: "0.5px solid rgba(0,85,255,.07)",
+            }}
+          >
+            {[
+              { key: "All", label: "All", count: counts.all },
+              { key: "PDF only", label: "PDF only", count: counts.pdf },
+              { key: "Excel only", label: "Excel only", count: counts.excel },
+            ].map(f => {
+              const active = filter === f.key;
+              return (
+                <button
+                  key={f.key}
+                  type="button"
+                  onClick={() => setFilter(f.key)}
+                  className="rpd-press"
+                  style={{
+                    padding: "9px 16px", borderRadius: 10,
+                    fontSize: 12, fontWeight: 700, letterSpacing: "-0.2px",
+                    color: active ? "#fff" : "#5070B0",
+                    background: active ? "linear-gradient(135deg, #0055FF, #1166FF)" : "transparent",
+                    boxShadow: active ? "0 1px 2px rgba(0,85,255,.22), 0 3px 10px rgba(0,85,255,.28)" : "none",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                    border: "none", cursor: "pointer", fontFamily: "inherit",
+                    transition: "all .22s cubic-bezier(.2,.9,.3,1)",
+                  }}
+                >
+                  {f.label}
+                  <span style={{
+                    background: active ? "rgba(255,255,255,.22)" : "#F4F7FE",
+                    color: active ? "#fff" : "#5070B0",
+                    fontSize: 10, fontWeight: 800, padding: "1px 7px", borderRadius: 100,
+                  }}>{f.count}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Report cards — 2×2 grid */}
+        {filtered.length === 0 ? (
+          <div className="rpd-card3d" style={{
+            background: "#fff", borderRadius: 20, padding: "48px 24px", textAlign: "center",
+            boxShadow: "0 0.5px 1px rgba(0,85,255,.04), 0 4px 14px rgba(0,85,255,.08)",
+            border: "0.5px solid rgba(0,85,255,.07)", marginBottom: 18,
+          }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "#001040", marginBottom: 6, letterSpacing: "-0.3px" }}>No reports match this filter</div>
+            <div style={{ fontSize: 13, color: "#5070B0", fontWeight: 500, letterSpacing: "-0.1px" }}>
+              Try switching to <b style={{ color: "#0055FF", fontWeight: 700 }}>All</b> to see every report type.
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14, marginBottom: 18 }}>
+            {filtered.map(r => {
+              const tone = MOB_TONES[r.id] || MOB_TONES.class_perf;
+              return (
+                <div
+                  key={r.id}
+                  className="rpd-card3d"
+                  onClick={() => onGenerate(r)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onGenerate(r); } }}
+                  style={{
+                    background: "#fff", borderRadius: 22, padding: 0,
+                    position: "relative", overflow: "hidden", cursor: "pointer",
+                    boxShadow: "0 0.5px 1px rgba(0,85,255,.04), 0 4px 14px rgba(0,85,255,.08)",
+                    border: "0.5px solid rgba(0,85,255,.07)",
+                  }}
+                >
+                  <div style={{ height: 5, width: "100%", background: tone.accent }} />
+                  <div style={{ padding: 22 }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 14 }}>
+                      <div style={{
+                        width: 54, height: 54, borderRadius: 15,
+                        background: tone.iconGrad, color: "#fff",
+                        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                        boxShadow: tone.iconShadow,
+                      }}>
+                        {r.icon("#fff")}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 7 }}>
+                          <div style={{ fontSize: 17, fontWeight: 800, color: "#001040", letterSpacing: "-0.4px", lineHeight: 1.2 }}>{r.title}</div>
+                          <div style={{
+                            flexShrink: 0, padding: "4px 11px", borderRadius: 100,
+                            fontSize: 10, fontWeight: 900, letterSpacing: "0.5px", textTransform: "uppercase",
+                            display: "flex", alignItems: "center", gap: 5,
+                            background: tone.tagBg, color: tone.tagColor,
+                            border: `0.5px solid ${tone.tagBorder}`,
+                          }}>
+                            {tone.name === "blue" && <span style={{ color: "#00C853", fontSize: 11, marginTop: -1 }}>★</span>}
+                            {tone.name === "red" && <span className="rpd-pulse" style={{ width: 6, height: 6, borderRadius: "50%", background: "#FF3355" }} />}
+                            {tone.tag}
+                          </div>
+                        </div>
+                        <div style={{ fontSize: 13, color: "#5070B0", lineHeight: 1.55, fontWeight: 500, letterSpacing: "-0.1px", marginBottom: 12 }}>{r.desc}</div>
+                        <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+                          {r.formats.map(fmt => (
+                            <span key={fmt} style={{
+                              display: "inline-flex", alignItems: "center", gap: 6,
+                              padding: "5px 11px", background: "#F4F7FE", color: "#002080",
+                              fontSize: 11, fontWeight: 800, borderRadius: 7,
+                              letterSpacing: "0.2px",
+                              border: "0.5px solid rgba(0,85,255,.07)",
+                            }}>
+                              <span style={{
+                                width: 6, height: 6, borderRadius: 2,
+                                background: fmt === "PDF" ? "#FF3355" : "#00C853",
+                              }} />
+                              {fmt}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={e => { e.stopPropagation(); onGenerate(r); }}
+                    className="rpd-press"
+                    style={{
+                      width: "100%", height: 50, borderRadius: 0, border: "none",
+                      cursor: "pointer", fontSize: 14, fontWeight: 800,
+                      letterSpacing: "-0.2px", color: "#fff",
+                      background: tone.btnGrad,
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                      fontFamily: "inherit", position: "relative", overflow: "hidden",
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    Generate Report
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* History section header */}
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: "8px 4px 12px" }}>
+          <div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: "#001040", letterSpacing: "-0.4px" }}>Intelligence output history</div>
+            <div style={{ fontSize: 10, fontWeight: 800, color: "#5070B0", letterSpacing: "1.5px", textTransform: "uppercase", marginTop: 5 }}>
+              {history.length === 0 ? "Audit trail" : `${history.length} report${history.length === 1 ? "" : "s"} on record`}
+            </div>
+          </div>
+          {history.length > 10 && (
+            <button
+              type="button"
+              onClick={() => setShowAllHistory(v => !v)}
+              className="rpd-press"
+              style={{
+                fontSize: 12, color: "#0055FF", fontWeight: 700,
+                background: "none", border: "none", cursor: "pointer",
+                marginTop: 6, fontFamily: "inherit",
+                display: "flex", alignItems: "center", gap: 5,
+                letterSpacing: "-0.15px",
+              }}
+            >
+              {showAllHistory ? "Show less" : "View all"}
+            </button>
+          )}
+        </div>
+
+        {history.length === 0 ? (
+          <div className="rpd-card3d" style={{
+            background: "#fff", borderRadius: 22, padding: "56px 24px", textAlign: "center",
+            boxShadow: "0 0.5px 1px rgba(0,85,255,.04), 0 4px 14px rgba(0,85,255,.08)",
+            border: "0.5px solid rgba(0,85,255,.07)",
+          }}>
+            <div style={{
+              width: 72, height: 72, borderRadius: 22, background: "linear-gradient(145deg, rgba(0,85,255,.08), rgba(17,102,255,.04))",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              margin: "0 auto 14px", color: "#0055FF",
+              boxShadow: "0 0 0 6px rgba(0,85,255,.05)",
+            }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+              </svg>
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "#001040", marginBottom: 6, letterSpacing: "-0.3px" }}>No reports generated yet</div>
+            <div style={{ fontSize: 13, color: "#5070B0", fontWeight: 500, letterSpacing: "-0.1px" }}>
+              Click any report above to generate your first one.
+            </div>
+          </div>
+        ) : (
+          <div
+            className="rpd-card3d"
+            style={{
+              background: "#fff", borderRadius: 22, padding: 6,
+              boxShadow: "0 0.5px 1px rgba(0,85,255,.04), 0 4px 14px rgba(0,85,255,.08)",
+              border: "0.5px solid rgba(0,85,255,.07)",
+              overflow: "hidden",
+            }}
+          >
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 0 }}>
+              {(showAllHistory ? history : history.slice(0, 10)).map((h, idx, arr) => {
+                const tone = MOB_TONES[h.type as string] || MOB_TONES.class_perf;
+                const iconBg = tone.name === "blue"
+                  ? { bg: "rgba(0,85,255,.08)", color: "#0055FF" }
+                  : tone.name === "teal"
+                  ? { bg: "rgba(22,184,176,.1)", color: "#16B8B0" }
+                  : tone.name === "orange"
+                  ? { bg: "rgba(255,136,0,.1)", color: "#FF8800" }
+                  : { bg: "rgba(255,51,85,.1)", color: "#FF3355" };
+                const status = (h.status || "Draft") as string;
+                const isReady = /report|ready|sync|broadcast/i.test(status);
+                const statusColor = isReady ? "#00C853" : /error|fail/i.test(status) ? "#FF3355" : "#FF8800";
+                const statusLabel = isReady ? "Ready" : /error|fail/i.test(status) ? "Error" : "Draft";
+                const fmt = (h.format || "PDF").toString().toUpperCase();
+                // First column has odd indices (0, 2, 4...); both cols need their own last-row detection
+                const isLastRow = idx >= arr.length - 2;
+
+                return (
+                  <div
+                    key={h.id}
+                    onClick={() => onDownloadHistory(h)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onDownloadHistory(h); } }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 13,
+                      padding: "14px 12px", borderRadius: 16,
+                      cursor: "pointer", position: "relative",
+                      borderTop: !isLastRow ? "none" : "none",
+                      borderBottom: !isLastRow ? "0.5px solid rgba(0,85,255,.07)" : "none",
+                      borderRight: idx % 2 === 0 ? "0.5px solid rgba(0,85,255,.07)" : "none",
+                      transition: "background .15s cubic-bezier(.2,.9,.3,1)",
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "#F4F7FE"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                  >
+                    <div style={{
+                      width: 44, height: 44, borderRadius: 13,
+                      background: iconBg.bg, color: iconBg.color,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      flexShrink: 0, position: "relative",
+                    }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+                      </svg>
+                      <span style={{
+                        position: "absolute", bottom: -3, right: -3,
+                        background: fmt === "PDF" ? "#FF3355" : "#00C853",
+                        color: "#fff", fontSize: 8, fontWeight: 900,
+                        padding: "2px 5px", borderRadius: 4,
+                        letterSpacing: "0.2px",
+                        border: "2px solid #fff", lineHeight: 1,
+                      }}>{fmt}</span>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "#001040", letterSpacing: "-0.25px", lineHeight: 1.2, marginBottom: 5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {(h.title as string) || "Report"}
+                        {(h.grade || h.className) ? ` — ${h.grade || h.className}` : ""}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#5070B0", fontWeight: 500, letterSpacing: "-0.1px", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: statusColor, boxShadow: `0 0 4px ${statusColor}55` }} />
+                        <span style={{ fontWeight: 700, color: statusColor }}>{statusLabel}</span>
+                        <span style={{ color: "#99AACC" }}>·</span>
+                        <span>{fmt} Format</span>
+                        <span style={{ color: "#99AACC" }}>·</span>
+                        <span style={{ color: "#99AACC" }}>{fmtHistoryDate(h.createdAt)}</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={e => { e.stopPropagation(); onDownloadHistory(h); }}
+                      aria-label="Download report"
+                      className="rpd-press"
+                      style={{
+                        width: 36, height: 36, borderRadius: 11,
+                        background: "rgba(0,85,255,.08)", color: "#0055FF",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        flexShrink: 0, cursor: "pointer",
+                        border: "0.5px solid rgba(0,85,255,.1)",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                      </svg>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 

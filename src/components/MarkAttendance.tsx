@@ -27,7 +27,7 @@ const MA = {
   BG: "#EEF4FF",
   CARD: "#FFFFFF",
   SURFACE: "#F4F7FE",
-  P: "#0957F7",
+  P: "#0055FF",
   T1: "#001040", T3: "#5070B0", T4: "#99AACC",
   GREEN: "#00C853",
   RED: "#FF3355",
@@ -36,7 +36,7 @@ const MA = {
   GOLD: "#FFAA00",
   SH: "0 0.5px 1px rgba(9,87,247,0.04), 0 4px 14px rgba(9,87,247,0.08)",
   SH_SM: "0 0.5px 1px rgba(9,87,247,0.04), 0 2px 10px rgba(9,87,247,0.06)",
-  HEADER_GRAD: "linear-gradient(160deg, #000820 0%, #001466 55%, #0033CC 100%)",
+  HEADER_GRAD: "linear-gradient(160deg, #000A33 0%, #001A66 55%, #0044CC 100%)",
 };
 
 const getSemesterLabel = () => {
@@ -557,7 +557,7 @@ const MarkAttendance = ({ onBack, initialClassId }: Props) => {
     <div className="hidden md:block">
 
       {/* ── Dark Hero (back + save + class info) ─────────────────────────────── */}
-      <div className="-mx-4 -mt-4 sm:-mx-6 sm:-mt-6 md:-mx-8 md:-mt-8 px-[22px] pb-7 bg-[#162E93] md:bg-[#08090C]">
+      <div className="-mx-4 -mt-4 sm:-mx-6 sm:-mt-6 md:-mx-8 md:-mt-8 px-[22px] pb-7 bg-[#001A66] md:bg-[#08090C]">
 
         {/* Nav row: Back | title | Save */}
         <div className="flex items-center justify-between pt-3 mb-5">

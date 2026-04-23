@@ -406,7 +406,7 @@ const ClassDetail = () => {
   // ── Design tokens (mobile) ─────────────────────────────────────
   const M = {
     BG: "#EEF4FF", CARD: "#FFFFFF", SURFACE: "#F4F7FE", SURFACE2: "#EAF0FB",
-    B1: "#0957F7", T1: "#001040", T2: "#002080", T3: "#5070B0", T4: "#99AACC",
+    B1: "#0055FF", T1: "#001040", T2: "#002080", T3: "#5070B0", T4: "#99AACC",
     GREEN: "#00C853", RED: "#FF3355", ORANGE: "#FF8800", GOLD: "#FFAA00", VIOLET: "#7B3FF4",
     FONT: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif",
   };
@@ -493,7 +493,7 @@ const ClassDetail = () => {
         {/* Class Hero */}
         <div className="rounded-[26px] p-[20px] mb-[14px] relative overflow-hidden"
           style={{
-            background: "linear-gradient(135deg, #000820 0%, #001466 32%, #0033CC 68%, #0957F7 100%)",
+            background: "linear-gradient(135deg, #000A33 0%, #001A66 32%, #0044CC 68%, #0055FF 100%)",
             boxShadow: "0 1px 2px rgba(0,8,60,0.15), 0 12px 32px rgba(0,8,60,0.28)",
           }}>
           <div className="absolute inset-0 pointer-events-none" style={{
@@ -1143,7 +1143,7 @@ const ClassDetail = () => {
                 {/* AI Class Intelligence */}
                 <div className="rounded-[24px] p-[18px] mt-[14px] relative overflow-hidden"
                   style={{
-                    background: "linear-gradient(140deg, #000820 0%, #001888 28%, #0033CC 64%, #0957F7 100%)",
+                    background: "linear-gradient(140deg, #000A33 0%, #001A66 28%, #0044CC 64%, #0055FF 100%)",
                     boxShadow: "0 1px 2px rgba(0,8,60,0.18), 0 12px 32px rgba(0,8,60,0.3)",
                   }}>
                   <div className="absolute inset-0 pointer-events-none" style={{

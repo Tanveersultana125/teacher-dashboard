@@ -146,7 +146,7 @@ export default function CreateTest({ onCancel, onCreate }: { onCancel: () => voi
     CARD: "#FFFFFF",
     SURFACE: "#F4F7FE",
     SURFACE2: "#EAF0FB",
-    P: "#0957F7",
+    P: "#0055FF",
     T1: "#001040", T2: "#002080", T3: "#5070B0", T4: "#99AACC",
     GREEN: "#00C853",
     RED: "#FF3355",
@@ -154,7 +154,7 @@ export default function CreateTest({ onCancel, onCreate }: { onCancel: () => voi
     GOLD: "#FFAA00",
     VIOLET: "#7B3FF4",
     SH: "0 0.5px 1px rgba(9,87,247,0.04), 0 4px 14px rgba(9,87,247,0.08)",
-    HEADER_GRAD: "linear-gradient(160deg, #000820 0%, #001466 55%, #0033CC 100%)",
+    HEADER_GRAD: "linear-gradient(160deg, #000A33 0%, #001A66 55%, #0044CC 100%)",
   };
 
   // Parse "45 mins" / "45" / "" → number with default; format back with "mins"
@@ -557,7 +557,7 @@ export default function CreateTest({ onCancel, onCreate }: { onCancel: () => voi
                   {q}
                   <button type="button" aria-label={`Remove ${q}`}
                     onClick={() => setQTypes(qTypes.filter((_, i) => i !== idx))}
-                    className="w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-extrabold active:bg-[#0957F7] active:text-white"
+                    className="w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-extrabold active:bg-[#0055FF] active:text-white"
                     style={{ background: "rgba(9,87,247,0.14)", color: MA.P, border: "none", cursor: "pointer" }}>
                     ×
                   </button>
@@ -569,7 +569,7 @@ export default function CreateTest({ onCancel, onCreate }: { onCancel: () => voi
                   {t}
                   <button type="button" aria-label={`Remove ${t}`}
                     onClick={() => setTopics(topics.filter((_, i) => i !== idx))}
-                    className="w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-extrabold active:bg-[#0957F7] active:text-white"
+                    className="w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-extrabold active:bg-[#0055FF] active:text-white"
                     style={{ background: "rgba(9,87,247,0.14)", color: MA.P, border: "none", cursor: "pointer" }}>
                     ×
                   </button>
@@ -695,7 +695,7 @@ export default function CreateTest({ onCancel, onCreate }: { onCancel: () => voi
 
       {/* ── Dark Hero ─────────────────────────────────────────────────────── */}
       <div
-        className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 px-[22px] pb-5 bg-[#162E93] md:bg-[#08090C]"
+        className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 px-[22px] pb-5 bg-[#001A66] md:bg-[#08090C]"
       >
         {/* Back link */}
         <button type="button"

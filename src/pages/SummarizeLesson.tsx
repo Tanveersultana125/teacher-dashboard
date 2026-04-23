@@ -164,12 +164,28 @@ const SummarizeLesson = () => {
       fileInputRef={fileInputRef}
     />
 
-    {/* ═══════════════════ DESKTOP VIEW (unchanged) ═══════════════════ */}
-    <div className="hidden md:block" style={{ minHeight: "100vh", background: "#EEF4FF", paddingBottom: 0 }}>
+    {/* ═══════════════════ DESKTOP VIEW — Mobile design, widescreen grid ═══════════════════ */}
+    <DesktopSummarizeLesson
+      file={file}
+      pageCount={pageCount}
+      extracting={extracting}
+      loading={loading}
+      summary={summary}
+      error={error}
+      dragging={dragging}
+      setDragging={setDragging}
+      onDrop={handleDrop}
+      onPickFile={handleFile}
+      onReset={handleReset}
+      onGenerate={handleGenerate}
+      fileInputRef={fileInputRef}
+    />
+    {/* Legacy desktop wrapper — kept but never rendered; result view falls through */}
+    <div className="hidden" style={{ minHeight: "100vh", background: "#EEF4FF", paddingBottom: 0 }}>
 
       {/* ═══ DARK HERO (form view only) ══════════════════════════════════ */}
       {!showResult && (
-        <div className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 bg-[#162E93] md:bg-[#08090C]" style={{ padding: "18px 22px 22px" }}>
+        <div className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 bg-[#001A66] md:bg-[#08090C]" style={{ padding: "18px 22px 22px" }}>
           {/* AI badge */}
           <div style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 20, background: "rgba(103,65,217,0.25)", border: "1px solid rgba(103,65,217,0.4)", marginBottom: 10 }}>
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke={T.plBdr} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1332,5 +1348,720 @@ const SumSec = ({ title, bg, color, icon, count, noPad, children }: {
     </div>
   </div>
 );
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Desktop-only view — mirrors mobile design in widescreen grid
+// ─────────────────────────────────────────────────────────────────────────────
+const DesktopSummarizeLesson = ({
+  file, pageCount, extracting, loading, summary, error, dragging, setDragging,
+  onDrop, onPickFile, onReset, onGenerate, fileInputRef,
+}: MobileSummarizeLessonProps) => {
+  const showResult = !!summary && !loading;
+
+  const mobBenefits = [
+    { key: "brief",   title: "Brief summary",         sub: "2-3 paragraph overview of the whole lesson", color: "b1",
+      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> },
+    { key: "key",     title: "Key concepts",          sub: "Core ideas highlighted with context", color: "navy",
+      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg> },
+    { key: "section", title: "Section breakdown",     sub: "Topic-by-topic structure with subheadings", color: "green",
+      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg> },
+    { key: "defs",    title: "Important definitions", sub: "Terms your students must memorize", color: "gold",
+      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg> },
+    { key: "formula", title: "Formulas & rules",      sub: "Math/science formulas extracted cleanly", color: "red",
+      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 11 12 6 7 11"/><polyline points="17 18 12 13 7 18"/></svg> },
+    { key: "exam",    title: "Exam important points", sub: "High-weightage topics flagged", color: "orange",
+      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/></svg> },
+    { key: "revise",  title: "Quick revision points", sub: "Last-minute bullet points before exams", color: "teal",
+      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg> },
+  ];
+
+  const colorStyles: Record<string, string> = {
+    b1:     "linear-gradient(135deg, #0055FF, #1166FF)",
+    navy:   "linear-gradient(135deg, #001A66, #0044CC)",
+    green:  "linear-gradient(135deg, #00C853, #00E866)",
+    gold:   "linear-gradient(135deg, #FFAA00, #FFDD55)",
+    red:    "linear-gradient(135deg, #FF3355, #FF6680)",
+    orange: "linear-gradient(135deg, #FF8800, #FFAB33)",
+    teal:   "linear-gradient(135deg, #16B8B0, #2FD4CC)",
+  };
+
+  const briefSummary = (summary as any)?.brief_summary || (summary as any)?.summary;
+  const keyConcepts = ((summary as any)?.key_concepts || []) as any[];
+  const examPoints = ((summary as any)?.exam_important_points || []) as any[];
+  const quickRevision = ((summary as any)?.quick_revision || []) as any[];
+  const definitions = ((summary as any)?.important_definitions || (summary as any)?.definitions || []) as any[];
+  const formulas = ((summary as any)?.key_formulas_or_rules || (summary as any)?.formulas || []) as any[];
+  const sections = ((summary as any)?.section_breakdown || (summary as any)?.sections || []) as any[];
+
+  const resultCards = [
+    briefSummary && { key: "brief", title: "Brief Summary", icon: mobBenefits[0].icon, color: "b1",
+      body: <div style={{ fontSize: 14, color: "#002080", lineHeight: 1.6, fontWeight: 500, letterSpacing: "-0.1px" }}>{briefSummary}</div> },
+    keyConcepts.length > 0 && { key: "key", title: "Key Concepts", icon: mobBenefits[1].icon, color: "navy",
+      body: <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: 9, margin: 0, padding: 0 }}>
+        {keyConcepts.map((kc: any, i: number) => (
+          <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13, color: "#002080", lineHeight: 1.55, fontWeight: 500, letterSpacing: "-0.1px" }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#0055FF", marginTop: 7, flexShrink: 0, boxShadow: "0 0 4px rgba(0,85,255,.3)" }} />
+            {typeof kc === "string" ? kc : (
+              <span>
+                {kc.concept && <b style={{ color: "#001040", fontWeight: 700 }}>{kc.concept}: </b>}
+                {kc.explanation || kc.definition || ""}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul> },
+    examPoints.length > 0 && { key: "exam", title: "Exam Important Points", icon: mobBenefits[5].icon, color: "gold",
+      body: <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: 9, margin: 0, padding: 0 }}>
+        {examPoints.map((pt: any, i: number) => {
+          const text = typeof pt === "string" ? pt : pt.point || pt.text || "";
+          return (
+            <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13, color: "#002080", lineHeight: 1.55, fontWeight: 500, letterSpacing: "-0.1px" }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#0055FF", marginTop: 7, flexShrink: 0, boxShadow: "0 0 4px rgba(0,85,255,.3)" }} />
+              {text}
+            </li>
+          );
+        })}
+      </ul> },
+    quickRevision.length > 0 && { key: "revise", title: "Quick Revision Points", icon: mobBenefits[6].icon, color: "green",
+      body: <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: 9, margin: 0, padding: 0 }}>
+        {quickRevision.map((pt: any, i: number) => {
+          const text = typeof pt === "string" ? pt : pt.point || pt.text || "";
+          return (
+            <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13, color: "#002080", lineHeight: 1.55, fontWeight: 500, letterSpacing: "-0.1px" }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#0055FF", marginTop: 7, flexShrink: 0, boxShadow: "0 0 4px rgba(0,85,255,.3)" }} />
+              {text}
+            </li>
+          );
+        })}
+      </ul> },
+    definitions.length > 0 && { key: "defs", title: "Important Definitions", icon: mobBenefits[3].icon, color: "gold",
+      body: <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: 9, margin: 0, padding: 0 }}>
+        {definitions.map((d: any, i: number) => (
+          <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13, color: "#002080", lineHeight: 1.55, fontWeight: 500, letterSpacing: "-0.1px" }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#0055FF", marginTop: 7, flexShrink: 0, boxShadow: "0 0 4px rgba(0,85,255,.3)" }} />
+            <span><b style={{ color: "#001040", fontWeight: 700 }}>{d.term}: </b>{d.definition || d.meaning}</span>
+          </li>
+        ))}
+      </ul> },
+    formulas.length > 0 && { key: "formula", title: "Formulas & Rules", icon: mobBenefits[4].icon, color: "red",
+      body: <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {formulas.map((f: any, i: number) => (
+          <div key={i} style={{ padding: "10px 14px", background: "rgba(255,51,85,.08)", border: "0.5px solid rgba(255,51,85,.2)", borderRadius: 11 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#FF3355", fontFamily: "monospace", lineHeight: 1.55 }}>{typeof f === "string" ? f : f.formula || ""}</div>
+          </div>
+        ))}
+      </div> },
+    sections.length > 0 && { key: "section", title: "Section Breakdown", icon: mobBenefits[2].icon, color: "green",
+      body: <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {sections.map((sec: any, i: number) => (
+          <div key={i} style={{ padding: "12px 14px", background: "rgba(0,200,83,.06)", border: "0.5px solid rgba(0,200,83,.15)", borderRadius: 13 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: "#001040", marginBottom: 7, letterSpacing: "-0.2px" }}>{sec.section || sec.title}</div>
+            {(sec.points || []).map((pt: string, pi: number) => (
+              <div key={pi} style={{ fontSize: 12, color: "#002080", lineHeight: 1.55, margin: "4px 0", display: "flex", alignItems: "flex-start", gap: 6, fontWeight: 500 }}>
+                <span style={{ color: "#00C853", fontWeight: 900, flexShrink: 0 }}>✓</span>
+                {pt}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div> },
+  ].filter(Boolean) as { key: string; title: string; icon: React.ReactNode; color: string; body: React.ReactNode }[];
+
+  const fileSizeKB = file ? (file.size / 1024).toFixed(0) : "0";
+  const fileSizeMB = file ? (file.size / 1024 / 1024).toFixed(1) : "0";
+  const showLargeFormat = file && file.size >= 1024 * 1024;
+
+  return (
+    <div
+      className="hidden md:block -mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 px-8 pt-8 pb-12 text-left"
+      style={{
+        background: "#EEF4FF",
+        minHeight: "100vh",
+        fontVariantNumeric: "tabular-nums",
+      }}
+    >
+      <style>{`
+        .sld-card3d { transition: transform .35s cubic-bezier(.2,.9,.3,1), box-shadow .35s cubic-bezier(.2,.9,.3,1); transform-style: preserve-3d; will-change: transform; }
+        @media (hover:hover) { .sld-card3d:hover { transform: translateY(-3px) scale(1.004); box-shadow: 0 1px 2px rgba(0,85,255,.08), 0 24px 44px rgba(0,85,255,.18), 0 8px 16px rgba(0,85,255,.1); } }
+        .sld-press { transition: transform .18s cubic-bezier(.34,1.56,.64,1); }
+        .sld-press:active { transform: scale(.96); }
+        @keyframes sldPulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .5; transform: scale(1.3); } }
+        @keyframes sldTwinkle { 0%,100% { opacity: .85; } 50% { opacity: .25; } }
+        @keyframes sldSpin { to { transform: rotate(360deg); } }
+        .sld-pulse { animation: sldPulse 1.6s ease-in-out infinite; }
+        .sld-spinner { width: 36px; height: 36px; border-radius: 50%; border: 3px solid rgba(0,85,255,.15); border-top-color: #0055FF; animation: sldSpin 1s linear infinite; flex-shrink: 0; }
+      `}</style>
+
+      <div style={{ maxWidth: 1400, margin: "0 auto" }}>
+
+        {/* Page header row */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 7,
+            fontSize: 10, fontWeight: 800, color: "#fff",
+            letterSpacing: "1.8px", textTransform: "uppercase", marginBottom: 14,
+            background: "linear-gradient(135deg, #001A66 0%, #0055FF 50%, #1166FF 100%)",
+            padding: "7px 14px 7px 10px", borderRadius: 100,
+            boxShadow: "0 1px 2px rgba(0,85,255,.25), 0 4px 12px rgba(0,85,255,.3), inset 0 0.5px 0 rgba(255,255,255,.2)",
+          }}>
+            <span style={{
+              width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center",
+              color: "#FFDD55", fontSize: 13, lineHeight: 1,
+              filter: "drop-shadow(0 0 3px rgba(255,221,85,.6))",
+            }}>✦</span>
+            {showResult ? "AI Summary Ready" : "AI Powered"}
+          </div>
+          <h1 style={{ fontSize: 42, fontWeight: 800, color: "#001040", letterSpacing: "-1.6px", lineHeight: 1.05, margin: 0 }}>
+            {showResult ? (
+              <>
+                {(summary as any)?.title ? <>{(summary as any).title}{" "}</> : "Chapter "}
+                <span style={{
+                  background: "linear-gradient(135deg, #0055FF 0%, #1166FF 100%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                }}>summarised</span>
+              </>
+            ) : (
+              <>
+                Summarize{" "}
+                <span style={{
+                  background: "linear-gradient(135deg, #0055FF 0%, #1166FF 100%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                }}>lesson</span>
+              </>
+            )}
+          </h1>
+          <div style={{ fontSize: 15, color: "#5070B0", fontWeight: 500, marginTop: 8, letterSpacing: "-0.15px" }}>
+            {showResult
+              ? `Your lesson has been analyzed into ${resultCards.length} section${resultCards.length === 1 ? "" : "s"}.`
+              : "Upload any PDF — AI reads & summarizes it instantly."}
+          </div>
+        </div>
+
+        {!showResult && (
+          <>
+            {/* AI Hero — full width */}
+            <div
+              className="sld-card3d"
+              style={{
+                background: "linear-gradient(135deg, #000A33 0%, #001A66 32%, #0044CC 68%, #0055FF 100%)",
+                borderRadius: 28, padding: 32, marginBottom: 18,
+                position: "relative", overflow: "hidden",
+                boxShadow: "0 1px 2px rgba(0,26,102,.2), 0 12px 32px rgba(0,26,102,.32)",
+              }}
+            >
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(255,255,255,.12) 0%, transparent 45%)", pointerEvents: "none" }} />
+              <div style={{
+                position: "absolute", top: 28, right: 48,
+                width: 4, height: 4, background: "#FFDD55", borderRadius: "50%",
+                boxShadow: "-34px 22px 0 -1px rgba(255,255,255,.7), 18px 34px 0 -1px rgba(255,221,85,.85), -54px 48px 0 -2px rgba(255,255,255,.55), -16px 58px 0 -1px rgba(255,221,85,.9), -76px 14px 0 -2px rgba(255,255,255,.4)",
+                pointerEvents: "none",
+                animation: "sldTwinkle 3s ease-in-out infinite",
+              }} />
+              <div style={{ position: "relative", zIndex: 2 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
+                  <div style={{ width: 52, height: 52, borderRadius: 15, background: "rgba(255,255,255,.16)", backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)", border: "0.5px solid rgba(255,255,255,.28)", display: "flex", alignItems: "center", justifyContent: "center", color: "#FFDD55" }}>
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 900, color: "rgba(255,255,255,.85)", letterSpacing: "1.8px", textTransform: "uppercase" }}>Powered by Edullent engine</div>
+                    <div style={{ fontSize: 12, color: "rgba(255,255,255,.55)", marginTop: 3, fontWeight: 500, letterSpacing: "-0.1px" }}>Smart extraction · Real-time</div>
+                  </div>
+                  <div style={{
+                    marginLeft: "auto",
+                    background: "rgba(255,255,255,.18)",
+                    border: "0.5px solid rgba(255,255,255,.32)",
+                    color: "#fff",
+                    padding: "7px 14px", borderRadius: 100,
+                    fontSize: 11, fontWeight: 800,
+                    display: "flex", alignItems: "center", gap: 7, letterSpacing: "0.3px",
+                  }}>
+                    <span className="sld-pulse" style={{ width: 7, height: 7, borderRadius: "50%", background: "#FFDD55", boxShadow: "0 0 8px #FFDD55" }} />
+                    {file ? "Ready" : "Waiting"}
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 32, flexWrap: "wrap" }}>
+                  <div>
+                    <div style={{ fontSize: 42, fontWeight: 800, color: "#fff", letterSpacing: "-1.6px", lineHeight: 1.1, marginBottom: 10 }}>
+                      Any PDF → exam notes ✨
+                    </div>
+                    <div style={{ fontSize: 15, color: "rgba(255,255,255,.82)", fontWeight: 500, letterSpacing: "-0.15px", lineHeight: 1.5 }}>
+                      Drop a chapter and get <b style={{ color: "#fff", fontWeight: 700 }}>7 ready-made study sections</b> back in seconds.
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 1, background: "rgba(255,255,255,.12)", borderRadius: 14, padding: 1, overflow: "hidden", minWidth: 380 }}>
+                    <div style={{ background: "rgba(0,10,51,.7)", padding: "16px 20px", textAlign: "center" }}>
+                      <div style={{ fontSize: 24, fontWeight: 800, color: "#fff", letterSpacing: "-0.7px" }}>7</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,.6)", letterSpacing: "1.1px", textTransform: "uppercase", marginTop: 4 }}>Sections</div>
+                    </div>
+                    <div style={{ background: "rgba(0,10,51,.7)", padding: "16px 20px", textAlign: "center" }}>
+                      <div style={{ fontSize: 24, fontWeight: 800, color: "#FFDD55", letterSpacing: "-0.7px" }}>~12s</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,.6)", letterSpacing: "1.1px", textTransform: "uppercase", marginTop: 4 }}>Avg Time</div>
+                    </div>
+                    <div style={{ background: "rgba(0,10,51,.7)", padding: "16px 20px", textAlign: "center" }}>
+                      <div style={{ fontSize: 24, fontWeight: 800, color: "#6FFFAA", letterSpacing: "-0.7px" }}>20MB</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,.6)", letterSpacing: "1.1px", textTransform: "uppercase", marginTop: 4 }}>Max Size</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 2-column: Upload zone + What you'll get */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 18 }}>
+
+              {/* Upload zone */}
+              <div>
+                {!file ? (
+                  <div
+                    className="sld-press"
+                    onDragOver={e => { e.preventDefault(); setDragging(true); }}
+                    onDragLeave={() => setDragging(false)}
+                    onDrop={onDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInputRef.current?.click(); } }}
+                    style={{
+                      background: "#fff",
+                      border: `1.5px dashed ${dragging ? "#0055FF" : "rgba(0,85,255,.22)"}`,
+                      borderRadius: 22, padding: "56px 24px",
+                      textAlign: "center", position: "relative", overflow: "hidden",
+                      boxShadow: "0 0.5px 1px rgba(0,85,255,.04), 0 4px 14px rgba(0,85,255,.08)",
+                      cursor: "pointer", transition: "all .25s cubic-bezier(.2,.9,.3,1)",
+                      height: "100%",
+                      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                    }}
+                  >
+                    <div style={{
+                      position: "absolute", top: -40, left: "50%", transform: "translateX(-50%)",
+                      width: 240, height: 100,
+                      background: "radial-gradient(ellipse, rgba(0,85,255,.14), transparent 70%)",
+                      pointerEvents: "none",
+                    }} />
+                    <div style={{
+                      position: "absolute", top: 16, right: 16,
+                      background: "#F4F7FE", color: "#5070B0",
+                      fontSize: 10, fontWeight: 800, padding: "5px 11px", borderRadius: 100,
+                      letterSpacing: "0.3px", border: "0.5px solid rgba(0,85,255,.07)",
+                    }}>MAX 20 MB</div>
+                    <div style={{
+                      width: 80, height: 80, borderRadius: 22,
+                      background: "linear-gradient(135deg, #0055FF, #1166FF)",
+                      marginBottom: 18,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      color: "#fff", position: "relative",
+                      boxShadow: "0 1px 2px rgba(0,85,255,.22), 0 8px 20px rgba(0,85,255,.3), inset 0 1px 0 rgba(255,255,255,.18)",
+                    }}>
+                      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                      </svg>
+                      <span className="sld-pulse" style={{
+                        position: "absolute", top: -6, right: -6,
+                        fontSize: 18, color: "#FFDD55",
+                        textShadow: "0 0 8px rgba(255,221,85,.8)", lineHeight: 1,
+                      }}>✦</span>
+                    </div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: "#001040", letterSpacing: "-0.4px", marginBottom: 6 }}>
+                      {dragging ? "Release to upload" : "Drop PDF here"}
+                    </div>
+                    <div style={{ fontSize: 13, color: "#5070B0", fontWeight: 500, letterSpacing: "-0.15px", lineHeight: 1.5, marginBottom: 16 }}>
+                      or click to browse files<br />
+                      <b style={{ color: "#0055FF", fontWeight: 700 }}>Text-based PDF only</b>
+                    </div>
+                    <div style={{
+                      display: "inline-flex", alignItems: "center", gap: 7,
+                      padding: "11px 20px",
+                      background: "linear-gradient(135deg, #0055FF, #1166FF)",
+                      color: "#fff",
+                      fontSize: 13, fontWeight: 800, borderRadius: 100,
+                      letterSpacing: "-0.15px",
+                      boxShadow: "0 1px 2px rgba(0,85,255,.22), 0 4px 12px rgba(0,85,255,.3)",
+                    }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                      </svg>
+                      Browse files
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="application/pdf"
+                      style={{ display: "none" }}
+                      onChange={e => { if (e.target.files?.[0]) onPickFile(e.target.files[0]); }}
+                    />
+                  </div>
+                ) : (
+                  <div
+                    className="sld-card3d"
+                    style={{
+                      background: "#fff", borderRadius: 22, padding: 22,
+                      boxShadow: "0 0.5px 1px rgba(0,85,255,.04), 0 4px 14px rgba(0,85,255,.08)",
+                      border: "0.5px solid rgba(0,85,255,.07)",
+                      display: "flex", alignItems: "center", gap: 16,
+                      height: "100%",
+                    }}
+                  >
+                    <div style={{
+                      width: 56, height: 68,
+                      background: "linear-gradient(145deg, #FF4B5C 0%, #E6244A 100%)",
+                      borderRadius: 10, position: "relative", flexShrink: 0,
+                      boxShadow: "0 1px 2px rgba(230,36,74,.15), 0 3px 10px rgba(230,36,74,.25)",
+                      display: "flex", alignItems: "flex-end", justifyContent: "center",
+                      paddingBottom: 9,
+                    }}>
+                      <span style={{
+                        position: "absolute", top: 0, right: 0,
+                        width: 18, height: 18,
+                        background: "linear-gradient(225deg, rgba(255,255,255,.35) 50%, transparent 50%)",
+                        borderRadius: "0 10px 0 0",
+                      }} />
+                      <span style={{ fontSize: 11, fontWeight: 900, color: "#fff", letterSpacing: "0.3px" }}>PDF</span>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: "#001040", letterSpacing: "-0.3px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: 6 }}>{file.name}</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: "#5070B0", fontWeight: 600, letterSpacing: "-0.1px", flexWrap: "wrap" }}>
+                        {extracting ? (
+                          <span style={{ background: "rgba(0,85,255,.1)", color: "#0055FF", padding: "3px 10px", borderRadius: 7, fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", gap: 5 }}>
+                            <Loader2 style={{ width: 11, height: 11 }} className="animate-spin" />
+                            Reading
+                          </span>
+                        ) : (
+                          <>
+                            <span style={{ background: "rgba(0,200,83,.1)", color: "#00C853", padding: "3px 10px", borderRadius: 7, fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", gap: 5 }}>
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                              Ready
+                            </span>
+                            <span style={{ color: "#99AACC" }}>·</span>
+                            <span>{pageCount} page{pageCount === 1 ? "" : "s"}</span>
+                            <span style={{ color: "#99AACC" }}>·</span>
+                            <span>{showLargeFormat ? `${fileSizeMB} MB` : `${fileSizeKB} KB`}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={onReset}
+                      aria-label="Remove file"
+                      className="sld-press"
+                      style={{
+                        width: 36, height: 36, borderRadius: 11,
+                        background: "#F4F7FE", color: "#5070B0",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        flexShrink: 0, cursor: "pointer",
+                        border: "0.5px solid rgba(0,85,255,.07)", fontFamily: "inherit",
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* What you'll get */}
+              <div className="sld-card3d" style={{
+                background: "#fff", borderRadius: 22, padding: 8,
+                boxShadow: "0 0.5px 1px rgba(0,85,255,.04), 0 4px 14px rgba(0,85,255,.08)",
+                border: "0.5px solid rgba(0,85,255,.07)",
+                overflow: "hidden",
+              }}>
+                <div style={{ padding: "6px 12px 10px", display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: "#001040", letterSpacing: "-0.3px", display: "flex", alignItems: "center", gap: 6 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="#FFAA00"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/></svg>
+                    What you'll get
+                  </span>
+                  <span style={{ fontSize: 11, color: "#5070B0", fontWeight: 700, letterSpacing: "-0.1px" }}>7 outputs</span>
+                </div>
+                {mobBenefits.map((b, idx) => (
+                  <div
+                    key={b.key}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 12,
+                      padding: "10px 12px", borderRadius: 13,
+                      position: "relative",
+                      borderTop: idx > 0 ? "0.5px solid rgba(0,85,255,.07)" : "none",
+                    }}
+                  >
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 11,
+                      background: colorStyles[b.color], color: "#fff",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      flexShrink: 0,
+                      boxShadow: "0 1px 2px rgba(0,85,255,.1), 0 2px 6px rgba(0,85,255,.14)",
+                    }}>{b.icon}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: "#001040", letterSpacing: "-0.25px", lineHeight: 1.25 }}>{b.title}</div>
+                      <div style={{ fontSize: 11, color: "#5070B0", fontWeight: 500, letterSpacing: "-0.1px", marginTop: 3 }}>{b.sub}</div>
+                    </div>
+                    <div style={{
+                      width: 20, height: 20, borderRadius: "50%",
+                      background: "rgba(0,85,255,.08)",
+                      border: "0.5px solid rgba(0,85,255,.07)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      color: "#0055FF", flexShrink: 0,
+                    }}>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Loading state */}
+            {loading && (
+              <div
+                className="sld-card3d"
+                style={{
+                  background: "linear-gradient(135deg, rgba(0,85,255,.08), rgba(17,102,255,.04))",
+                  border: "0.5px solid rgba(0,85,255,.2)",
+                  borderRadius: 20, padding: 22,
+                  display: "flex", alignItems: "center", gap: 16, marginBottom: 18,
+                }}
+              >
+                <div className="sld-spinner" />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: "#001040", letterSpacing: "-0.3px" }}>AI is summarizing…</div>
+                  <div style={{ fontSize: 12, color: "#5070B0", fontWeight: 500, marginTop: 3, letterSpacing: "-0.1px" }}>This may take 15–30 seconds</div>
+                </div>
+              </div>
+            )}
+
+            {/* Error */}
+            {error && (
+              <div style={{
+                display: "flex", alignItems: "center", gap: 10,
+                padding: "12px 16px", background: "rgba(255,51,85,.08)",
+                border: "0.5px solid rgba(255,51,85,.25)", borderRadius: 14, marginBottom: 14,
+              }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF3355" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="1" fill="currentColor" stroke="none"/>
+                </svg>
+                <span style={{ fontSize: 13, fontWeight: 600, color: "#FF3355" }}>{error}</span>
+              </div>
+            )}
+
+            {/* Inline Summarize CTA (not sticky on desktop) */}
+            <button
+              type="button"
+              onClick={onGenerate}
+              disabled={!file || extracting || loading}
+              className="sld-press"
+              style={{
+                width: "100%", height: 58, borderRadius: 16,
+                background: (!file || extracting || loading)
+                  ? "#F4F7FE"
+                  : "linear-gradient(135deg, #0044CC 0%, #0055FF 50%, #1166FF 100%)",
+                color: (!file || extracting || loading) ? "#99AACC" : "#fff",
+                fontSize: 17, fontWeight: 800, border: "none",
+                cursor: (!file || extracting || loading) ? "not-allowed" : "pointer",
+                letterSpacing: "-0.3px",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                boxShadow: (!file || extracting || loading)
+                  ? "0 0.5px 1px rgba(0,85,255,.04)"
+                  : "0 1px 2px rgba(0,26,102,.3), 0 8px 22px rgba(0,85,255,.42), inset 0 1px 0 rgba(255,255,255,.2)",
+                fontFamily: "inherit",
+                position: "relative", overflow: "hidden",
+              }}
+            >
+              {loading ? (
+                <><Loader2 className="w-5 h-5 animate-spin" /> Summarizing…</>
+              ) : extracting ? (
+                <><Loader2 className="w-5 h-5 animate-spin" /> Reading PDF…</>
+              ) : (
+                <>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style={{ color: (!file || extracting || loading) ? "#99AACC" : "#FFDD55", filter: (!file || extracting || loading) ? "none" : "drop-shadow(0 0 4px rgba(255,221,85,.55))" }}>
+                    <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/>
+                  </svg>
+                  {file ? "Summarize PDF" : "Upload PDF to start"}
+                </>
+              )}
+            </button>
+          </>
+        )}
+
+        {showResult && (
+          <>
+            {/* Uploaded file card */}
+            <div className="sld-card3d" style={{
+              background: "#fff", borderRadius: 22, padding: 18, marginBottom: 18,
+              boxShadow: "0 0.5px 1px rgba(0,85,255,.04), 0 4px 14px rgba(0,85,255,.08)",
+              border: "0.5px solid rgba(0,85,255,.07)",
+              display: "flex", alignItems: "center", gap: 16,
+            }}>
+              <div style={{
+                width: 52, height: 64,
+                background: "linear-gradient(145deg, #FF4B5C 0%, #E6244A 100%)",
+                borderRadius: 9, position: "relative", flexShrink: 0,
+                boxShadow: "0 1px 2px rgba(230,36,74,.15), 0 3px 10px rgba(230,36,74,.25)",
+                display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: 8,
+              }}>
+                <span style={{ position: "absolute", top: 0, right: 0, width: 16, height: 16, background: "linear-gradient(225deg, rgba(255,255,255,.35) 50%, transparent 50%)", borderRadius: "0 9px 0 0" }} />
+                <span style={{ fontSize: 10, fontWeight: 900, color: "#fff", letterSpacing: "0.3px" }}>PDF</span>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 16, fontWeight: 800, color: "#001040", letterSpacing: "-0.3px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: 6 }}>{file?.name}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: "#5070B0", fontWeight: 600, letterSpacing: "-0.1px" }}>
+                  <span style={{ background: "rgba(0,200,83,.1)", color: "#00C853", padding: "3px 10px", borderRadius: 7, fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", gap: 5 }}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    Analysed
+                  </span>
+                  <span style={{ color: "#99AACC" }}>·</span>
+                  <span>{pageCount} page{pageCount === 1 ? "" : "s"}</span>
+                  <span style={{ color: "#99AACC" }}>·</span>
+                  <span>{showLargeFormat ? `${fileSizeMB} MB` : `${fileSizeKB} KB`}</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={onReset}
+                aria-label="Close summary"
+                className="sld-press"
+                style={{
+                  width: 36, height: 36, borderRadius: 11,
+                  background: "#F4F7FE", color: "#5070B0",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  flexShrink: 0, cursor: "pointer",
+                  border: "0.5px solid rgba(0,85,255,.07)", fontFamily: "inherit",
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+
+            {/* AI Summary section head */}
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", padding: "4px 4px 14px" }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                <span style={{ fontSize: 17, fontWeight: 800, color: "#001040", letterSpacing: "-0.4px", display: "flex", alignItems: "center", gap: 7 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFAA00"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/></svg>
+                  AI Summary
+                </span>
+                <span style={{ fontSize: 13, color: "#5070B0", fontWeight: 600, letterSpacing: "-0.1px" }}>
+                  {resultCards.length} section{resultCards.length === 1 ? "" : "s"}
+                </span>
+              </div>
+            </div>
+
+            {/* Result cards — 2-col grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14, marginBottom: 14 }}>
+              {resultCards.map(card => (
+                <div
+                  key={card.key}
+                  className="sld-card3d"
+                  style={{
+                    background: "#fff", borderRadius: 20, padding: 20,
+                    boxShadow: "0 0.5px 1px rgba(0,85,255,.04), 0 4px 14px rgba(0,85,255,.08)",
+                    border: "0.5px solid rgba(0,85,255,.07)",
+                    position: "relative", overflow: "hidden",
+                  }}
+                >
+                  <div style={{
+                    position: "absolute", left: 0, top: 0, bottom: 0, width: 4,
+                    background: "linear-gradient(180deg, #0055FF, #1166FF)",
+                  }} />
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+                    <div style={{
+                      width: 38, height: 38, borderRadius: 12,
+                      background: colorStyles[card.color], color: "#fff",
+                      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                    }}>{card.icon}</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: "#001040", letterSpacing: "-0.3px", flex: 1 }}>{card.title}</div>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: "#FFAA00", letterSpacing: "1px", textTransform: "uppercase", display: "flex", alignItems: "center", gap: 3 }}>
+                      ✦ AI
+                    </div>
+                  </div>
+                  {card.body}
+                </div>
+              ))}
+            </div>
+
+            {/* Action buttons */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => {
+                  const text = JSON.stringify(summary, null, 2);
+                  const blob = new Blob([text], { type: "text/plain" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `${(file?.name || "summary").replace(/\.pdf$/i, "")}_summary.txt`;
+                  a.click();
+                  setTimeout(() => URL.revokeObjectURL(url), 1000);
+                }}
+                className="sld-press"
+                style={{
+                  padding: "14px 16px", borderRadius: 14,
+                  background: "linear-gradient(135deg, #0055FF, #1166FF)",
+                  color: "#fff",
+                  fontSize: 14, fontWeight: 800, border: "none",
+                  letterSpacing: "-0.2px", cursor: "pointer", fontFamily: "inherit",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+                  boxShadow: "0 1px 2px rgba(0,85,255,.22), 0 4px 12px rgba(0,85,255,.28)",
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Export
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard?.writeText(JSON.stringify(summary, null, 2));
+                }}
+                className="sld-press"
+                style={{
+                  padding: "14px 16px", borderRadius: 14,
+                  background: "#F4F7FE", color: "#002080",
+                  border: "0.5px solid rgba(0,85,255,.07)",
+                  fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+                  letterSpacing: "-0.2px",
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                </svg>
+                Copy
+              </button>
+              <button
+                type="button"
+                onClick={onReset}
+                className="sld-press"
+                style={{
+                  padding: "14px 16px", borderRadius: 14,
+                  background: "#fff", color: "#002080",
+                  border: "0.5px solid rgba(0,85,255,.07)",
+                  fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+                  letterSpacing: "-0.2px",
+                  boxShadow: "0 0.5px 1px rgba(0,85,255,.04), 0 2px 8px rgba(0,85,255,.06)",
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 12a9 9 0 0118 0 9 9 0 01-15 6.7L3 16"/><polyline points="3 21 3 16 8 16"/>
+                </svg>
+                Summarize another
+              </button>
+            </div>
+          </>
+        )}
+
+      </div>
+    </div>
+  );
+};
 
 export default SummarizeLesson;

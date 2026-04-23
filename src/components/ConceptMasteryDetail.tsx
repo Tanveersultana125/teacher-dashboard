@@ -240,7 +240,7 @@ const ConceptMasteryDetail = ({ student, concepts, scores, className, onBack }: 
 
       {/* ── Dark hero ────────────────────────────────────────────────────────── */}
       <div
-        className="bg-[#162E93] md:bg-[#08090C] md:rounded-2xl"
+        className="bg-[#001A66] md:bg-[#08090C] md:rounded-2xl"
         style={{ margin: "0 -22px", position: "relative" }}
       >
         <div className="max-w-[1200px] md:mx-auto" style={{ padding: "0 22px 28px" }}>
@@ -501,7 +501,7 @@ const ConceptMasteryDetail = ({ student, concepts, scores, className, onBack }: 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mobile-only redesign (does not affect desktop)
 // ─────────────────────────────────────────────────────────────────────────────
-const MOB_AV_PALETTE = ['#7B3FF4', '#00C853', '#0957F7', '#FF8800', '#00B8D4', '#C2255C', '#6741D9'];
+const MOB_AV_PALETTE = ['#7B3FF4', '#00C853', '#0055FF', '#FF8800', '#00B8D4', '#C2255C', '#6741D9'];
 const mobAvatarColor = (name: string) => {
   const sum = (name || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
   return MOB_AV_PALETTE[sum % MOB_AV_PALETTE.length];
@@ -561,7 +561,7 @@ const MobileConceptMasteryDetail = ({
       {/* Dark header */}
       <div style={{
         position: 'sticky', top: 0, zIndex: 20,
-        background: 'linear-gradient(160deg, #000820 0%, #001466 55%, #0033CC 100%)',
+        background: 'linear-gradient(160deg, #000A33 0%, #001A66 55%, #0044CC 100%)',
         padding: '10px 16px 22px 16px',
         borderRadius: '0 0 26px 26px',
         boxShadow: '0 8px 24px rgba(0,8,60,.25)',
@@ -631,7 +631,7 @@ const MobileConceptMasteryDetail = ({
               className="cmd-press"
               style={{
                 flex: 1, height: 38, borderRadius: 11,
-                background: '#0957F7', color: '#fff',
+                background: '#0055FF', color: '#fff',
                 border: 'none',
                 fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: '-0.2px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, fontFamily: 'inherit',
@@ -795,7 +795,7 @@ const MobileConceptMasteryDetail = ({
           boxShadow: '0 0.5px 1px rgba(9,87,247,.04), 0 4px 14px rgba(9,87,247,.08)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-            <div style={{ width: 34, height: 34, borderRadius: 11, background: '#0957F7', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 11, background: '#0055FF', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
               </svg>
@@ -807,7 +807,7 @@ const MobileConceptMasteryDetail = ({
           </div>
           {recommendedActions.map((action, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 11, padding: '10px 0', position: 'relative', borderTop: i > 0 ? '0.5px solid rgba(9,87,247,.07)' : 'none' }}>
-              <div style={{ width: 26, height: 26, borderRadius: 8, background: 'rgba(9,87,247,.1)', color: '#0957F7', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div style={{ width: 26, height: 26, borderRadius: 8, background: 'rgba(9,87,247,.1)', color: '#0055FF', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 {i + 1}
               </div>
               <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#001040', letterSpacing: '-0.15px', lineHeight: 1.5, paddingTop: 3 }}>{action}</div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+﻿import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import MarkAttendance from "@/components/MarkAttendance";
 import { db } from "../lib/firebase";
@@ -39,14 +39,14 @@ const MA = {
   BG: "#EEF4FF",
   CARD: "#FFFFFF",
   SURFACE: "#F4F7FE",
-  P: "#0957F7", PD: "#0044DD",
+  P: "#0055FF", PD: "#0044CC",
   T1: "#001040", T3: "#5070B0", T4: "#99AACC",
   GREEN: "#00C853", GREEN_B: "#00E866",
   RED: "#FF3355",
   ORANGE: "#FF8800",
   SH: "0 0.5px 1px rgba(9,87,247,0.04), 0 4px 14px rgba(9,87,247,0.08)",
   SH_SM: "0 0.5px 1px rgba(9,87,247,0.04), 0 2px 10px rgba(9,87,247,0.06)",
-  HERO_GRAD: "linear-gradient(135deg, #000820 0%, #001466 32%, #0033CC 68%, #0957F7 100%)",
+  HERO_GRAD: "linear-gradient(135deg, #000A33 0%, #001A66 32%, #0044CC 68%, #0055FF 100%)",
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -429,7 +429,7 @@ const Attendance = () => {
                   tabIndex={onClickCard ? 0 : undefined}
                   className={`flex-shrink-0 w-[128px] rounded-[16px] p-[12px] relative overflow-hidden ${onClickCard ? "active:scale-[0.97]" : ""}`}
                   style={{
-                    background: day.isToday ? "linear-gradient(145deg, #0957F7 0%, #2970FF 100%)" : MA.SURFACE,
+                    background: day.isToday ? "linear-gradient(145deg, #0055FF 0%, #2970FF 100%)" : MA.SURFACE,
                     boxShadow: day.isToday ? "0 1px 2px rgba(9,87,247,0.2), 0 6px 16px rgba(9,87,247,0.35)" : "none",
                     opacity: day.isFuture ? 0.92 : 1,
                     cursor: onClickCard ? "pointer" : "default",
@@ -559,7 +559,7 @@ const Attendance = () => {
           return (
             <div className="mx-4 mb-[14px] rounded-[24px] p-[20px] relative overflow-hidden"
               style={{
-                background: "linear-gradient(140deg, #000820 0%, #001888 28%, #0033CC 64%, #0957F7 100%)",
+                background: "linear-gradient(140deg, #000A33 0%, #001A66 28%, #0044CC 64%, #0055FF 100%)",
                 boxShadow: "0 1px 2px rgba(0,8,60,0.18), 0 12px 32px rgba(0,8,60,0.3)",
               }}>
               <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.09) 0%, transparent 45%)" }} />
@@ -615,217 +615,366 @@ const Attendance = () => {
 
       </div>
 
-      {/* ═══════════════════ DESKTOP VIEW ═══════════════════ */}
-      <div className="hidden md:block">
+      {/* ═══════════════════ DESKTOP VIEW — Mobile design, widescreen grid ═══════════════════ */}
+      <div className="hidden md:block -mx-4 sm:-mx-6 md:-mx-8 md:-mt-8" style={{ fontFamily: MA.FONT, background: "#EEF4FF", minHeight: "100vh" }}>
+        <div className="max-w-[1600px] mx-auto px-8 pt-8 pb-12">
 
-        {/* ── Header row ─────────────────────────────────────────── */}
-        <div className="flex items-start justify-between mb-6 gap-4">
-          <div>
-            <h1 className="text-[28px] font-bold text-slate-900 leading-tight tracking-tight">Attendance</h1>
-            <p className="text-sm text-slate-500 mt-1">Track and manage student attendance across all classes.</p>
+          {/* Header */}
+          <div className="mb-6">
+            <div className="flex items-center gap-[7px] text-[10px] font-extrabold uppercase mb-[8px]" style={{ color: MA.T3, letterSpacing: "1.8px" }}>
+              <span className="w-[6px] h-[6px] rounded-[2px]" style={{ background: MA.P }} />
+              Teacher Dashboard · Attendance
+            </div>
+            <h1 className="text-[40px] font-extrabold leading-[1.05]" style={{ color: MA.T1, letterSpacing: "-1.4px" }}>Attendance</h1>
+            <div className="text-[14px] font-medium mt-[8px]" style={{ color: MA.T3, letterSpacing: "-0.15px" }}>
+              Track and manage student attendance across all classes.
+            </div>
           </div>
-          <button type="button"
-            onClick={() => { setMarkingClassId(selectedClassId); setMarking(true); }}
-            className="h-11 px-5 rounded-lg bg-[#1e3272] text-white text-sm font-semibold hover:bg-[#162552] flex items-center gap-2 shadow-sm transition-colors"
-          >
-            Mark Today's Attendance
-          </button>
-        </div>
 
-        {/* ── 4-col Stat cards ───────────────────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div
-            onClick={() => navigate('/reports')}
-            role="button"
-            tabIndex={0}
-            className="clickable-card bg-white border border-slate-200 rounded-2xl p-5 shadow-sm"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: T.greenL }}>
-                <IcoBarChart color={T.green} />
+          {/* Hero banner */}
+          <div className="rounded-[28px] px-8 py-8 relative overflow-hidden mb-5"
+            style={{ background: MA.HERO_GRAD, boxShadow: "0 1px 2px rgba(0,8,60,0.15), 0 12px 32px rgba(0,8,60,0.28)" }}>
+            <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.09) 0%, transparent 45%)" }} />
+            <div className="relative z-[2]">
+              <div className="flex items-center gap-4 mb-5">
+                <div className="w-[52px] h-[52px] rounded-[15px] flex items-center justify-center text-white"
+                  style={{
+                    background: "rgba(255,255,255,0.14)",
+                    backdropFilter: "blur(22px)",
+                    WebkitBackdropFilter: "blur(22px)",
+                    border: "0.5px solid rgba(255,255,255,0.22)",
+                    boxShadow: "inset 0 0.5px 0 rgba(255,255,255,0.15)",
+                  }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
+                </div>
+                <div>
+                  <div className="text-[11px] font-extrabold uppercase" style={{ color: "rgba(255,255,255,0.72)", letterSpacing: "1.8px" }}>Overall Rate</div>
+                  <div className="text-[12px] font-medium mt-[3px]" style={{ color: "rgba(255,255,255,0.5)", letterSpacing: "-0.1px" }}>Today · {activeClass?.name || "All classes"}</div>
+                </div>
+                <div className="ml-auto flex items-center gap-[6px] px-4 py-[7px] rounded-full text-[11px] font-extrabold"
+                  style={{
+                    background: stats.rateNum >= 85 ? "rgba(0,232,102,0.18)" : stats.rateNum >= 70 ? "rgba(255,170,0,0.22)" : stats.rateNum > 0 ? "rgba(255,51,85,0.18)" : "rgba(255,255,255,0.14)",
+                    border: `0.5px solid ${stats.rateNum >= 85 ? "rgba(0,232,102,0.5)" : stats.rateNum >= 70 ? "rgba(255,170,0,0.5)" : stats.rateNum > 0 ? "rgba(255,51,85,0.5)" : "rgba(255,255,255,0.22)"}`,
+                    color: stats.rateNum >= 85 ? "#6FFFAA" : stats.rateNum >= 70 ? "#FFD166" : stats.rateNum > 0 ? "#FF99AA" : "rgba(255,255,255,0.72)",
+                    letterSpacing: "0.3px",
+                  }}>
+                  <span className="w-[6px] h-[6px] rounded-full" style={{
+                    background: stats.rateNum >= 85 ? "#00FF88" : stats.rateNum >= 70 ? "#FFCC22" : stats.rateNum > 0 ? "#FF5577" : "#fff",
+                    boxShadow: `0 0 8px ${stats.rateNum >= 85 ? "#00FF88" : stats.rateNum >= 70 ? "#FFCC22" : stats.rateNum > 0 ? "#FF5577" : "#fff"}`,
+                  }} />
+                  {stats.rateNum >= 85 ? "On Track" : stats.rateNum >= 70 ? "Watch" : stats.rateNum > 0 ? "Low" : "No data"}
+                </div>
               </div>
-              <div>
-                <p className="text-[28px] font-bold text-slate-900 leading-none">{stats.rateStr}</p>
-                <p className="text-xs text-slate-500 mt-1.5">Overall Rate</p>
-              </div>
-            </div>
-          </div>
-          <div
-            onClick={() => navigate('/students')}
-            role="button"
-            tabIndex={0}
-            className="clickable-card bg-white border border-slate-200 rounded-2xl p-5 shadow-sm"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: T.blueL }}>
-                <IcoUserCheck color={T.blue} />
-              </div>
-              <div>
-                <p className="text-[28px] font-bold text-slate-900 leading-none">{stats.presentToday}</p>
-                <p className="text-xs text-slate-500 mt-1.5">Present Today</p>
-              </div>
-            </div>
-          </div>
-          <div
-            onClick={() => navigate('/risks-alerts')}
-            role="button"
-            tabIndex={0}
-            className="clickable-card bg-white border border-slate-200 rounded-2xl p-5 shadow-sm"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: T.redL }}>
-                <IcoUserX color={T.red} />
-              </div>
-              <div>
-                <p className="text-[28px] font-bold text-slate-900 leading-none">{stats.absentToday}</p>
-                <p className="text-xs text-slate-500 mt-1.5">Absent Today</p>
-              </div>
-            </div>
-          </div>
-          <div
-            onClick={() => navigate('/risks-alerts')}
-            role="button"
-            tabIndex={0}
-            className="clickable-card bg-white border border-slate-200 rounded-2xl p-5 shadow-sm"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: T.amberL }}>
-                <IcoClock color={T.amber} />
-              </div>
-              <div>
-                <p className="text-[28px] font-bold text-slate-900 leading-none">{stats.lateToday}</p>
-                <p className="text-xs text-slate-500 mt-1.5">Late Today</p>
+              <div className="flex items-end justify-between gap-8 flex-wrap">
+                <div>
+                  <div className="text-[84px] font-extrabold text-white leading-none mb-[6px] flex items-baseline gap-[2px]" style={{ letterSpacing: "-3.8px" }}>
+                    {stats.rateNum > 0 ? stats.rateNum.toFixed(1) : "—"}
+                    {stats.rateNum > 0 && <span className="text-[40px] font-bold" style={{ color: "rgba(255,255,255,0.68)", letterSpacing: "-1px" }}>%</span>}
+                  </div>
+                  <div className="text-[14px] font-medium" style={{ color: "rgba(255,255,255,0.72)", letterSpacing: "-0.15px" }}>
+                    <b className="text-white font-bold">
+                      {stats.rateNum >= 85 ? "Excellent turnout" : stats.rateNum >= 70 ? "Steady turnout" : stats.rateNum > 0 ? "Needs attention" : "No records yet"}
+                    </b>
+                    {stats.rateNum > 0 ? " today — tracking overall performance." : " — mark today to start tracking."}
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-[1px] rounded-[14px] overflow-hidden p-[1px] min-w-[380px]" style={{ background: "rgba(255,255,255,0.1)" }}>
+                  <div className="py-4 px-5 text-center" style={{ background: "rgba(0,20,80,0.55)" }}>
+                    <div className="text-[26px] font-extrabold" style={{ color: "#6FFFAA", letterSpacing: "-0.8px" }}>{stats.presentToday}</div>
+                    <div className="text-[10px] font-extrabold uppercase mt-[4px]" style={{ color: "rgba(255,255,255,0.58)", letterSpacing: "1.2px" }}>Present</div>
+                  </div>
+                  <div className="py-4 px-5 text-center" style={{ background: "rgba(0,20,80,0.55)" }}>
+                    <div className="text-[26px] font-extrabold" style={{ color: "#FF9AA9", letterSpacing: "-0.8px" }}>{stats.absentToday}</div>
+                    <div className="text-[10px] font-extrabold uppercase mt-[4px]" style={{ color: "rgba(255,255,255,0.58)", letterSpacing: "1.2px" }}>Absent</div>
+                  </div>
+                  <div className="py-4 px-5 text-center" style={{ background: "rgba(0,20,80,0.55)" }}>
+                    <div className="text-[26px] font-extrabold" style={{ color: "#FFD060", letterSpacing: "-0.8px" }}>{stats.lateToday}</div>
+                    <div className="text-[10px] font-extrabold uppercase mt-[4px]" style={{ color: "rgba(255,255,255,0.58)", letterSpacing: "1.2px" }}>Late</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* ── Class tabs ─────────────────────────────────────────── */}
-        {classes.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-5">
-            {classes.map(cls => (
-              <button type="button"
-                key={cls.id}
-                onClick={() => setSelectedClassId(cls.id)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  selectedClassId === cls.id
-                    ? 'bg-[#1e3272] text-white'
-                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-                }`}
-              >
-                {cls.name}
+          {/* Mark today CTA + 3 stat cards row */}
+          <div className="grid grid-cols-4 gap-4 mb-5">
+            <button type="button"
+              onClick={() => { setMarkingClassId(selectedClassId); setMarking(true); }}
+              className="h-auto rounded-[22px] flex flex-col items-center justify-center gap-2 p-5 hover:scale-[1.02] active:scale-[0.98] transition-transform"
+              style={{ background: MA.GREEN, color: "#fff", fontSize: 14, fontWeight: 800, letterSpacing: "-0.2px", boxShadow: "0 1px 2px rgba(0,200,83,0.3), 0 6px 16px rgba(0,200,83,0.35)", fontFamily: MA.FONT }}>
+              <div className="w-11 h-11 rounded-[12px] flex items-center justify-center" style={{ background: "rgba(255,255,255,0.2)" }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <div>Mark today's attendance</div>
+            </button>
+            {([
+              { key: "present", color: MA.GREEN, value: stats.presentToday, label: "Present", onClick: () => navigate('/students'),
+                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21a6 6 0 0112 0"/><polyline points="17 11 19 13 23 9"/></svg> },
+              { key: "absent", color: MA.RED, value: stats.absentToday, label: "Absent", onClick: () => navigate('/risks-alerts'),
+                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21a6 6 0 0112 0"/><line x1="17" y1="9" x2="23" y2="15"/><line x1="23" y1="9" x2="17" y2="15"/></svg> },
+              { key: "late", color: MA.ORANGE, value: stats.lateToday, label: "Late", onClick: () => navigate('/risks-alerts'),
+                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> },
+            ] as const).map(s => (
+              <button key={s.key} type="button" onClick={s.onClick}
+                className="bg-white rounded-[22px] p-5 text-center hover:-translate-y-[2px] active:scale-[0.98] transition-all"
+                style={{ boxShadow: MA.SH, fontFamily: MA.FONT }}>
+                <div className="w-11 h-11 rounded-[12px] flex items-center justify-center text-white mx-auto mb-3" style={{ background: s.color }}>
+                  {s.icon}
+                </div>
+                <div className="text-[32px] font-extrabold leading-none" style={{ color: s.color, letterSpacing: "-1.2px" }}>{s.value}</div>
+                <div className="text-[10px] font-extrabold uppercase mt-[7px]" style={{ color: MA.T3, letterSpacing: "1.2px" }}>{s.label}</div>
               </button>
             ))}
           </div>
-        )}
 
-        {/* ── Weekly Attendance Overview (horizontal day strip) ─── */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm mb-5">
-          <div className="mb-4">
-            <h2 className="text-base font-semibold text-slate-900">Weekly Attendance Overview</h2>
-            {activeClass && weeklyDays.length > 0 && (
-              <p className="text-xs text-slate-500 mt-1">
-                {activeClass.name} • {weeklyDays[0]?.dateLabel} – {weeklyDays[weeklyDays.length - 1]?.dateLabel}, {new Date().getFullYear()}
-              </p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-4 lg:grid-cols-8 gap-3">
-            {weeklyDays.map((day, i) => {
-              const isPending = day.isToday && !day.hasData && !day.isWeekend;
-              return (
-                <div
-                  key={i}
-                  className={`rounded-xl p-3 ${isPending ? 'border-2' : 'border'}`}
-                  style={{
-                    borderColor: isPending ? T.amber : T.bdr,
-                    background: isPending ? '#FFFBEB' : '#fff',
-                    opacity: day.isFuture || day.isWeekend ? 0.5 : 1,
-                  }}
-                >
-                  <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: T.ink2 }}>{day.label}</p>
-                  <p className="text-base font-bold mt-0.5" style={{ color: T.ink0 }}>{day.dateLabel}</p>
-                  {day.hasData ? (
-                    <>
-                      <div className="flex items-center justify-between text-[11px] mt-2">
-                        <span style={{ color: T.ink2 }}>Present</span>
-                        <span className="font-bold" style={{ color: T.green2 }}>{day.present}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-[11px] mt-1">
-                        <span style={{ color: T.ink2 }}>Absent</span>
-                        <span className="font-bold" style={{ color: T.red }}>{day.absent}</span>
-                      </div>
-                      <p className="text-sm font-bold mt-2" style={{ color: parseFloat(day.rate!) >= 85 ? T.green : T.amber }}>
-                        {day.rate}
-                      </p>
-                    </>
-                  ) : isPending ? (
-                    <>
-                      <div className="flex items-center justify-between text-[11px] mt-2">
-                        <span style={{ color: T.ink2 }}>Present</span>
-                        <span style={{ color: T.ink2 }}>—</span>
-                      </div>
-                      <div className="flex items-center justify-between text-[11px] mt-1">
-                        <span style={{ color: T.ink2 }}>Absent</span>
-                        <span style={{ color: T.ink2 }}>—</span>
-                      </div>
-                      <button type="button"
-                        onClick={() => { setMarkingClassId(selectedClassId); setMarking(true); }}
-                        className="mt-2 w-full py-1.5 rounded-md text-[11px] font-semibold text-white"
-                        style={{ background: T.blue }}
-                      >
-                        Mark Now
-                      </button>
-                    </>
-                  ) : (
-                    <p className="text-[11px] mt-2" style={{ color: T.ink2 }}>
-                      {day.isWeekend ? 'Weekend' : day.isFuture ? 'Upcoming' : day.isForgotten ? 'Not marked' : '—'}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* ── Attendance Concerns ────────────────────────────────── */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-semibold text-slate-900">Attendance Concerns</h2>
-            <button type="button" className="text-xs font-medium text-blue-600 hover:text-blue-700">View All</button>
-          </div>
-
-          {concerns.length === 0 ? (
-            <div className="py-10 text-center">
-              <div className="inline-flex w-12 h-12 rounded-xl items-center justify-center mb-2" style={{ background: T.greenL }}>
-                <IcoCheck color={T.green} size={18} />
-              </div>
-              <p className="text-sm" style={{ color: T.ink2 }}>All students have good attendance</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {concerns.map((s, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl"
-                  style={{ background: s.badge.bg }}
-                >
-                  <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-[12px] font-semibold flex-shrink-0"
-                    style={{ background: s.av.color, color: '#fff' }}
-                  >
-                    {s.initials}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-semibold truncate" style={{ color: T.ink0 }}>{s.name}</p>
-                    <p className="text-[11px] truncate mt-0.5" style={{ color: s.badge.color }}>{s.issue}</p>
-                  </div>
-                </div>
-              ))}
+          {/* Class tabs */}
+          {classes.length > 0 && (
+            <div className="mb-5 p-[5px] rounded-[14px] flex gap-[7px]"
+              style={{ background: MA.CARD, boxShadow: MA.SH_SM, overflowX: "auto", scrollbarWidth: "none" as const }}>
+              {classes.map(cls => {
+                const isActive = selectedClassId === cls.id;
+                return (
+                  <button key={cls.id} type="button" onClick={() => setSelectedClassId(cls.id)}
+                    className="py-[10px] px-5 rounded-[10px] text-[13px] font-bold text-center transition-all active:scale-[0.96]"
+                    style={{
+                      background: isActive ? MA.P : "transparent",
+                      color: isActive ? "#fff" : MA.T3,
+                      letterSpacing: "-0.2px",
+                      fontFamily: MA.FONT,
+                      whiteSpace: "nowrap",
+                      minWidth: 120,
+                      boxShadow: isActive ? "0 1px 2px rgba(9,87,247,0.2), 0 3px 8px rgba(9,87,247,0.25)" : "none",
+                    }}>
+                    {cls.name}
+                  </button>
+                );
+              })}
             </div>
           )}
-        </div>
 
+          {/* 2-column: Weekly overview + Attendance Concerns */}
+          <div className="grid grid-cols-2 gap-4 mb-5">
+
+            {/* Weekly Overview */}
+            <div className="p-6 rounded-[22px]" style={{ background: MA.CARD, boxShadow: MA.SH }}>
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-[42px] h-[42px] rounded-[13px] flex items-center justify-center text-white" style={{ background: MA.P }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  </div>
+                  <div>
+                    <div className="text-[16px] font-extrabold" style={{ color: MA.T1, letterSpacing: "-0.35px" }}>Weekly Overview</div>
+                    {activeClass && weeklyDays.length > 0 && (
+                      <div className="text-[12px] font-semibold mt-[2px]" style={{ color: MA.T3, letterSpacing: "-0.1px" }}>
+                        {activeClass.name} · {weeklyDays[0]?.dateLabel} – {weeklyDays[weeklyDays.length - 1]?.dateLabel}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <button type="button" onClick={() => navigate('/reports')}
+                  className="text-[13px] font-bold flex items-center gap-[2px] active:opacity-70 hover:bg-[#EEF4FF] py-1 px-2 rounded-[8px] transition-colors" style={{ color: MA.P }}>
+                  View all <span className="text-[18px] opacity-80 -mt-[3px]">›</span>
+                </button>
+              </div>
+
+              <div className="flex gap-[10px] overflow-x-auto pb-1" style={{ scrollbarWidth: "none" as const }}>
+                {weeklyDays.map((day, i) => {
+                  const isPending = day.isToday && !day.hasData && !day.isWeekend;
+                  const onClickCard = isPending ? () => { setMarkingClassId(selectedClassId); setMarking(true); } : undefined;
+                  return (
+                    <div key={i}
+                      onClick={onClickCard}
+                      role={onClickCard ? "button" : undefined}
+                      tabIndex={onClickCard ? 0 : undefined}
+                      className={`flex-shrink-0 w-[128px] rounded-[16px] p-[12px] relative overflow-hidden ${onClickCard ? "active:scale-[0.97]" : ""}`}
+                      style={{
+                        background: day.isToday ? "linear-gradient(145deg, #0055FF 0%, #2970FF 100%)" : MA.SURFACE,
+                        boxShadow: day.isToday ? "0 1px 2px rgba(9,87,247,0.2), 0 6px 16px rgba(9,87,247,0.35)" : "none",
+                        opacity: day.isFuture ? 0.92 : 1,
+                        cursor: onClickCard ? "pointer" : "default",
+                        transition: "transform .15s ease",
+                      }}>
+                      {day.isToday && (
+                        <>
+                          <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 45%)" }} />
+                          <div className="absolute top-[10px] right-[10px] text-[8px] font-extrabold px-[7px] py-[3px] rounded-full uppercase"
+                            style={{ background: "rgba(255,255,255,0.25)", backdropFilter: "blur(8px)", color: "#fff", border: "0.5px solid rgba(255,255,255,0.3)", letterSpacing: "0.5px" }}>
+                            Today
+                          </div>
+                        </>
+                      )}
+                      {day.isFuture && (
+                        <div className="absolute top-[10px] right-[10px] text-[8px] font-extrabold px-[7px] py-[3px] rounded-full uppercase"
+                          style={{ background: "rgba(9,87,247,0.1)", color: MA.P, letterSpacing: "0.5px" }}>
+                          Upcoming
+                        </div>
+                      )}
+                      <div className="relative z-[2]">
+                        <div className="text-[9px] font-extrabold uppercase" style={{ color: day.isToday ? "rgba(255,255,255,0.8)" : MA.T3, letterSpacing: "1.3px", marginBottom: 3 }}>
+                          {day.label}
+                        </div>
+                        <div className="text-[17px] font-extrabold mb-[10px]" style={{ color: day.isToday ? "#fff" : MA.T1, letterSpacing: "-0.5px" }}>
+                          {day.dateLabel}
+                        </div>
+                        {day.hasData ? (
+                          <>
+                            <div className="flex flex-col gap-[5px] mb-[10px]">
+                              <div className="flex justify-between items-center text-[10px]">
+                                <span className="font-semibold" style={{ color: day.isToday ? "rgba(255,255,255,0.7)" : MA.T3 }}>Present</span>
+                                <span className="font-extrabold" style={{ color: day.isToday ? "#6FFFAA" : MA.GREEN, letterSpacing: "-0.2px" }}>{day.present}</span>
+                              </div>
+                              <div className="flex justify-between items-center text-[10px]">
+                                <span className="font-semibold" style={{ color: day.isToday ? "rgba(255,255,255,0.7)" : MA.T3 }}>Absent</span>
+                                <span className="font-extrabold" style={{ color: day.isToday ? "#FF9AA9" : MA.RED, letterSpacing: "-0.2px" }}>{day.absent}</span>
+                              </div>
+                            </div>
+                            <div className="text-[17px] font-extrabold" style={{
+                              color: day.isToday ? "#fff" : (parseFloat(day.rate!) >= 85 ? MA.GREEN : parseFloat(day.rate!) >= 70 ? MA.ORANGE : MA.RED),
+                              letterSpacing: "-0.5px",
+                            }}>{day.rate}</div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex flex-col gap-[5px] mb-[10px]" style={{ minHeight: 50 }} />
+                            {isPending ? (
+                              <div className="text-[11px] font-bold" style={{ color: MA.P }}>Tap to mark ›</div>
+                            ) : (
+                              <div className="text-[10px] font-semibold italic" style={{ color: day.isFuture ? MA.P : day.isForgotten ? MA.ORANGE : MA.T4, letterSpacing: "-0.1px" }}>
+                                {day.isWeekend ? "Weekend" : day.isFuture ? "Upcoming" : day.isForgotten ? "Not marked" : "—"}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Attendance Concerns */}
+            <div className="p-6 rounded-[22px]" style={{ background: MA.CARD, boxShadow: MA.SH }}>
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-[42px] h-[42px] rounded-[13px] flex items-center justify-center text-white" style={{ background: MA.RED }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 21h20L12 2z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12" y2="17"/></svg>
+                  </div>
+                  <div>
+                    <div className="text-[16px] font-extrabold" style={{ color: MA.T1, letterSpacing: "-0.35px" }}>Attendance Concerns</div>
+                    <div className="text-[12px] font-semibold mt-[2px]" style={{ color: MA.T3, letterSpacing: "-0.1px" }}>
+                      {concerns.length === 0 ? "No flagged students" : `${concerns.length} student${concerns.length === 1 ? "" : "s"} need follow up`}
+                    </div>
+                  </div>
+                </div>
+                <button type="button" onClick={() => navigate('/risks-alerts')}
+                  className="text-[13px] font-bold flex items-center gap-[2px] active:opacity-70 hover:bg-[#EEF4FF] py-1 px-2 rounded-[8px] transition-colors" style={{ color: MA.P }}>
+                  View all <span className="text-[18px] opacity-80 -mt-[3px]">›</span>
+                </button>
+              </div>
+
+              {concerns.length === 0 ? (
+                <div className="py-[36px] px-[20px] text-center relative">
+                  <div className="mx-auto mb-[16px] w-[96px] h-[96px] rounded-[28px] flex items-center justify-center text-white relative"
+                    style={{
+                      background: `linear-gradient(145deg, ${MA.GREEN_B} 0%, ${MA.GREEN} 100%)`,
+                      boxShadow: "0 0 0 10px rgba(0,200,83,0.1), 0 0 0 22px rgba(0,200,83,0.05), 0 8px 20px rgba(0,200,83,0.35)",
+                    }}>
+                    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  <div className="text-[17px] font-extrabold mb-[5px]" style={{ color: MA.T1, letterSpacing: "-0.3px" }}>All good here ✨</div>
+                  <div className="text-[13px] font-medium" style={{ color: MA.T3, letterSpacing: "-0.1px" }}>
+                    <b className="font-bold" style={{ color: MA.GREEN }}>All students</b> have good attendance
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-[10px]">
+                  {concerns.map((s, i) => (
+                    <button key={i} type="button" onClick={() => navigate('/risks-alerts')}
+                      className="w-full flex items-center gap-3 p-[13px] rounded-[14px] hover:brightness-[0.98] active:scale-[0.99] transition text-left"
+                      style={{ background: MA.SURFACE }}>
+                      <div className="w-[44px] h-[44px] rounded-[13px] flex items-center justify-center flex-shrink-0 text-white text-[13px] font-extrabold"
+                        style={{ background: s.av.color, letterSpacing: "0.3px" }}>
+                        {s.initials}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[14px] font-extrabold truncate" style={{ color: MA.T1, letterSpacing: "-0.25px" }}>{s.name}</div>
+                        <div className="text-[12px] font-semibold mt-[2px] truncate" style={{ color: MA.T3, letterSpacing: "-0.1px" }}>{s.issue}</div>
+                      </div>
+                      <span className="px-[12px] py-[5px] rounded-full text-[11px] font-extrabold flex-shrink-0"
+                        style={{ background: s.badge.bg, color: s.badge.color, letterSpacing: "0.3px" }}>
+                        {s.badge.text}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+          </div>
+
+          {/* AI Intelligence */}
+          {(() => {
+            const unmarkedCount = weeklyDays.filter(d => d.isForgotten).length;
+            const roster = enrollments.filter(e => e.classId === selectedClassId).length;
+            const rateLabel = stats.rateNum > 0 ? `${stats.rateNum.toFixed(1)}%` : "—";
+            return (
+              <div className="rounded-[26px] p-7 relative overflow-hidden"
+                style={{
+                  background: "linear-gradient(140deg, #000A33 0%, #001A66 28%, #0044CC 64%, #0055FF 100%)",
+                  boxShadow: "0 1px 2px rgba(0,8,60,0.18), 0 12px 32px rgba(0,8,60,0.3)",
+                }}>
+                <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.09) 0%, transparent 45%)" }} />
+                <div className="relative z-[2]">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-[48px] h-[48px] rounded-[14px] flex items-center justify-center text-[22px]"
+                      style={{
+                        background: "rgba(255,255,255,0.14)",
+                        backdropFilter: "blur(22px)",
+                        WebkitBackdropFilter: "blur(22px)",
+                        border: "0.5px solid rgba(255,255,255,0.22)",
+                        color: "#FFDD55",
+                      }}>⚡</div>
+                    <div className="text-[11px] font-black uppercase" style={{ color: "rgba(255,255,255,0.95)", letterSpacing: "1.9px" }}>
+                      AI Attendance Intelligence
+                    </div>
+                    <div className="ml-auto px-[11px] py-[5px] rounded-full text-[10px] font-extrabold"
+                      style={{ background: "rgba(123,63,244,0.3)", border: "0.5px solid rgba(155,95,255,0.5)", color: "#DCC8FF", letterSpacing: "0.5px" }}>
+                      Live
+                    </div>
+                  </div>
+                  <div className="text-[14px] leading-[1.6] mb-5" style={{ color: "rgba(255,255,255,0.85)", letterSpacing: "-0.15px" }}>
+                    {stats.rateNum >= 85 ? (
+                      <>Turnout is <strong className="text-white font-bold">strong</strong> with an overall rate of <strong className="text-white font-bold">{rateLabel}</strong>.{unmarkedCount > 0 && <> <strong className="text-white font-bold">{unmarkedCount} day{unmarkedCount === 1 ? "" : "s"}</strong> {unmarkedCount === 1 ? "was" : "were"} unmarked — mark retroactively to improve accuracy.</>}</>
+                    ) : stats.rateNum >= 70 ? (
+                      <>Turnout is <strong className="text-white font-bold">steady</strong> at <strong className="text-white font-bold">{rateLabel}</strong>. Keep an eye on repeat absences this week.</>
+                    ) : stats.rateNum > 0 ? (
+                      <>Overall rate of <strong className="text-white font-bold">{rateLabel}</strong> is <strong className="text-white font-bold">below target</strong>. Review concerns and follow up with parents.</>
+                    ) : (
+                      <>No attendance has been recorded yet. <strong className="text-white font-bold">Click "Mark today"</strong> to begin tracking turnout for this class.</>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-3 gap-[1px] rounded-[14px] overflow-hidden p-[1px]" style={{ background: "rgba(255,255,255,0.1)" }}>
+                    <div className="py-4 px-3 text-center" style={{ background: "rgba(0,20,80,0.55)" }}>
+                      <div className="text-[22px] font-extrabold" style={{ color: stats.rateNum >= 85 ? "#6FFFAA" : "#fff", letterSpacing: "-0.6px" }}>{rateLabel}</div>
+                      <div className="text-[10px] font-extrabold uppercase mt-[4px]" style={{ color: "rgba(255,255,255,0.6)", letterSpacing: "1.1px" }}>Rate</div>
+                    </div>
+                    <div className="py-4 px-3 text-center" style={{ background: "rgba(0,20,80,0.55)" }}>
+                      <div className="text-[22px] font-extrabold text-white" style={{ letterSpacing: "-0.6px" }}>
+                        {stats.presentToday}{roster > 0 ? `/${roster}` : ""}
+                      </div>
+                      <div className="text-[10px] font-extrabold uppercase mt-[4px]" style={{ color: "rgba(255,255,255,0.6)", letterSpacing: "1.1px" }}>Present</div>
+                    </div>
+                    <div className="py-4 px-3 text-center" style={{ background: "rgba(0,20,80,0.55)" }}>
+                      <div className="text-[22px] font-extrabold text-white" style={{ letterSpacing: "-0.6px" }}>{unmarkedCount}</div>
+                      <div className="text-[10px] font-extrabold uppercase mt-[4px]" style={{ color: "rgba(255,255,255,0.6)", letterSpacing: "1.1px" }}>Unmarked</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+        </div>
       </div>{/* ═══════════ END DESKTOP VIEW ═══════════ */}
 
     </div>

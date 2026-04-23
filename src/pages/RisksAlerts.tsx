@@ -669,7 +669,7 @@ const RisksAlerts = () => {
             if (hrs < 24) return `${hrs}h`;
             return `${Math.floor(hrs / 24)}d`;
           };
-          const MOB_AV = ["#7B3FF4", "#0957F7", "#00C853", "#FF8800", "#C2255C", "#00B8D4", "#6741D9"];
+          const MOB_AV = ["#7B3FF4", "#0055FF", "#00C853", "#FF8800", "#C2255C", "#00B8D4", "#6741D9"];
           const mobAvBg = (name: string) => {
             const sum = (name || "").split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
             return MOB_AV[sum % MOB_AV.length];
@@ -677,7 +677,7 @@ const RisksAlerts = () => {
           const mobClassChipColor = (name: string) => {
             const lower = (name || "").toLowerCase();
             if (lower.includes("shaik")) return { bg: "rgba(123,63,244,.12)", color: "#7B3FF4" };
-            return { bg: "rgba(9,87,247,.08)", color: "#0957F7" };
+            return { bg: "rgba(9,87,247,.08)", color: "#0055FF" };
           };
           const mobParseCls = (cls: string) => {
             const parts = (cls || "").split(" — ");
@@ -769,10 +769,10 @@ const RisksAlerts = () => {
                       ? <span style={{ color: "#FF8800", fontWeight: 700 }}>Priority</span>
                       : <span style={{ color: "#5070B0", fontWeight: 600 }}>All clear</span>,
                     onClick: () => setActiveTab("All") },
-                  { key: "Medium", label: "Medium", count: mediumCount, color: "#0957F7",
+                  { key: "Medium", label: "Medium", count: mediumCount, color: "#0055FF",
                     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12" y2="16"/></svg>,
                     sub: count => count > 0
-                      ? <span style={{ color: "#0957F7", fontWeight: 700 }}>Watching</span>
+                      ? <span style={{ color: "#0055FF", fontWeight: 700 }}>Watching</span>
                       : <span style={{ color: "#5070B0", fontWeight: 600 }}>Low risk</span>,
                     onClick: () => setActiveTab("All") },
                   { key: "Resolved", label: "Resolved This Week", count: resolvedCount, color: "#00C853",
@@ -828,7 +828,7 @@ const RisksAlerts = () => {
                       className="ra-press"
                       style={{
                         flex: 1, padding: "9px 8px", borderRadius: 10,
-                        background: active ? "#0957F7" : "transparent",
+                        background: active ? "#0055FF" : "transparent",
                         color: active ? "#fff" : "#5070B0",
                         fontSize: 12, fontWeight: 700, letterSpacing: "-0.2px",
                         border: "none", cursor: "pointer", fontFamily: "inherit",
@@ -1000,7 +1000,7 @@ const RisksAlerts = () => {
                           const isTrend = /trend/i.test(k || "");
                           const isAbsence = /absence/i.test(k || "");
                           const chipStyle = isTrend
-                            ? { bg: "rgba(9,87,247,.06)", bdr: "rgba(9,87,247,.15)", vColor: "#0957F7" }
+                            ? { bg: "rgba(9,87,247,.06)", bdr: "rgba(9,87,247,.15)", vColor: "#0055FF" }
                             : isAbsence
                             ? { bg: "rgba(255,51,85,.08)", bdr: "rgba(255,51,85,.2)", vColor: "#FF3355" }
                             : { bg: "#fff", bdr: "rgba(9,87,247,.08)", vColor: "#001040" };
@@ -1086,7 +1086,7 @@ const RisksAlerts = () => {
                   <div
                     className="ra-card3d"
                     style={{
-                      background: "linear-gradient(140deg, #000820 0%, #001888 28%, #0033CC 64%, #0957F7 100%)",
+                      background: "linear-gradient(140deg, #000A33 0%, #001A66 28%, #0044CC 64%, #0055FF 100%)",
                       borderRadius: 24, padding: 20, marginTop: 14,
                       position: "relative", overflow: "hidden",
                       boxShadow: "0 1px 2px rgba(0,8,60,.18), 0 12px 32px rgba(0,8,60,.3)",
@@ -1178,7 +1178,7 @@ const RisksAlerts = () => {
                 <div style={{ background: "#F4F7FE", borderRadius: 12, padding: "12px 14px" }}>
                   <p style={{ fontSize: 10, color: "#5070B0", margin: "0 0 4px", fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase" }}>Contact Number</p>
                   {selectedContact.phone ? (
-                    <p style={{ fontSize: 17, fontWeight: 800, color: "#0957F7", margin: 0, letterSpacing: "-0.3px" }}>{selectedContact.phone}</p>
+                    <p style={{ fontSize: 17, fontWeight: 800, color: "#0055FF", margin: 0, letterSpacing: "-0.3px" }}>{selectedContact.phone}</p>
                   ) : (
                     <p style={{ fontSize: 13, fontWeight: 500, color: "#99AACC", margin: 0, fontStyle: "italic" }}>
                       Not available — add parent phone in Students
@@ -1197,7 +1197,7 @@ const RisksAlerts = () => {
                           href={disabled ? undefined : `tel:${sanitized}`}
                           onClick={(e) => { if (disabled) { e.preventDefault(); toast.error("No phone number on file."); } }}
                           style={{
-                            padding: "12px 0", background: disabled ? "#EAF0FB" : "#0957F7", color: disabled ? "#99AACC" : "#fff",
+                            padding: "12px 0", background: disabled ? "#EAF0FB" : "#0055FF", color: disabled ? "#99AACC" : "#fff",
                             borderRadius: 12, fontSize: 13, fontWeight: 700,
                             textDecoration: "none", cursor: disabled ? "not-allowed" : "pointer",
                             display: "flex", alignItems: "center", justifyContent: "center", gap: 6,

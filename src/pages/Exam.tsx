@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { Loader2, Printer, Copy, RefreshCw, Check } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../lib/AuthContext";
@@ -11,7 +11,7 @@ const MA = {
   CARD: "#FFFFFF",
   SURFACE: "#F4F7FE",
   SURFACE2: "#EAF0FB",
-  P: "#0957F7", PD: "#0044DD",
+  P: "#0055FF", PD: "#0044CC",
   T1: "#001040", T2: "#002080", T3: "#5070B0", T4: "#99AACC",
   GREEN: "#00C853",
   RED: "#FF3355",
@@ -21,7 +21,7 @@ const MA = {
   TEAL: "#16B8B0",
   SH: "0 0.5px 1px rgba(9,87,247,0.04), 0 4px 14px rgba(9,87,247,0.08)",
   SH_SM: "0 0.5px 1px rgba(9,87,247,0.04), 0 2px 10px rgba(9,87,247,0.06)",
-  HERO_GRAD: "linear-gradient(135deg, #000820 0%, #001466 32%, #0033CC 68%, #0957F7 100%)",
+  HERO_GRAD: "linear-gradient(135deg, #000A33 0%, #001A66 32%, #0044CC 68%, #0055FF 100%)",
 };
 
 // ── Desktop tokens (matches Students page) ───────────────────────────────────
@@ -419,175 +419,251 @@ const Exam = () => {
         )}
       </div>
 
-      {/* ═══════════════════ DESKTOP VIEW ═══════════════════ */}
-      <div className="hidden md:block">
-        <div className="max-w-[1100px] mx-auto px-6 py-8">
+      {/* ═══════════════════ DESKTOP VIEW — Mobile design, widescreen grid ═══════════════════ */}
+      <div className="hidden md:block -mx-4 sm:-mx-6 md:-mx-8 md:-mt-8" style={{ fontFamily: MA.FONT, background: "#EEF4FF", minHeight: "100vh" }}>
+        <div className="max-w-[1500px] mx-auto px-8 pt-8 pb-12">
+
+          {/* Header */}
           <div className="mb-6">
-            <div className="text-[11px] font-bold uppercase tracking-[2px] mb-1" style={{ color: T.ink2 }}>
+            <div className="flex items-center gap-[7px] text-[10px] font-extrabold uppercase mb-[8px]" style={{ color: MA.T3, letterSpacing: "1.8px" }}>
+              <span className="w-[6px] h-[6px] rounded-[2px]" style={{ background: MA.P }} />
               Teacher Dashboard · Exam
             </div>
-            <h1 className="text-[32px] font-extrabold leading-tight" style={{ color: T.ink0, letterSpacing: "-0.8px" }}>
-              Exam Generator
-            </h1>
-            <p className="text-[14px] mt-1" style={{ color: T.ink1 }}>
-              AI ki madad se customized exam paper generate karo — apni class, board, topics aur difficulty ke hisaab se.
-            </p>
+            <h1 className="text-[40px] font-extrabold leading-[1.05]" style={{ color: MA.T1, letterSpacing: "-1.4px" }}>Exam Generator</h1>
+            <div className="text-[14px] font-medium mt-[8px]" style={{ color: MA.T3, letterSpacing: "-0.15px" }}>
+              Apni requirements ke hisaab se AI se exam paper banwao.
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            {/* Form */}
-            <div className="lg:col-span-2 bg-white rounded-2xl p-6 border" style={{ borderColor: T.bdr }}>
-              <div className="text-[11px] font-extrabold uppercase tracking-[1.5px] mb-4" style={{ color: T.ink2 }}>Paper Setup</div>
+          {/* Hero banner */}
+          <div className="rounded-[28px] px-8 py-7 relative overflow-hidden mb-5"
+            style={{ background: MA.HERO_GRAD, boxShadow: "0 1px 2px rgba(0,8,60,0.15), 0 12px 32px rgba(0,8,60,0.28)" }}>
+            <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.09) 0%, transparent 45%)" }} />
+            <div className="relative z-[2]">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-[52px] h-[52px] rounded-[15px] flex items-center justify-center text-white"
+                  style={{
+                    background: "rgba(255,255,255,0.14)",
+                    backdropFilter: "blur(22px)",
+                    WebkitBackdropFilter: "blur(22px)",
+                    border: "0.5px solid rgba(255,255,255,0.22)",
+                    boxShadow: "inset 0 0.5px 0 rgba(255,255,255,0.15)",
+                  }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+                </div>
+                <div>
+                  <div className="text-[11px] font-extrabold uppercase" style={{ color: "rgba(255,255,255,0.72)", letterSpacing: "1.8px" }}>AI Exam Paper</div>
+                  <div className="text-[12px] font-medium mt-[3px]" style={{ color: "rgba(255,255,255,0.5)", letterSpacing: "-0.1px" }}>
+                    Subject · Grade · Difficulty
+                  </div>
+                </div>
+                <div className="ml-auto flex items-center gap-[6px] px-4 py-[7px] rounded-full text-[11px] font-extrabold"
+                  style={{
+                    background: "rgba(255,170,0,0.2)",
+                    border: "0.5px solid rgba(255,170,0,0.5)",
+                    color: "#FFE699",
+                    letterSpacing: "0.3px",
+                  }}>
+                  <span className="w-[6px] h-[6px] rounded-full" style={{ background: "#FFDD55", boxShadow: "0 0 8px #FFDD55" }} />
+                  AI
+                </div>
+              </div>
+              <div className="text-[18px] font-semibold text-white leading-[1.45]" style={{ letterSpacing: "-0.2px" }}>
+                Customize <b className="font-extrabold">question types, marks, difficulty</b> — AI ek exam-ready paper banayega.
+              </div>
+            </div>
+          </div>
 
-              <DField label="Subject">
-                <DInput value={form.subject} onChange={(v) => update("subject", v)} placeholder="e.g. Mathematics" />
-              </DField>
+          {/* 2-column: Form (left) + Output (right) */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+
+            {/* Form card */}
+            <div className="lg:col-span-2 rounded-[22px] p-6" style={{ background: MA.CARD, boxShadow: MA.SH }}>
+              <SectionLabel>Basics</SectionLabel>
+
+              <MField label="Subject">
+                <MInput
+                  value={form.subject}
+                  onChange={(v) => update("subject", v)}
+                  placeholder="e.g. Mathematics, Physics"
+                />
+              </MField>
 
               <div className="grid grid-cols-2 gap-3">
-                <DField label="Grade">
-                  <DSelect value={form.grade} onChange={(v) => update("grade", v)} options={GRADES} />
-                </DField>
-                <DField label="Board">
-                  <DSelect value={form.board} onChange={(v) => update("board", v)} options={BOARDS} />
-                </DField>
+                <MField label="Grade">
+                  <MSelect value={form.grade} onChange={(v) => update("grade", v)} options={GRADES} />
+                </MField>
+                <MField label="Board">
+                  <MSelect value={form.board} onChange={(v) => update("board", v)} options={BOARDS} />
+                </MField>
               </div>
 
-              <DField label="Topics / Chapters">
+              <MField label="Topics / Chapters">
                 <textarea
                   value={form.topics}
                   onChange={(e) => update("topics", e.target.value)}
                   rows={3}
-                  placeholder="e.g. Quadratic Equations, Trigonometry"
-                  className="w-full rounded-lg px-3 py-2.5 text-[13px] outline-none resize-none border"
-                  style={{ background: T.s1, color: T.ink0, borderColor: T.bdr }}
+                  placeholder="e.g. Quadratic Equations, Arithmetic Progression, Trigonometry"
+                  className="w-full rounded-[12px] px-[14px] py-[11px] text-[13px] font-medium outline-none resize-none"
+                  style={{
+                    background: MA.SURFACE,
+                    color: MA.T1,
+                    fontFamily: MA.FONT,
+                    border: "1px solid transparent",
+                    letterSpacing: "-0.1px",
+                  }}
                 />
-              </DField>
+              </MField>
+
+              <div className="h-[1px] my-4" style={{ background: MA.SURFACE2 }} />
+
+              <SectionLabel>Paper Setup</SectionLabel>
 
               <div className="grid grid-cols-2 gap-3">
-                <DField label="Difficulty">
-                  <DSelect value={form.difficulty} onChange={(v) => update("difficulty", v)} options={DIFFICULTIES} />
-                </DField>
-                <DField label="Duration">
-                  <DSelect value={form.duration} onChange={(v) => update("duration", v)} options={DURATIONS} />
-                </DField>
+                <MField label="Difficulty">
+                  <MSelect value={form.difficulty} onChange={(v) => update("difficulty", v)} options={DIFFICULTIES} />
+                </MField>
+                <MField label="Duration">
+                  <MSelect value={form.duration} onChange={(v) => update("duration", v)} options={DURATIONS} />
+                </MField>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <DField label="Total Marks">
-                  <DInput type="number" value={String(form.totalMarks)} onChange={(v) => update("totalMarks", Math.max(0, parseInt(v || "0", 10)))} />
-                </DField>
-                <DField label="Questions">
-                  <DInput type="number" value={String(form.numQuestions)} onChange={(v) => update("numQuestions", Math.max(0, parseInt(v || "0", 10)))} />
-                </DField>
+                <MField label="Total Marks">
+                  <MInput
+                    type="number"
+                    value={String(form.totalMarks)}
+                    onChange={(v) => update("totalMarks", Math.max(0, parseInt(v || "0", 10)))}
+                    placeholder="50"
+                  />
+                </MField>
+                <MField label="Questions">
+                  <MInput
+                    type="number"
+                    value={String(form.numQuestions)}
+                    onChange={(v) => update("numQuestions", Math.max(0, parseInt(v || "0", 10)))}
+                    placeholder="20"
+                  />
+                </MField>
               </div>
 
-              <DField label="Question Types">
+              <MField label="Question Types">
                 <div className="flex flex-wrap gap-2">
                   {QUESTION_TYPES.map((t) => {
                     const active = form.types.includes(t.key);
                     return (
                       <button type="button" key={t.key}
                         onClick={() => toggleType(t.key)}
-                        className="px-3 py-1.5 rounded-full text-[12px] font-semibold transition-colors"
+                        className="px-[14px] py-[9px] rounded-full flex items-center gap-[6px] hover:scale-[1.03] active:scale-[0.96] transition-transform"
                         style={{
-                          background: active ? T.blue : T.s1,
-                          color: active ? "#fff" : T.ink1,
-                          border: `1px solid ${active ? T.blue : T.bdr}`,
+                          background: active ? MA.P : MA.SURFACE,
+                          color: active ? "#fff" : MA.T2,
+                          fontSize: 12, fontWeight: 700, letterSpacing: "-0.15px",
+                          boxShadow: active
+                            ? `0 1px 2px ${MA.P}33, 0 3px 10px ${MA.P}4d`
+                            : "none",
+                          fontFamily: MA.FONT, border: "none", cursor: "pointer",
                         }}>
+                        {active && <span className="w-[5px] h-[5px] rounded-full" style={{ background: "#fff" }} />}
                         {t.label}
                       </button>
                     );
                   })}
                 </div>
-              </DField>
+              </MField>
 
-              <DField label="Special Instructions (optional)">
+              <MField label="Special Instructions (optional)">
                 <textarea
                   value={form.instructions}
                   onChange={(e) => update("instructions", e.target.value)}
                   rows={2}
-                  placeholder="e.g. Include diagrams"
-                  className="w-full rounded-lg px-3 py-2.5 text-[13px] outline-none resize-none border"
-                  style={{ background: T.s1, color: T.ink0, borderColor: T.bdr }}
+                  placeholder="e.g. Include diagrams, focus on application-based questions"
+                  className="w-full rounded-[12px] px-[14px] py-[11px] text-[13px] font-medium outline-none resize-none"
+                  style={{
+                    background: MA.SURFACE,
+                    color: MA.T1,
+                    fontFamily: MA.FONT,
+                    border: "1px solid transparent",
+                    letterSpacing: "-0.1px",
+                  }}
                 />
-              </DField>
+              </MField>
 
               <button type="button"
                 onClick={handleGenerate}
                 disabled={loading}
-                className="w-full mt-2 h-11 rounded-lg flex items-center justify-center gap-2 text-[14px] font-bold transition-opacity"
+                className="w-full mt-2 h-14 rounded-[14px] flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.98] transition-transform"
                 style={{
-                  background: loading ? T.ink2 : T.blue,
+                  background: loading ? MA.T4 : MA.P,
                   color: "#fff",
+                  fontSize: 15, fontWeight: 800, letterSpacing: "-0.2px",
+                  boxShadow: loading ? "none" : "0 1px 2px rgba(9,87,247,0.2), 0 6px 16px rgba(9,87,247,0.32)",
+                  fontFamily: MA.FONT, border: "none",
                   cursor: loading ? "not-allowed" : "pointer",
                 }}>
-                {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Generating…</> : "Generate Paper"}
+                {loading ? (
+                  <><Loader2 className="w-5 h-5 animate-spin" /> Generating…</>
+                ) : (
+                  <>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l2.5 7h7.5l-6 4.5L18 21l-6-4.5L6 21l2-7.5L2 9h7.5z"/></svg>
+                    Generate Paper
+                  </>
+                )}
               </button>
             </div>
 
-            {/* Output */}
-            <div className="lg:col-span-3 bg-white rounded-2xl border overflow-hidden" style={{ borderColor: T.bdr }}>
+            {/* Output panel */}
+            <div className="lg:col-span-3 rounded-[22px] overflow-hidden" style={{ background: MA.CARD, boxShadow: MA.SH }}>
               {!paper && !loading && (
-                <div className="h-full flex flex-col items-center justify-center py-20 px-6 text-center">
-                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style={{ background: T.blueL, color: T.blue }}>
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <div className="h-full flex flex-col items-center justify-center py-24 px-8 text-center">
+                  <div className="w-20 h-20 rounded-[22px] flex items-center justify-center mb-5"
+                    style={{ background: "linear-gradient(145deg, rgba(9,87,247,0.1) 0%, rgba(123,63,244,0.12) 100%)", color: MA.P, boxShadow: "0 0 0 10px rgba(9,87,247,0.04), inset 0 1px 0 rgba(255,255,255,0.6)" }}>
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                   </div>
-                  <div className="text-[15px] font-bold" style={{ color: T.ink0 }}>Paper yahan render hoga</div>
-                  <div className="text-[13px] mt-1" style={{ color: T.ink2 }}>Form bharo aur Generate dabao.</div>
+                  <div className="text-[18px] font-extrabold mb-[6px]" style={{ color: MA.T1, letterSpacing: "-0.4px" }}>Paper yahan render hoga</div>
+                  <div className="text-[13px] font-medium" style={{ color: MA.T3, letterSpacing: "-0.1px" }}>Form bharo aur <b style={{ color: MA.P, fontWeight: 800 }}>Generate</b> dabao.</div>
                 </div>
               )}
 
               {loading && !paper && (
-                <div className="h-full flex flex-col items-center justify-center py-20 gap-3">
-                  <Loader2 className="w-8 h-8 animate-spin" style={{ color: T.blue }} />
-                  <div className="text-[13px] font-medium" style={{ color: T.ink1 }}>AI paper bana raha hai…</div>
+                <div className="h-full flex flex-col items-center justify-center py-24 gap-3">
+                  <Loader2 className="w-9 h-9 animate-spin" style={{ color: MA.P }} />
+                  <div className="text-[14px] font-semibold" style={{ color: MA.T3, letterSpacing: "-0.1px" }}>AI aapka paper bana raha hai…</div>
                 </div>
               )}
 
               {paper && (
                 <div>
-                  <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: T.bdr, background: T.s1 }}>
-                    <div>
-                      <div className="text-[11px] font-extrabold uppercase tracking-[1.5px]" style={{ color: T.ink2 }}>Generated Paper</div>
-                      <div className="text-[15px] font-bold mt-0.5" style={{ color: T.ink0 }}>
-                        {paper.title || `${form.subject} · ${form.grade}`}
-                      </div>
+                  <PaperHeader paper={paper} form={form} />
+                  <div className="px-6 py-5">
+                    <div className="flex gap-2 mb-5">
+                      <ActionBtn onClick={() => setShowAnswers((p) => !p)} primary={showAnswers} label={showAnswers ? "Hide Answers" : "Show Answers"} />
+                      <ActionBtn onClick={handleCopy} label={copied ? "Copied" : "Copy"} icon={copied ? <Check className="w-[14px] h-[14px]" /> : <Copy className="w-[14px] h-[14px]" />} />
+                      <ActionBtn onClick={handlePrint} label="Print" icon={<Printer className="w-[14px] h-[14px]" />} />
                     </div>
-                    <div className="flex gap-2">
-                      <button type="button" onClick={() => setShowAnswers((p) => !p)}
-                        className="px-3 py-1.5 rounded-lg text-[12px] font-bold border"
-                        style={{
-                          background: showAnswers ? T.blue : "#fff",
-                          color: showAnswers ? "#fff" : T.ink1,
-                          borderColor: showAnswers ? T.blue : T.bdr,
-                        }}>
-                        {showAnswers ? "Hide Answers" : "Show Answers"}
-                      </button>
-                      <button type="button" onClick={handleCopy}
-                        className="px-3 py-1.5 rounded-lg text-[12px] font-bold border flex items-center gap-1.5"
-                        style={{ background: "#fff", color: T.ink1, borderColor: T.bdr }}>
-                        {copied ? <Check className="w-[13px] h-[13px]" /> : <Copy className="w-[13px] h-[13px]" />}
-                        {copied ? "Copied" : "Copy"}
-                      </button>
-                      <button type="button" onClick={handlePrint}
-                        className="px-3 py-1.5 rounded-lg text-[12px] font-bold border flex items-center gap-1.5"
-                        style={{ background: "#fff", color: T.ink1, borderColor: T.bdr }}>
-                        <Printer className="w-[13px] h-[13px]" /> Print
-                      </button>
-                    </div>
-                  </div>
-                  <div className="p-6">
-                    <PaperHeaderDesktop paper={paper} form={form} totalQ={totalQuestionsCount} />
-                    <div className="mt-5">
-                      <PaperBody paper={paper} showAnswers={showAnswers} desktop />
-                    </div>
+
+                    <PaperBody paper={paper} showAnswers={showAnswers} />
+
+                    <button type="button"
+                      onClick={handleReset}
+                      className="w-full mt-5 h-12 rounded-[12px] flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.98] transition-transform"
+                      style={{
+                        background: MA.SURFACE, color: MA.T2,
+                        fontSize: 13, fontWeight: 700, letterSpacing: "-0.15px",
+                        fontFamily: MA.FONT, border: "none",
+                      }}>
+                      <RefreshCw className="w-[14px] h-[14px]" />
+                      Start Over
+                    </button>
                   </div>
                 </div>
               )}
             </div>
+
           </div>
+
         </div>
-      </div>
+      </div>{/* ═══════════ END DESKTOP VIEW ═══════════ */}
 
       {/* Print-only styles */}
       <style>{`

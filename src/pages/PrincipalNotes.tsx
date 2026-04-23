@@ -189,7 +189,7 @@ const PrincipalNotes = () => {
 
       {/* ═══ DARK HERO + PRINCIPAL CARD ═══════════════════════════════════ */}
       <div
-        className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 bg-[#162E93] md:bg-[#08090C]"
+        className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 bg-[#001A66] md:bg-[#08090C]"
         style={{ padding: "0 22px 0" }}
       >
         {/* Hero text */}
@@ -644,7 +644,7 @@ const MobilePrincipalChat = ({
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 2 }}>
               <div style={{ fontSize: 16, fontWeight: 800, color: "#001040", letterSpacing: "-0.4px", lineHeight: 1.1 }}>{principalName}</div>
-              <div style={{ width: 14, height: 14, background: "#0957F7", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <div style={{ width: 14, height: 14, background: "#0055FF", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 6 9 17 4 12"/>
                 </svg>
@@ -667,7 +667,7 @@ const MobilePrincipalChat = ({
         }}>
           {[
             {
-              label: "Messages", value: String(stats.total), color: "#0957F7",
+              label: "Messages", value: String(stats.total), color: "#0055FF",
               icon: <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>,
               valueColor: "#001040",
             },
@@ -781,7 +781,7 @@ const MobilePrincipalChat = ({
                         </div>
                       )}
                       <div style={{
-                        background: isTeacher ? "linear-gradient(135deg, #4A85FF 0%, #0957F7 100%)" : "#fff",
+                        background: isTeacher ? "linear-gradient(135deg, #4A85FF 0%, #0055FF 100%)" : "#fff",
                         color: isTeacher ? "#fff" : "#001040",
                         padding: "10px 14px",
                         borderRadius: isTeacher ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
@@ -803,7 +803,7 @@ const MobilePrincipalChat = ({
                       }}>
                         <span>{fmtTime(m.timestamp)}</span>
                         {isTeacher && (
-                          <span style={{ display: "flex", alignItems: "center", color: m.read ? "#0957F7" : "#99AACC" }}>
+                          <span style={{ display: "flex", alignItems: "center", color: m.read ? "#0055FF" : "#99AACC" }}>
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
                               <polyline points="20 6 9 17 4 12"/>
                             </svg>
@@ -844,7 +844,7 @@ const MobilePrincipalChat = ({
               style={{
                 padding: "6px 12px", borderRadius: 100,
                 background: "#fff",
-                color: "#0957F7",
+                color: "#0055FF",
                 fontSize: 12, fontWeight: 700, letterSpacing: "-0.1px",
                 whiteSpace: "nowrap", cursor: "pointer", flexShrink: 0,
                 fontFamily: "inherit",
@@ -877,7 +877,7 @@ const MobilePrincipalChat = ({
           style={{
             width: 34, height: 34, borderRadius: "50%",
             background: showQuickReplies ? "rgba(9,87,247,.15)" : "#F4F7FE",
-            color: "#0957F7",
+            color: "#0055FF",
             display: "flex", alignItems: "center", justifyContent: "center",
             flexShrink: 0, cursor: "pointer", border: "none",
             marginBottom: 3,
@@ -932,7 +932,7 @@ const MobilePrincipalChat = ({
           className="pn-press"
           style={{
             width: 38, height: 38, borderRadius: "50%",
-            background: messageContent.trim() ? "linear-gradient(135deg, #4A85FF 0%, #0957F7 100%)" : "#EAF0FB",
+            background: messageContent.trim() ? "linear-gradient(135deg, #4A85FF 0%, #0055FF 100%)" : "#EAF0FB",
             color: messageContent.trim() ? "#fff" : "#99AACC",
             display: "flex", alignItems: "center", justifyContent: "center",
             flexShrink: 0, cursor: messageContent.trim() ? "pointer" : "not-allowed",

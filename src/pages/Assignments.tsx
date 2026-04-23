@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import CreateAssignment from "@/components/CreateAssignment";
 import GradeAssignment from "@/components/GradeAssignment";
 import { db } from "../lib/firebase";
@@ -28,7 +28,7 @@ const MA = {
   BG: "#EEF4FF",
   CARD: "#FFFFFF",
   SURFACE: "#F4F7FE",
-  P: "#0957F7", PD: "#0044DD",
+  P: "#0055FF", PD: "#0044CC",
   T1: "#001040", T3: "#5070B0", T4: "#99AACC",
   GREEN: "#00C853",
   RED: "#FF3355",
@@ -37,7 +37,7 @@ const MA = {
   VIOLET: "#7B3FF4",
   SH: "0 0.5px 1px rgba(9,87,247,0.04), 0 4px 14px rgba(9,87,247,0.08)",
   SH_SM: "0 0.5px 1px rgba(9,87,247,0.04), 0 2px 10px rgba(9,87,247,0.06)",
-  HERO_GRAD: "linear-gradient(135deg, #000820 0%, #001466 32%, #0033CC 68%, #0957F7 100%)",
+  HERO_GRAD: "linear-gradient(135deg, #000A33 0%, #001A66 32%, #0044CC 68%, #0055FF 100%)",
 };
 
 // ── SVG icons ────────────────────────────────────────────────────────────────
@@ -599,7 +599,7 @@ const Assignments = () => {
         {!loading && (
           <div className="mx-4 mt-[14px] rounded-[24px] p-[20px] relative overflow-hidden"
             style={{
-              background: "linear-gradient(140deg, #000820 0%, #001888 28%, #0033CC 64%, #0957F7 100%)",
+              background: "linear-gradient(140deg, #000A33 0%, #001A66 28%, #0044CC 64%, #0055FF 100%)",
               boxShadow: "0 1px 2px rgba(0,8,60,0.18), 0 12px 32px rgba(0,8,60,0.3)",
             }}>
             <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.09) 0%, transparent 45%)" }} />
@@ -660,176 +660,416 @@ const Assignments = () => {
 
       </div>{/* ═══════════ END MOBILE VIEW ═══════════ */}
 
-      {/* ═══════════════════ DESKTOP VIEW ═══════════════════ */}
-      <div className="hidden md:block">
+      {/* ═══════════════════ DESKTOP VIEW — Mobile design, widescreen grid ═══════════════════ */}
+      <div className="hidden md:block -mx-4 sm:-mx-6 md:-mx-8 md:-mt-8" style={{ fontFamily: MA.FONT, background: "#EEF4FF", minHeight: "100vh" }}>
+        <div className="max-w-[1600px] mx-auto px-8 pt-8 pb-12">
 
-        {/* ── Header row ─────────────────────────────────────────── */}
-        <div className="flex items-start justify-between mb-6 gap-4">
-          <div>
-            <h1 className="text-[28px] font-bold text-slate-900 leading-tight tracking-tight">Assignments</h1>
-            <p className="text-sm text-slate-500 mt-1">Create, manage, and grade student assignments.</p>
+          {/* Header */}
+          <div className="mb-6">
+            <div className="flex items-center gap-[7px] text-[10px] font-extrabold uppercase mb-[8px]" style={{ color: MA.T3, letterSpacing: "1.8px" }}>
+              <span className="w-[6px] h-[6px] rounded-[2px]" style={{ background: MA.P }} />
+              Teacher Dashboard · Assignments
+            </div>
+            <h1 className="text-[40px] font-extrabold leading-[1.05]" style={{ color: MA.T1, letterSpacing: "-1.4px" }}>Assignments</h1>
+            <div className="text-[14px] font-medium mt-[8px]" style={{ color: MA.T3, letterSpacing: "-0.15px" }}>
+              Create, manage, and grade student assignments.
+            </div>
           </div>
-          <button type="button"
-            onClick={() => setView("create")}
-            className="h-11 px-5 rounded-lg bg-[#1e3272] text-white text-sm font-semibold hover:bg-[#162552] flex items-center gap-2 shadow-sm"
-          >
-            <IcoPlus /> Create Assignment
-          </button>
-        </div>
 
-        {/* ── 4-col Stat cards ───────────────────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: T.blueL }}>
-                <IcoDoc color={T.blue} />
+          {/* Hero banner */}
+          <div className="rounded-[28px] px-8 py-8 relative overflow-hidden mb-5"
+            style={{ background: MA.HERO_GRAD, boxShadow: "0 1px 2px rgba(0,8,60,0.15), 0 12px 32px rgba(0,8,60,0.28)" }}>
+            <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.09) 0%, transparent 45%)" }} />
+            <div className="relative z-[2]">
+              <div className="flex items-center gap-4 mb-5">
+                <div className="w-[52px] h-[52px] rounded-[15px] flex items-center justify-center text-white"
+                  style={{
+                    background: "rgba(255,255,255,0.14)",
+                    backdropFilter: "blur(22px)",
+                    WebkitBackdropFilter: "blur(22px)",
+                    border: "0.5px solid rgba(255,255,255,0.22)",
+                    boxShadow: "inset 0 0.5px 0 rgba(255,255,255,0.15)",
+                  }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                </div>
+                <div>
+                  <div className="text-[11px] font-extrabold uppercase" style={{ color: "rgba(255,255,255,0.72)", letterSpacing: "1.8px" }}>Total Active</div>
+                  <div className="text-[12px] font-medium mt-[3px]" style={{ color: "rgba(255,255,255,0.5)", letterSpacing: "-0.1px" }}>Across all classes</div>
+                </div>
+                <div className="ml-auto px-4 py-[7px] rounded-full text-[11px] font-extrabold"
+                  style={{
+                    background: "rgba(9,87,247,0.3)",
+                    border: "0.5px solid rgba(74,133,255,0.55)",
+                    color: "#B5CEFF",
+                    letterSpacing: "0.3px",
+                  }}>
+                  This Week
+                </div>
               </div>
-              <div>
-                <p className="text-[28px] font-bold text-slate-900 leading-none">{stats.totalActive}</p>
-                <p className="text-xs text-slate-500 mt-1.5">Total Active</p>
+              <div className="flex items-end justify-between gap-8 flex-wrap">
+                <div>
+                  <div className="text-[84px] font-extrabold text-white leading-none mb-[6px] flex items-baseline" style={{ letterSpacing: "-3.8px" }}>
+                    {stats.totalActive}
+                    <span className="text-[32px] font-bold ml-[10px]" style={{ color: "rgba(255,255,255,0.65)", letterSpacing: "-0.6px" }}>
+                      {stats.totalActive === 1 ? "assignment" : "assignments"}
+                    </span>
+                  </div>
+                  <div className="text-[14px] font-medium" style={{ color: "rgba(255,255,255,0.72)", letterSpacing: "-0.15px" }}>
+                    <b className="text-white font-bold">{stats.dueThisWeek} due this week</b> — {stats.pendingGrading} pending your grading.
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-[1px] rounded-[14px] overflow-hidden p-[1px] min-w-[380px]" style={{ background: "rgba(255,255,255,0.1)" }}>
+                  <div className="py-4 px-5 text-center" style={{ background: "rgba(0,20,80,0.55)" }}>
+                    <div className="text-[26px] font-extrabold" style={{ color: stats.dueThisWeek > 0 ? "#FFD060" : "#fff", letterSpacing: "-0.8px" }}>{stats.dueThisWeek}</div>
+                    <div className="text-[10px] font-bold uppercase mt-[4px]" style={{ color: "rgba(255,255,255,0.58)", letterSpacing: "1.1px" }}>Due</div>
+                  </div>
+                  <div className="py-4 px-5 text-center" style={{ background: "rgba(0,20,80,0.55)" }}>
+                    <div className="text-[26px] font-extrabold" style={{ color: stats.pendingGrading > 0 ? "#FF9AA9" : "#fff", letterSpacing: "-0.8px" }}>{stats.pendingGrading}</div>
+                    <div className="text-[10px] font-bold uppercase mt-[4px]" style={{ color: "rgba(255,255,255,0.58)", letterSpacing: "1.1px" }}>Pending</div>
+                  </div>
+                  <div className="py-4 px-5 text-center" style={{ background: "rgba(0,20,80,0.55)" }}>
+                    <div className="text-[26px] font-extrabold" style={{ color: stats.avgSubmission >= 80 ? "#6FFFAA" : "#fff", letterSpacing: "-0.8px" }}>{stats.avgSubmission}%</div>
+                    <div className="text-[10px] font-bold uppercase mt-[4px]" style={{ color: "rgba(255,255,255,0.58)", letterSpacing: "1.1px" }}>Avg Sub.</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: T.amberL }}>
-                <IcoCal color={T.amber} />
-              </div>
-              <div>
-                <p className="text-[28px] font-bold text-slate-900 leading-none">{stats.dueThisWeek}</p>
-                <p className="text-xs text-slate-500 mt-1.5">Due This Week</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: T.redL }}>
-                <IcoAlert color={T.red} />
-              </div>
-              <div>
-                <p className="text-[28px] font-bold text-slate-900 leading-none">{stats.pendingGrading}</p>
-                <p className="text-xs text-slate-500 mt-1.5">Pending Grading</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: T.greenL }}>
-                <IcoCheck2 color={T.green} />
-              </div>
-              <div>
-                <p className="text-[28px] font-bold text-slate-900 leading-none">{stats.avgSubmission}%</p>
-                <p className="text-xs text-slate-500 mt-1.5">Avg. Submission</p>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        {/* ── Search + filter chips row ──────────────────────────── */}
-        <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-          <div className="flex items-center gap-2 flex-wrap">
-            {filterChips.map(key => (
-              <button type="button"
-                key={key}
-                onClick={() => setFilter(key)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  filter === key
-                    ? 'bg-[#1e3272] text-white'
-                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-                }`}
-              >
-                {key}
+          {/* Create CTA + 4 stat cards row */}
+          <div className="grid grid-cols-5 gap-4 mb-5">
+            <button type="button" onClick={() => setView("create")}
+              className="rounded-[22px] flex flex-col items-center justify-center gap-2 p-5 hover:scale-[1.02] active:scale-[0.98] transition-transform"
+              style={{
+                background: MA.P, color: "#fff",
+                fontSize: 14, fontWeight: 800, letterSpacing: "-0.2px",
+                boxShadow: "0 1px 2px rgba(9,87,247,0.2), 0 6px 16px rgba(9,87,247,0.3)",
+                fontFamily: MA.FONT, border: "none",
+              }}>
+              <div className="w-11 h-11 rounded-[12px] flex items-center justify-center" style={{ background: "rgba(255,255,255,0.2)" }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </div>
+              <div>Create assignment</div>
+            </button>
+            {([
+              {
+                key: "total", label: "Total Active", val: stats.totalActive, color: MA.P,
+                sub: stats.totalActive > 0
+                  ? <span className="font-bold" style={{ color: MA.P }}>● Currently running</span>
+                  : <span className="font-semibold" style={{ color: MA.T3 }}>No active work</span>,
+                onClick: () => setFilter("All"),
+                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,
+              },
+              {
+                key: "due", label: "Due This Week", val: stats.dueThisWeek, color: MA.ORANGE,
+                sub: stats.dueThisWeek > 0
+                  ? <span className="font-bold" style={{ color: MA.ORANGE }}>● Due in 7 days</span>
+                  : <span className="font-bold" style={{ color: MA.GREEN }}>✓ All clear</span>,
+                onClick: () => setFilter("All"),
+                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+              },
+              {
+                key: "pending", label: "Pending Grading", val: stats.pendingGrading, color: stats.pendingGrading > 0 ? MA.RED : MA.GREEN,
+                sub: stats.pendingGrading > 0
+                  ? <span className="font-bold" style={{ color: MA.RED }}>● Needs review</span>
+                  : <span className="font-bold" style={{ color: MA.GREEN }}>✓ All caught up</span>,
+                onClick: () => setFilter("To grade"),
+                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12" y2="16"/></svg>,
+              },
+              {
+                key: "avg", label: "Avg Submission", val: `${stats.avgSubmission}%`, color: stats.avgSubmission >= 80 ? MA.GREEN : MA.VIOLET,
+                sub: stats.avgSubmission >= 80
+                  ? <span className="font-bold" style={{ color: MA.GREEN }}>✓ Strong</span>
+                  : stats.avgSubmission > 0
+                    ? <span className="font-bold" style={{ color: MA.P }}>● In progress</span>
+                    : <span className="font-semibold" style={{ color: MA.T3 }}>Awaiting subs</span>,
+                onClick: () => setFilter("Submitted"),
+                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+              },
+            ] as const).map(s => (
+              <button key={s.key} type="button" onClick={s.onClick}
+                className="bg-white rounded-[22px] p-5 relative flex flex-col text-left hover:-translate-y-[2px] active:scale-[0.98] transition-all"
+                style={{ boxShadow: MA.SH, fontFamily: MA.FONT }}>
+                <div className="flex items-start gap-[10px] mb-5" style={{ minHeight: 44 }}>
+                  <div className="flex-1 min-w-0 text-[11px] font-bold uppercase leading-[1.4] pt-[4px]" style={{ color: MA.T3, letterSpacing: "1px" }}>
+                    {s.label}
+                  </div>
+                  <div className="flex-shrink-0 w-[44px] h-[44px] rounded-[13px] flex items-center justify-center text-white" style={{ background: s.color }}>
+                    {s.icon}
+                  </div>
+                </div>
+                <div className="text-[38px] font-extrabold leading-none" style={{ color: s.color, letterSpacing: "-1.6px" }}>{s.val}</div>
+                <div className="text-[12px] font-semibold mt-2 flex items-center gap-[5px]" style={{ color: MA.T4, letterSpacing: "-0.15px" }}>
+                  {s.sub}
+                </div>
               </button>
             ))}
           </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search assignments..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-64 h-10 pl-9 pr-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
-            />
-          </div>
-        </div>
 
-        {/* ── Assignments table ──────────────────────────────────── */}
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-          {loading ? (
-            <div className="py-16 flex justify-center">
-              <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+          {/* Filter Tabs + Search row */}
+          <div className="flex items-center gap-4 mb-5 flex-wrap">
+            <div className="flex-1 min-w-[280px] p-[5px] rounded-[14px] flex gap-[7px]"
+              style={{ background: MA.CARD, boxShadow: MA.SH_SM }}>
+              {filterChips.map(key => {
+                const count =
+                  key === "All"       ? assignments.length :
+                  key === "To grade"  ? assignments.filter(a => a.pendingGrading > 0).length :
+                  key === "Submitted" ? assignments.filter(a => a.subCount >= a.expected && a.expected > 0).length :
+                  /* Draft */         assignments.filter(a => a.status === "Draft").length;
+                const isActive = filter === key;
+                return (
+                  <button key={key} type="button" onClick={() => setFilter(key)}
+                    aria-pressed={isActive}
+                    className="flex-1 py-[11px] px-4 rounded-[10px] flex items-center justify-center gap-[6px] transition-all active:scale-[0.96]"
+                    style={{
+                      background: isActive ? MA.P : "transparent",
+                      color: isActive ? "#fff" : MA.T3,
+                      fontSize: 13, fontWeight: isActive ? 800 : 700, letterSpacing: "-0.2px",
+                      boxShadow: isActive ? "0 1px 2px rgba(9,87,247,0.2), 0 3px 8px rgba(9,87,247,0.25)" : "none",
+                      fontFamily: MA.FONT, border: "none", cursor: "pointer",
+                    }}>
+                    {key}
+                    <span className="text-[10px] font-extrabold px-[7px] py-[2px] rounded-full min-w-[18px] text-center"
+                      style={{ background: isActive ? "rgba(255,255,255,0.22)" : MA.SURFACE, color: isActive ? "#fff" : MA.T3 }}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
-          ) : filtered.length === 0 ? (
-            <div className="py-20 text-center">
-              <p className="text-sm text-slate-500 font-semibold mb-1">
-                {filter === 'All' ? 'No assignments yet' : `No "${filter}" assignments`}
-              </p>
-              <p className="text-xs text-slate-400">Create your first assignment to get started.</p>
+            <div className="flex items-center gap-2 py-[11px] px-4 rounded-[12px] w-[320px]"
+              style={{ background: MA.CARD, boxShadow: MA.SH_SM }}>
+              <Search className="w-[16px] h-[16px] flex-shrink-0" style={{ color: MA.T4 }} strokeWidth={2.4} />
+              <input type="text" placeholder="Search assignments…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="flex-1 bg-transparent outline-none text-[13px] font-medium"
+                style={{ color: search ? MA.T1 : MA.T4, letterSpacing: "-0.1px", fontFamily: MA.FONT }} />
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-slate-50 border-b border-slate-200">
-                  <tr>
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide">Assignment</th>
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide">Class</th>
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide">Due Date</th>
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide">Submissions</th>
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide">Status</th>
-                    <th className="text-right px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filtered.map(a => {
-                    const badge = statusBadge(a.status);
-                    const dueLabel = timeRemaining(a.deadline);
-                    return (
-                      <tr
-                        key={a.id}
-                        onClick={() => { setSelectedAssignment(a); setView("grade"); }}
-                        className="hover:bg-slate-50 transition-colors cursor-pointer"
-                      >
-                        <td className="px-5 py-4">
-                          <p className="text-sm font-semibold text-slate-900">{a.title}</p>
-                          {a.description && <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{a.description}</p>}
-                        </td>
-                        <td className="px-5 py-4 text-sm text-slate-700">{a.className || '—'}</td>
-                        <td className={`px-5 py-4 text-sm ${isDuePast(a.deadline) ? 'text-rose-600 font-semibold' : 'text-slate-700'}`}>
-                          {dueLabel}
-                        </td>
-                        <td className="px-5 py-4 text-sm text-slate-700 font-medium">{a.subCount}/{a.expected}</td>
-                        <td className="px-5 py-4">
-                          <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full" style={{ background: badge.bg, color: badge.color }}>
-                            {badge.text}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button type="button"
-                              onClick={(e) => { e.stopPropagation(); setSelectedAssignment(a); setView("grade"); }}
-                              className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline"
-                            >
-                              Grade
-                            </button>
-                            <span className="text-slate-300">|</span>
-                            <button type="button"
-                              onClick={(e) => { e.stopPropagation(); handleDelete(a.id, a.title); }}
-                              className="text-xs font-semibold text-rose-600 hover:text-rose-700 hover:underline"
-                            >
-                              Delete
-                            </button>
+          </div>
+
+          {/* Assignment cards grid */}
+          <div className="mb-5">
+            {loading ? (
+              <div className="bg-white rounded-[20px] py-14 flex justify-center" style={{ boxShadow: MA.SH }}>
+                <Loader2 className="w-9 h-9 animate-spin" style={{ color: MA.P }} />
+              </div>
+            ) : filtered.length === 0 ? (
+              /* Empty state */
+              <div className="bg-white rounded-[22px] pt-12 pb-10 px-6 text-center" style={{ boxShadow: MA.SH }}>
+                <div className="relative w-[96px] h-[96px] rounded-[28px] flex items-center justify-center mx-auto mb-[20px]"
+                  style={{
+                    background: "linear-gradient(145deg, rgba(9,87,247,0.1) 0%, rgba(123,63,244,0.08) 100%)",
+                    color: MA.P,
+                    boxShadow: "0 0 0 10px rgba(9,87,247,0.04), inset 0 1px 0 rgba(255,255,255,0.6)",
+                  }}>
+                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                  <div className="absolute -top-[7px] -right-[7px] w-[30px] h-[30px] rounded-full flex items-center justify-center text-white text-[16px] font-extrabold"
+                    style={{ background: MA.P, border: "3px solid #fff", boxShadow: "0 2px 6px rgba(9,87,247,0.35)" }}>
+                    +
+                  </div>
+                </div>
+                <div className="text-[20px] font-extrabold mb-[8px]" style={{ color: MA.T1, letterSpacing: "-0.5px" }}>
+                  {search ? "No matches" : filter === "All" ? "No assignments yet" : `No "${filter}" items`}
+                </div>
+                <div className="text-[14px] font-medium leading-[1.5] mb-[22px] max-w-[460px] mx-auto" style={{ color: MA.T3, letterSpacing: "-0.15px" }}>
+                  {search ? (
+                    <>Try a different search term or clear the filter.</>
+                  ) : filter === "All" ? (
+                    <><b className="font-bold" style={{ color: MA.T1 }}>Create your first</b> assignment to track student progress.</>
+                  ) : filter === "To grade" ? (
+                    <><b className="font-bold" style={{ color: MA.T1 }}>All caught up!</b> Submissions will appear here once students upload their work.</>
+                  ) : filter === "Submitted" ? (
+                    <>No fully-submitted assignments yet — check back as students turn in work.</>
+                  ) : (
+                    <>No drafts right now. Every assignment you create is published live.</>
+                  )}
+                </div>
+                <button type="button" onClick={() => setView("create")}
+                  className="inline-flex items-center gap-[7px] px-6 py-3 rounded-[13px] active:scale-[0.96] hover:scale-[1.02] transition-transform"
+                  style={{
+                    background: MA.P, color: "#fff",
+                    fontSize: 14, fontWeight: 700, letterSpacing: "-0.2px",
+                    boxShadow: "0 1px 2px rgba(9,87,247,0.2), 0 5px 14px rgba(9,87,247,0.3)",
+                    border: "none", fontFamily: MA.FONT,
+                  }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  Create Assignment
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                {filtered.map(a => {
+                  const accent = accentColor(a.status);
+                  const pastDue = isDuePast(a.deadline);
+                  const isActive = !pastDue && a.pendingGrading === 0;
+                  return (
+                    <div key={a.id}
+                      onClick={() => { setSelectedAssignment(a); setView("grade"); }}
+                      role="button" tabIndex={0}
+                      className="bg-white rounded-[20px] p-5 relative overflow-hidden hover:-translate-y-[2px] active:scale-[0.99] transition-all cursor-pointer"
+                      style={{ boxShadow: MA.SH }}>
+                      <div className="absolute left-0 top-0 bottom-0 w-[4px] rounded-r-[3px]" style={{ background: accent }} />
+                      {/* Head */}
+                      <div className="flex items-start gap-3 mb-[14px]">
+                        <div className="w-[46px] h-[46px] rounded-[13px] flex items-center justify-center text-white flex-shrink-0" style={{ background: accent }}>
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-[8px]">
+                            <div className="text-[16px] font-extrabold leading-[1.2] truncate" style={{ color: MA.T1, letterSpacing: "-0.3px" }}>
+                              {a.title}
+                            </div>
+                            {isActive ? (
+                              <span className="px-[11px] py-[5px] rounded-full text-[10px] font-extrabold flex items-center gap-[5px] flex-shrink-0"
+                                style={{ background: "rgba(9,87,247,0.1)", color: MA.P, letterSpacing: "0.3px" }}>
+                                <span className="w-[5px] h-[5px] rounded-full" style={{ background: MA.P }} />
+                                Active
+                              </span>
+                            ) : (
+                              <span className="px-[11px] py-[5px] rounded-full text-[10px] font-extrabold flex-shrink-0"
+                                style={{ background: statusBadge(a.status).bg, color: statusBadge(a.status).color, letterSpacing: "0.3px" }}>
+                                {statusBadge(a.status).text}
+                              </span>
+                            )}
                           </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                          {a.description && (
+                            <div className="text-[12px] font-medium mt-[4px] truncate" style={{ color: MA.T3, letterSpacing: "-0.1px" }}>
+                              {a.description}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 3-col metrics */}
+                      <div className="grid grid-cols-3 gap-[1px] rounded-[12px] overflow-hidden p-[1px] mb-[13px]" style={{ background: MA.SURFACE }}>
+                        <div className="py-[11px] px-[6px] text-center bg-white">
+                          <div className="inline-block px-[9px] py-[3px] rounded-[6px] text-[12px] font-extrabold"
+                            style={{ background: "rgba(9,87,247,0.08)", color: MA.P, letterSpacing: "-0.2px" }}>
+                            {a.className || "—"}
+                          </div>
+                          <div className="text-[9px] font-bold uppercase mt-[4px]" style={{ color: MA.T3, letterSpacing: "1px" }}>Class</div>
+                        </div>
+                        <div className="py-[11px] px-[6px] text-center bg-white">
+                          <div className="text-[14px] font-extrabold" style={{ color: pastDue ? MA.RED : MA.ORANGE, letterSpacing: "-0.3px" }}>
+                            {timeRemaining(a.deadline)}
+                          </div>
+                          <div className="text-[9px] font-bold uppercase mt-[4px]" style={{ color: MA.T3, letterSpacing: "1px" }}>Due Date</div>
+                        </div>
+                        <div className="py-[11px] px-[6px] text-center bg-white">
+                          <div className="text-[14px] font-extrabold" style={{ color: MA.T1, letterSpacing: "-0.3px" }}>
+                            {a.subCount}/{a.expected}
+                          </div>
+                          <div className="text-[9px] font-bold uppercase mt-[4px]" style={{ color: MA.T3, letterSpacing: "1px" }}>Submitted</div>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex gap-2">
+                        <button type="button"
+                          onClick={(e) => { e.stopPropagation(); setSelectedAssignment(a); setView("grade"); }}
+                          className="flex-1 h-11 rounded-[12px] flex items-center justify-center gap-[6px] hover:scale-[1.02] active:scale-[0.96] transition-transform"
+                          style={{
+                            background: MA.P, color: "#fff",
+                            fontSize: 13, fontWeight: 700, letterSpacing: "-0.2px",
+                            boxShadow: "0 1px 2px rgba(9,87,247,0.2), 0 3px 10px rgba(9,87,247,0.25)",
+                            fontFamily: MA.FONT, border: "none",
+                          }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                          Grade
+                        </button>
+                        <button type="button"
+                          onClick={(e) => { e.stopPropagation(); setSelectedAssignment(a); setView("grade"); }}
+                          className="flex-1 h-11 rounded-[12px] flex items-center justify-center hover:scale-[1.02] active:scale-[0.96] transition-transform"
+                          style={{
+                            background: MA.SURFACE, color: MA.T1,
+                            fontSize: 13, fontWeight: 700, letterSpacing: "-0.2px",
+                            fontFamily: MA.FONT, border: "none",
+                          }}>
+                          View
+                        </button>
+                        <button type="button"
+                          onClick={(e) => { e.stopPropagation(); handleDelete(a.id, a.title); }}
+                          aria-label={`Delete ${a.title}`}
+                          className="w-11 h-11 rounded-[12px] flex items-center justify-center hover:scale-[1.04] active:scale-[0.92] transition-transform"
+                          style={{
+                            background: "rgba(255,51,85,0.08)", color: MA.RED,
+                            fontFamily: MA.FONT, border: "none",
+                          }}>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 01-2 2H9a2 2 0 01-2-2L5 6"/></svg>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* AI Intelligence */}
+          {!loading && (
+            <div className="rounded-[26px] p-7 relative overflow-hidden"
+              style={{
+                background: "linear-gradient(140deg, #000A33 0%, #001A66 28%, #0044CC 64%, #0055FF 100%)",
+                boxShadow: "0 1px 2px rgba(0,8,60,0.18), 0 12px 32px rgba(0,8,60,0.3)",
+              }}>
+              <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.09) 0%, transparent 45%)" }} />
+              <div className="relative z-[2]">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-[48px] h-[48px] rounded-[14px] flex items-center justify-center text-[22px]"
+                    style={{
+                      background: "rgba(255,255,255,0.14)",
+                      backdropFilter: "blur(22px)",
+                      WebkitBackdropFilter: "blur(22px)",
+                      border: "0.5px solid rgba(255,255,255,0.22)",
+                      color: "#FFDD55",
+                    }}>⚡</div>
+                  <div className="text-[11px] font-black uppercase" style={{ color: "rgba(255,255,255,0.95)", letterSpacing: "1.9px" }}>
+                    AI Assignment Intelligence
+                  </div>
+                  <div className="ml-auto px-[11px] py-[5px] rounded-full text-[10px] font-extrabold"
+                    style={{ background: "rgba(123,63,244,0.3)", border: "0.5px solid rgba(155,95,255,0.5)", color: "#DCC8FF", letterSpacing: "0.5px" }}>
+                    Tip
+                  </div>
+                </div>
+                {(() => {
+                  const nextDue = assignments.filter(a => a.deadline > new Date()).sort((a, b) => a.deadline.getTime() - b.deadline.getTime())[0];
+                  const nextDueLabel = nextDue ? timeRemaining(nextDue.deadline) : "—";
+                  return (
+                    <>
+                      <div className="text-[14px] leading-[1.6] mb-5" style={{ color: "rgba(255,255,255,0.85)", letterSpacing: "-0.15px" }}>
+                        {stats.pendingGrading > 0 ? (
+                          <><strong className="text-white font-bold">{stats.pendingGrading}</strong> submission{stats.pendingGrading === 1 ? "" : "s"} waiting for your review. Grading today keeps students in the loop.</>
+                        ) : stats.totalActive === 0 ? (
+                          <>No active assignments yet. <strong className="text-white font-bold">Create your first</strong> to start tracking submissions and grades.</>
+                        ) : nextDue ? (
+                          <><strong className="text-white font-bold">{stats.totalActive} active</strong> — <strong className="text-white font-bold">{nextDue.title}</strong> is due in {nextDueLabel.toLowerCase()}. Send a reminder to <strong className="text-white font-bold">{nextDue.className || "the class"}</strong> if submissions stall.</>
+                        ) : (
+                          <>Nothing to grade right now — <strong className="text-white font-bold">great job</strong> staying on top of submissions.</>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-3 gap-[1px] rounded-[14px] overflow-hidden p-[1px]" style={{ background: "rgba(255,255,255,0.1)" }}>
+                        <div className="py-4 px-3 text-center" style={{ background: "rgba(0,20,80,0.55)" }}>
+                          <div className="text-[22px] font-extrabold text-white" style={{ letterSpacing: "-0.6px" }}>{stats.pendingGrading}</div>
+                          <div className="text-[10px] font-extrabold uppercase mt-[4px]" style={{ color: "rgba(255,255,255,0.6)", letterSpacing: "1.1px" }}>Pending</div>
+                        </div>
+                        <div className="py-4 px-3 text-center" style={{ background: "rgba(0,20,80,0.55)" }}>
+                          <div className="text-[22px] font-extrabold text-white" style={{ letterSpacing: "-0.6px" }}>{stats.totalActive}</div>
+                          <div className="text-[10px] font-extrabold uppercase mt-[4px]" style={{ color: "rgba(255,255,255,0.6)", letterSpacing: "1.1px" }}>Active</div>
+                        </div>
+                        <div className="py-4 px-3 text-center" style={{ background: "rgba(0,20,80,0.55)" }}>
+                          <div className="text-[22px] font-extrabold" style={{ color: "#FFD060", letterSpacing: "-0.6px" }}>{nextDueLabel}</div>
+                          <div className="text-[10px] font-extrabold uppercase mt-[4px]" style={{ color: "rgba(255,255,255,0.6)", letterSpacing: "1.1px" }}>Next Due</div>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
             </div>
           )}
-        </div>
 
+        </div>
       </div>{/* ═══════════ END DESKTOP VIEW ═══════════ */}
 
     </div>

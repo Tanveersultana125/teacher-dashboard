@@ -261,12 +261,28 @@ const LessonPlanGenerator = () => {
         />
       )}
 
-      {/* ═══════════════════ DESKTOP VIEW (unchanged when showing form; shared for result) ═══════════════════ */}
-      <div className={!showResult ? "hidden md:block" : ""}>
+      {/* ═══════════════════ DESKTOP VIEW — Mobile design, widescreen grid ═══════════════════ */}
+      {!showResult && (
+        <DesktopLessonPlanner
+          form={form}
+          upd={upd}
+          loading={loading}
+          error={error}
+          history={history}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          onGenerate={handleGenerate}
+          onLoadHistory={loadFromHistory}
+          onReset={handleReset}
+        />
+      )}
+
+      {/* ═══════════════════ SHARED RESULT VIEW (mobile + desktop) ═══════════════════ */}
+      <div className={showResult ? "block" : "hidden"}>
 
       {/* ═══ DARK HERO ═══════════════════════════════════════════════════ */}
       {!showResult && (
-        <div className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 bg-[#162E93] md:bg-[#08090C]">
+        <div className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 bg-[#001A66] md:bg-[#08090C]">
           <div style={{ padding: "18px 22px 0" }}>
             {/* AI badge */}
             <div style={{
@@ -1570,6 +1586,728 @@ const MobileLessonPlanner = ({
                 </div>
               </div>
             ))}
+          </>
+        )}
+
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Desktop-only view — mirrors mobile design in widescreen grid
+// ─────────────────────────────────────────────────────────────────────────────
+const DesktopLessonPlanner = ({
+  form, upd, loading, error, history,
+  activeTab, setActiveTab, onGenerate, onLoadHistory, onReset,
+}: MobileLessonPlannerProps) => {
+  const [inclusions, setInclusions] = useState<Set<string>>(new Set(["objectives", "activities", "quiz"]));
+  const selectedClass = parseClassLabel(form.grade);
+  const durationMin = parseDurationMin(form.duration_per_lesson);
+
+  const matchedSubject = SUBJECT_CHIPS.find(s =>
+    (form.subject || "").toLowerCase().includes(s.key.toLowerCase()) ||
+    s.label.toLowerCase() === (form.subject || "").toLowerCase()
+  );
+
+  const boardActive = (b: string) => {
+    if (form.board === b) return true;
+    if (b === "State Board" && /state/i.test(form.board)) return true;
+    return false;
+  };
+
+  const canGenerate = !!form.subject.trim() && !!form.topic.trim() && !loading;
+
+  const fmtDate = (ts: any): string => {
+    const d: Date | null = ts?.toDate?.() || (ts instanceof Date ? ts : null);
+    if (!d) return "";
+    return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  };
+
+  return (
+    <div
+      className="hidden md:block -mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 px-8 pt-8 pb-12 text-left"
+      style={{
+        background: "#EEF4FF",
+        minHeight: "100vh",
+        fontVariantNumeric: "tabular-nums",
+      }}
+    >
+      <style>{`
+        .lpd-card3d { transition: transform .35s cubic-bezier(.2,.9,.3,1), box-shadow .35s cubic-bezier(.2,.9,.3,1); transform-style: preserve-3d; will-change: transform; }
+        @media (hover:hover) { .lpd-card3d:hover { transform: translateY(-3px) scale(1.004); box-shadow: 0 1px 2px rgba(0,85,255,.08), 0 24px 44px rgba(0,85,255,.18), 0 8px 16px rgba(0,85,255,.1); } }
+        .lpd-press { transition: transform .18s cubic-bezier(.34,1.56,.64,1); }
+        .lpd-press:active { transform: scale(.96); }
+        @keyframes lpdPulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .5; transform: scale(1.25); } }
+        @keyframes lpdTwinkle { 0%,100% { opacity: .85; } 50% { opacity: .25; } }
+        .lpd-pulse { animation: lpdPulse 1.6s ease-in-out infinite; }
+      `}</style>
+
+      <div style={{ maxWidth: 1400, margin: "0 auto" }}>
+
+        {/* Page header row + tabs */}
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 24, marginBottom: 18, flexWrap: "wrap" }}>
+          <div>
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: 7,
+              fontSize: 10, fontWeight: 800, color: "#fff",
+              letterSpacing: "1.8px", textTransform: "uppercase", marginBottom: 14,
+              background: "linear-gradient(135deg, #001A66 0%, #0055FF 50%, #1166FF 100%)",
+              padding: "7px 14px 7px 10px", borderRadius: 100,
+              boxShadow: "0 1px 2px rgba(0,85,255,.25), 0 4px 12px rgba(0,85,255,.3), inset 0 0.5px 0 rgba(255,255,255,.2)",
+            }}>
+              <span style={{
+                width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center",
+                color: "#FFDD55", fontSize: 13, lineHeight: 1,
+                filter: "drop-shadow(0 0 3px rgba(255,221,85,.6))",
+              }}>✦</span>
+              AI Powered
+            </div>
+            <h1 style={{ fontSize: 40, fontWeight: 800, color: "#001040", letterSpacing: "-1.4px", lineHeight: 1.05, margin: 0 }}>
+              AI Lesson{" "}
+              <span style={{
+                background: "linear-gradient(135deg, #0055FF 0%, #1166FF 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}>Planner</span>
+            </h1>
+            <div style={{ fontSize: 14, color: "#5070B0", fontWeight: 500, marginTop: 8, letterSpacing: "-0.15px" }}>
+              Generate classroom-ready lesson plans in seconds.
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div
+            style={{
+              display: "flex", gap: 5, background: "#fff", padding: 5,
+              borderRadius: 14,
+              boxShadow: "0 0.5px 1px rgba(0,85,255,.04), 0 2px 10px rgba(0,85,255,.08)",
+              border: "0.5px solid rgba(0,85,255,.07)",
+            }}
+          >
+            {[
+              { key: "generate", label: "Generate",
+                icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/></svg> },
+              { key: "history", label: "History", badge: history.length,
+                icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> },
+            ].map(tab => {
+              const active = activeTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveTab(tab.key as "generate" | "history")}
+                  className="lpd-press"
+                  style={{
+                    padding: "10px 18px", borderRadius: 10,
+                    fontSize: 13, fontWeight: 700, letterSpacing: "-0.2px",
+                    color: active ? "#fff" : "#5070B0",
+                    background: active ? "linear-gradient(135deg, #0055FF, #1166FF)" : "transparent",
+                    boxShadow: active ? "0 1px 2px rgba(0,85,255,.22), 0 3px 10px rgba(0,85,255,.3)" : "none",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+                    border: "none", cursor: "pointer", fontFamily: "inherit",
+                    transition: "all .22s cubic-bezier(.2,.9,.3,1)",
+                  }}
+                >
+                  {tab.icon}
+                  {tab.label}
+                  {tab.badge !== undefined && (
+                    <span style={{
+                      background: active ? "rgba(255,255,255,.22)" : "#F4F7FE",
+                      color: active ? "#fff" : "#5070B0",
+                      fontSize: 11, fontWeight: 800, padding: "1px 8px", borderRadius: 100,
+                    }}>{tab.badge}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* AI Hero — full width */}
+        <div
+          className="lpd-card3d"
+          style={{
+            background: "linear-gradient(135deg, #000A33 0%, #001A66 32%, #0044CC 68%, #0055FF 100%)",
+            borderRadius: 28, padding: 32, marginBottom: 18,
+            position: "relative", overflow: "hidden",
+            boxShadow: "0 1px 2px rgba(0,26,102,.2), 0 12px 32px rgba(0,26,102,.32)",
+          }}
+        >
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(255,255,255,.12) 0%, transparent 45%)", pointerEvents: "none" }} />
+          <div style={{
+            position: "absolute", top: 28, right: 48,
+            width: 4, height: 4, background: "#FFDD55", borderRadius: "50%",
+            boxShadow: "-34px 22px 0 -1px rgba(255,255,255,.7), 18px 34px 0 -1px rgba(255,221,85,.85), -54px 48px 0 -2px rgba(255,255,255,.55), -16px 58px 0 -1px rgba(255,221,85,.9), -76px 14px 0 -2px rgba(255,255,255,.4)",
+            pointerEvents: "none",
+            animation: "lpdTwinkle 3s ease-in-out infinite",
+          }} />
+          <div style={{ position: "relative", zIndex: 2 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
+              <div style={{ width: 52, height: 52, borderRadius: 15, background: "rgba(255,255,255,.16)", backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)", border: "0.5px solid rgba(255,255,255,.28)", display: "flex", alignItems: "center", justifyContent: "center", color: "#FFDD55" }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8L19 13M15 9h0M17.8 6.2L19 5M3 21l9-9M12.2 6.2L11 5"/>
+                </svg>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 900, color: "rgba(255,255,255,.85)", letterSpacing: "1.8px", textTransform: "uppercase" }}>Powered by Edullent engine</div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,.55)", marginTop: 3, fontWeight: 500, letterSpacing: "-0.1px" }}>Curriculum-aligned · Real-time</div>
+              </div>
+              <div style={{
+                marginLeft: "auto",
+                background: "rgba(255,255,255,.18)",
+                border: "0.5px solid rgba(255,255,255,.32)",
+                color: "#fff",
+                padding: "7px 14px", borderRadius: 100,
+                fontSize: 11, fontWeight: 800,
+                display: "flex", alignItems: "center", gap: 7, letterSpacing: "0.3px",
+              }}>
+                <span className="lpd-pulse" style={{ width: 7, height: 7, borderRadius: "50%", background: "#FFDD55", boxShadow: "0 0 8px #FFDD55" }} />
+                Live
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 32, flexWrap: "wrap" }}>
+              <div>
+                <div style={{ fontSize: 42, fontWeight: 800, color: "#fff", letterSpacing: "-1.6px", lineHeight: 1.1, marginBottom: 10 }}>
+                  Craft lessons in seconds ✨
+                </div>
+                <div style={{ fontSize: 15, color: "rgba(255,255,255,.82)", fontWeight: 500, letterSpacing: "-0.15px", lineHeight: 1.5 }}>
+                  Just pick a subject, class, and topic — <b style={{ color: "#fff", fontWeight: 700 }}>the AI handles the rest</b>.
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 1, background: "rgba(255,255,255,.12)", borderRadius: 14, padding: 1, overflow: "hidden", minWidth: 380 }}>
+                <div style={{ background: "rgba(0,10,51,.7)", padding: "16px 20px", textAlign: "center" }}>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: "#fff", letterSpacing: "-0.7px" }}>{history.length}</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,.6)", letterSpacing: "1.1px", textTransform: "uppercase", marginTop: 4 }}>Generated</div>
+                </div>
+                <div style={{ background: "rgba(0,10,51,.7)", padding: "16px 20px", textAlign: "center" }}>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: "#FFDD55", letterSpacing: "-0.7px" }}>~8s</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,.6)", letterSpacing: "1.1px", textTransform: "uppercase", marginTop: 4 }}>Avg Time</div>
+                </div>
+                <div style={{ background: "rgba(0,10,51,.7)", padding: "16px 20px", textAlign: "center" }}>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: "#6FFFAA", letterSpacing: "-0.7px" }}>100%</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,.6)", letterSpacing: "1.1px", textTransform: "uppercase", marginTop: 4 }}>Saved</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {activeTab === "generate" ? (
+          loading ? (
+            /* Loading state */
+            <div className="lpd-card3d" style={{
+              background: "#fff", borderRadius: 22, padding: "80px 24px",
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 18,
+              boxShadow: "0 0.5px 1px rgba(0,85,255,.04), 0 4px 14px rgba(0,85,255,.08)",
+              border: "0.5px solid rgba(0,85,255,.07)",
+            }}>
+              <div style={{
+                width: 72, height: 72, borderRadius: 20,
+                background: "linear-gradient(135deg, rgba(0,85,255,.12), rgba(17,102,255,.08))",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                boxShadow: "0 0 0 8px rgba(0,85,255,.04)",
+              }}>
+                <Loader2 style={{ width: 36, height: 36, color: "#0055FF" }} className="animate-spin" />
+              </div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: "#001040", letterSpacing: "-0.4px" }}>AI is crafting your lesson plan…</div>
+              <div style={{ fontSize: 12, color: "#5070B0", fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.5px" }}>This may take 10-20 seconds</div>
+              <div style={{ width: "100%", maxWidth: 340, display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
+                {[80, 55, 90, 45].map((w, i) => (
+                  <div key={i} style={{ height: 4, background: "rgba(0,85,255,.1)", borderRadius: 2, width: `${w}%` }} className="animate-pulse" />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* AI Tip */}
+              <div style={{
+                background: "linear-gradient(135deg, rgba(0,85,255,.08), rgba(17,102,255,.04))",
+                border: "0.5px solid rgba(0,85,255,.2)",
+                borderRadius: 16, padding: "14px 18px",
+                display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 16,
+              }}>
+                <div style={{
+                  width: 34, height: 34, borderRadius: 11,
+                  background: "linear-gradient(135deg, #0055FF, #1166FF)",
+                  color: "#FFDD55",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  flexShrink: 0, fontSize: 16,
+                  boxShadow: "0 1px 2px rgba(0,85,255,.2), 0 3px 8px rgba(0,85,255,.25)",
+                }}>⚡</div>
+                <div style={{ flex: 1, fontSize: 13, color: "#002080", lineHeight: 1.55, fontWeight: 500, letterSpacing: "-0.1px" }}>
+                  <b style={{ color: "#0055FF", fontWeight: 800 }}>Pro tip:</b> The more specific your topic, the better the lesson plan. Try "Noun types with examples" instead of just "Nouns".
+                </div>
+              </div>
+
+              {/* Form grid: 2-column layout */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+
+                {/* Subject — full row */}
+                <div className="lpd-card3d" style={{
+                  gridColumn: "1 / -1",
+                  background: "#fff", borderRadius: 22, padding: 22,
+                  boxShadow: "0 0.5px 1px rgba(0,85,255,.04), 0 4px 14px rgba(0,85,255,.08)",
+                  border: "0.5px solid rgba(0,85,255,.07)",
+                }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: "#5070B0", letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                    Subject
+                    <span style={{ color: "#FF3355", fontSize: 12, fontWeight: 900 }}>*</span>
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {SUBJECT_CHIPS.map(sc => {
+                      const active = matchedSubject?.key === sc.key;
+                      return (
+                        <button
+                          key={sc.key}
+                          type="button"
+                          onClick={() => upd("subject", sc.key)}
+                          className="lpd-press"
+                          style={{
+                            padding: "10px 18px", borderRadius: 100,
+                            background: active ? "linear-gradient(135deg, #0055FF, #1166FF)" : "#F4F7FE",
+                            color: active ? "#fff" : "#002080",
+                            fontSize: 13, fontWeight: 700, letterSpacing: "-0.2px",
+                            display: "flex", alignItems: "center", gap: 7,
+                            border: active ? "0.5px solid #0055FF" : "0.5px solid rgba(0,85,255,.07)",
+                            cursor: "pointer", fontFamily: "inherit",
+                            boxShadow: active ? "0 1px 2px rgba(0,85,255,.22), 0 3px 10px rgba(0,85,255,.28)" : "none",
+                            transition: "all .22s cubic-bezier(.2,.9,.3,1)",
+                          }}
+                        >
+                          <span style={{ fontSize: 14, lineHeight: 1 }}>{sc.emoji}</span>
+                          {sc.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Class */}
+                <div className="lpd-card3d" style={{
+                  background: "#fff", borderRadius: 22, padding: 22,
+                  boxShadow: "0 0.5px 1px rgba(0,85,255,.04), 0 4px 14px rgba(0,85,255,.08)",
+                  border: "0.5px solid rgba(0,85,255,.07)",
+                }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: "#5070B0", letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                    Class
+                    <span style={{ color: "#FF3355", fontSize: 12, fontWeight: 900 }}>*</span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 6 }}>
+                    {CLASS_OPTIONS.map(c => {
+                      const active = selectedClass === c;
+                      return (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => upd("grade", classToGrade(c))}
+                          className="lpd-press"
+                          style={{
+                            padding: "10px 4px", borderRadius: 10,
+                            background: active ? "linear-gradient(135deg, #0055FF, #1166FF)" : "#F4F7FE",
+                            color: active ? "#fff" : "#5070B0",
+                            fontSize: 13, fontWeight: active ? 800 : 700,
+                            textAlign: "center", letterSpacing: "-0.2px",
+                            border: active ? "0.5px solid #0055FF" : "0.5px solid rgba(0,85,255,.07)",
+                            boxShadow: active ? "0 1px 2px rgba(0,85,255,.22), 0 3px 8px rgba(0,85,255,.25)" : "none",
+                            cursor: "pointer", fontFamily: "inherit",
+                            transition: "all .22s cubic-bezier(.2,.9,.3,1)",
+                          }}
+                        >{c}</button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const v = prompt("Enter class number:");
+                        const n = v && /^\d+$/.test(v) ? v : null;
+                        if (n) upd("grade", classToGrade(n));
+                      }}
+                      className="lpd-press"
+                      style={{
+                        padding: "10px 4px", borderRadius: 10,
+                        background: "#F4F7FE", color: "#5070B0",
+                        fontSize: 13, fontWeight: 700,
+                        textAlign: "center", letterSpacing: "-0.2px",
+                        border: "0.5px solid rgba(0,85,255,.07)",
+                        cursor: "pointer", fontFamily: "inherit",
+                      }}
+                    >+</button>
+                  </div>
+                </div>
+
+                {/* Board */}
+                <div className="lpd-card3d" style={{
+                  background: "#fff", borderRadius: 22, padding: 22,
+                  boxShadow: "0 0.5px 1px rgba(0,85,255,.04), 0 4px 14px rgba(0,85,255,.08)",
+                  border: "0.5px solid rgba(0,85,255,.07)",
+                }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: "#5070B0", letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 12 }}>Board</div>
+                  <div style={{ display: "flex", gap: 4, background: "#F4F7FE", padding: 4, borderRadius: 12 }}>
+                    {BOARD_OPTIONS.map(b => {
+                      const active = boardActive(b);
+                      return (
+                        <button
+                          key={b}
+                          type="button"
+                          onClick={() => upd("board", b)}
+                          className="lpd-press"
+                          style={{
+                            flex: 1, padding: "10px 14px", borderRadius: 9,
+                            fontSize: 13, fontWeight: active ? 800 : 700,
+                            color: active ? "#0055FF" : "#5070B0",
+                            background: active ? "#fff" : "transparent",
+                            boxShadow: active ? "0 1px 2px rgba(0,0,0,.04), 0 2px 6px rgba(0,85,255,.15)" : "none",
+                            textAlign: "center", letterSpacing: "-0.2px",
+                            border: "none", cursor: "pointer", fontFamily: "inherit",
+                            transition: "all .22s cubic-bezier(.2,.9,.3,1)",
+                          }}
+                        >{b}</button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Topic — full row */}
+                <div className="lpd-card3d" style={{
+                  gridColumn: "1 / -1",
+                  background: "#fff", borderRadius: 22, padding: 22,
+                  boxShadow: "0 0.5px 1px rgba(0,85,255,.04), 0 4px 14px rgba(0,85,255,.08)",
+                  border: "0.5px solid rgba(0,85,255,.07)",
+                }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: "#5070B0", letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                    Lesson Topic
+                    <span style={{ color: "#FF3355", fontSize: 12, fontWeight: 900 }}>*</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={form.topic}
+                    onChange={e => upd("topic", e.target.value.slice(0, 120))}
+                    placeholder="e.g. Understanding Parts of Speech"
+                    maxLength={120}
+                    style={{
+                      width: "100%", padding: "14px 16px",
+                      background: form.topic ? "#fff" : "#F4F7FE",
+                      border: "0.5px solid rgba(0,85,255,.07)",
+                      borderRadius: 13,
+                      fontSize: 15, fontWeight: form.topic ? 600 : 500, color: "#001040",
+                      fontFamily: "inherit", letterSpacing: "-0.2px", outline: "none",
+                      transition: "all .2s cubic-bezier(.2,.9,.3,1)",
+                    }}
+                    onFocus={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#0055FF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0,85,255,.12)"; }}
+                    onBlur={e => { e.currentTarget.style.background = form.topic ? "#fff" : "#F4F7FE"; e.currentTarget.style.borderColor = "rgba(0,85,255,.07)"; e.currentTarget.style.boxShadow = "none"; }}
+                  />
+                  <div style={{ fontSize: 12, color: "#99AACC", marginTop: 8, fontWeight: 500, letterSpacing: "-0.1px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span>What should the AI teach?</span>
+                    <span style={{ color: "#5070B0", fontWeight: 600 }}>{form.topic.length} / 120</span>
+                  </div>
+                </div>
+
+                {/* Lessons */}
+                <div className="lpd-card3d" style={{
+                  background: "#fff", borderRadius: 22, padding: 22,
+                  boxShadow: "0 0.5px 1px rgba(0,85,255,.04), 0 4px 14px rgba(0,85,255,.08)",
+                  border: "0.5px solid rgba(0,85,255,.07)",
+                }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: "#5070B0", letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 12 }}>Lessons</div>
+                  <div style={{ display: "flex", alignItems: "center", background: "#F4F7FE", border: "0.5px solid rgba(0,85,255,.07)", borderRadius: 13, overflow: "hidden" }}>
+                    <button
+                      type="button"
+                      onClick={() => upd("num_lessons", Math.max(1, form.num_lessons - 1))}
+                      aria-label="Decrease lessons"
+                      className="lpd-press"
+                      style={{ width: 46, height: 52, background: "transparent", border: "none", color: "#0055FF", fontSize: 22, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}
+                    >−</button>
+                    <div style={{ flex: 1, textAlign: "center", fontSize: 18, fontWeight: 800, color: "#001040", letterSpacing: "-0.3px" }}>{form.num_lessons}</div>
+                    <button
+                      type="button"
+                      onClick={() => upd("num_lessons", Math.min(5, form.num_lessons + 1))}
+                      aria-label="Increase lessons"
+                      className="lpd-press"
+                      style={{ width: 46, height: 52, background: "transparent", border: "none", color: "#0055FF", fontSize: 22, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}
+                    >+</button>
+                  </div>
+                </div>
+
+                {/* Duration */}
+                <div className="lpd-card3d" style={{
+                  background: "#fff", borderRadius: 22, padding: 22,
+                  boxShadow: "0 0.5px 1px rgba(0,85,255,.04), 0 4px 14px rgba(0,85,255,.08)",
+                  border: "0.5px solid rgba(0,85,255,.07)",
+                }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: "#5070B0", letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 12 }}>Duration</div>
+                  <div style={{ display: "flex", alignItems: "center", background: "#F4F7FE", border: "0.5px solid rgba(0,85,255,.07)", borderRadius: 13, overflow: "hidden" }}>
+                    <button
+                      type="button"
+                      onClick={() => upd("duration_per_lesson", minToDuration(Math.max(15, durationMin - 15)))}
+                      aria-label="Decrease duration"
+                      className="lpd-press"
+                      style={{ width: 46, height: 52, background: "transparent", border: "none", color: "#0055FF", fontSize: 22, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}
+                    >−</button>
+                    <div style={{ flex: 1, textAlign: "center", fontSize: 18, fontWeight: 800, color: "#001040", letterSpacing: "-0.3px" }}>
+                      {durationMin}<span style={{ color: "#5070B0", fontSize: 13, fontWeight: 700, marginLeft: 4 }}>min</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => upd("duration_per_lesson", minToDuration(Math.min(120, durationMin + 15)))}
+                      aria-label="Increase duration"
+                      className="lpd-press"
+                      style={{ width: 46, height: 52, background: "transparent", border: "none", color: "#0055FF", fontSize: 22, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}
+                    >+</button>
+                  </div>
+                </div>
+
+                {/* Include in Plan — full row */}
+                <div className="lpd-card3d" style={{
+                  gridColumn: "1 / -1",
+                  background: "#fff", borderRadius: 22, padding: 22,
+                  boxShadow: "0 0.5px 1px rgba(0,85,255,.04), 0 4px 14px rgba(0,85,255,.08)",
+                  border: "0.5px solid rgba(0,85,255,.07)",
+                }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: "#5070B0", letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                    Include in Plan
+                    <span style={{ color: "#99AACC", fontWeight: 600, letterSpacing: 0, textTransform: "none", fontSize: 11, marginLeft: 2 }}>(optional)</span>
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {PLAN_INCLUSIONS.map(p => {
+                      const active = inclusions.has(p.key);
+                      return (
+                        <button
+                          key={p.key}
+                          type="button"
+                          onClick={() => {
+                            const next = new Set(inclusions);
+                            if (next.has(p.key)) next.delete(p.key); else next.add(p.key);
+                            setInclusions(next);
+                            const chosen = PLAN_INCLUSIONS.filter(x => next.has(x.key)).map(x => x.label);
+                            upd("learning_goals", chosen.join(", "));
+                          }}
+                          className="lpd-press"
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: 6,
+                            padding: "9px 16px", borderRadius: 100,
+                            background: active ? "rgba(0,85,255,.1)" : "#F4F7FE",
+                            color: active ? "#0055FF" : "#002080",
+                            fontSize: 12, fontWeight: 700, letterSpacing: "-0.15px",
+                            border: active ? "0.5px solid rgba(0,85,255,.25)" : "0.5px solid rgba(0,85,255,.07)",
+                            cursor: "pointer", fontFamily: "inherit",
+                            transition: "all .22s cubic-bezier(.2,.9,.3,1)",
+                          }}
+                        >
+                          <span style={{ fontSize: 14 }}>{p.emoji}</span>
+                          {p.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Error banner */}
+              {error && (
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "12px 16px", background: "rgba(255,51,85,.08)",
+                  border: "0.5px solid rgba(255,51,85,.25)", borderRadius: 14, marginBottom: 14,
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF3355" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="1" fill="currentColor" stroke="none"/>
+                  </svg>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#FF3355" }}>{error}</span>
+                </div>
+              )}
+
+              {/* Action row: Reset + Generate */}
+              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                <button
+                  type="button"
+                  onClick={onReset}
+                  className="lpd-press"
+                  style={{
+                    height: 52, padding: "0 22px", borderRadius: 14,
+                    background: "#fff", color: "#5070B0", border: "0.5px solid rgba(0,85,255,.07)",
+                    fontSize: 13, fontWeight: 700, letterSpacing: "-0.2px",
+                    display: "inline-flex", alignItems: "center", gap: 7, cursor: "pointer",
+                    fontFamily: "inherit",
+                    boxShadow: "0 0.5px 1px rgba(0,85,255,.04), 0 2px 6px rgba(0,85,255,.06)",
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 12a9 9 0 0118 0 9 9 0 01-15 6.7L3 16"/><polyline points="3 21 3 16 8 16"/>
+                  </svg>
+                  Reset form
+                </button>
+                <button
+                  type="button"
+                  onClick={onGenerate}
+                  disabled={!canGenerate}
+                  className="lpd-press"
+                  style={{
+                    flex: 1, height: 52, borderRadius: 16,
+                    background: canGenerate ? "linear-gradient(135deg, #0044CC 0%, #0055FF 50%, #1166FF 100%)" : "#EAF0FB",
+                    color: canGenerate ? "#fff" : "#99AACC",
+                    fontSize: 16, fontWeight: 800, border: "none",
+                    cursor: canGenerate ? "pointer" : "not-allowed",
+                    letterSpacing: "-0.3px",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                    boxShadow: canGenerate ? "0 1px 2px rgba(0,26,102,.3), 0 8px 22px rgba(0,85,255,.42), inset 0 1px 0 rgba(255,255,255,.2)" : "none",
+                    fontFamily: "inherit",
+                    position: "relative", overflow: "hidden",
+                  }}
+                >
+                  {loading ? (
+                    <><Loader2 className="w-5 h-5 animate-spin" /> Generating…</>
+                  ) : (
+                    <>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{ color: canGenerate ? "#FFDD55" : "#99AACC", filter: canGenerate ? "drop-shadow(0 0 4px rgba(255,221,85,.55))" : "none" }}>
+                        <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/>
+                      </svg>
+                      Generate Lesson Plan
+                    </>
+                  )}
+                </button>
+              </div>
+            </>
+          )
+        ) : (
+          /* HISTORY TAB */
+          <>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", padding: "4px 4px 14px" }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                <span style={{ fontSize: 17, fontWeight: 800, color: "#001040", letterSpacing: "-0.4px" }}>Recent Plans</span>
+                <span style={{ fontSize: 13, color: "#5070B0", fontWeight: 600, letterSpacing: "-0.1px" }}>{history.length} plan{history.length === 1 ? "" : "s"}</span>
+              </div>
+            </div>
+
+            {history.length === 0 ? (
+              <div className="lpd-card3d" style={{
+                background: "#fff", borderRadius: 22, padding: "56px 24px", textAlign: "center",
+                boxShadow: "0 0.5px 1px rgba(0,85,255,.04), 0 4px 14px rgba(0,85,255,.08)",
+                border: "0.5px solid rgba(0,85,255,.07)",
+              }}>
+                <div style={{
+                  width: 72, height: 72, borderRadius: 22,
+                  background: "linear-gradient(145deg, rgba(0,85,255,.08), rgba(17,102,255,.04))",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  margin: "0 auto 14px", color: "#0055FF",
+                  boxShadow: "0 0 0 6px rgba(0,85,255,.05)",
+                }}>
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: "#001040", marginBottom: 6, letterSpacing: "-0.3px" }}>No plans yet</div>
+                <div style={{ fontSize: 13, color: "#5070B0", fontWeight: 500, letterSpacing: "-0.1px", lineHeight: 1.5 }}>
+                  Switch to <b style={{ color: "#0055FF", fontWeight: 800 }}>Generate</b> to create your first lesson plan.
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
+                {history.map(h => (
+                  <div
+                    key={h.id}
+                    className="lpd-card3d"
+                    onClick={() => onLoadHistory(h)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onLoadHistory(h); } }}
+                    style={{
+                      background: "#fff", borderRadius: 20, padding: 18,
+                      position: "relative", overflow: "hidden", cursor: "pointer",
+                      boxShadow: "0 0.5px 1px rgba(0,85,255,.04), 0 4px 14px rgba(0,85,255,.08)",
+                      border: "0.5px solid rgba(0,85,255,.07)",
+                    }}
+                  >
+                    <div style={{
+                      position: "absolute", left: 0, top: 0, bottom: 0, width: 4,
+                      background: "linear-gradient(180deg, #0055FF, #1166FF)",
+                    }} />
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 14 }}>
+                      <div style={{
+                        width: 48, height: 48, borderRadius: 14,
+                        background: "linear-gradient(135deg, #001A66 0%, #0055FF 55%, #1166FF 100%)",
+                        color: "#fff",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        flexShrink: 0, position: "relative",
+                        boxShadow: "0 1px 2px rgba(0,85,255,.22), 0 4px 10px rgba(0,85,255,.28), inset 0 0.5px 0 rgba(255,255,255,.15)",
+                      }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+                        </svg>
+                        <span style={{
+                          position: "absolute", top: -4, right: -4,
+                          fontSize: 15, color: "#FFDD55",
+                          textShadow: "0 0 6px rgba(255,221,85,.75)", lineHeight: 1,
+                        }}>✦</span>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: "#001040", letterSpacing: "-0.35px", lineHeight: 1.25, marginBottom: 7 }}>
+                          {(h.plan?.plan_title as string) || h.topic || "Untitled plan"}
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 7 }}>
+                          {h.subject && <span style={{ padding: "3px 10px", borderRadius: 7, fontSize: 11, fontWeight: 800, letterSpacing: "-0.1px", background: "rgba(0,85,255,.1)", color: "#0055FF" }}>{h.subject}</span>}
+                          {h.grade && <span style={{ padding: "3px 10px", borderRadius: 7, fontSize: 11, fontWeight: 800, letterSpacing: "-0.1px", background: "rgba(0,85,255,.04)", color: "#0044CC", border: "0.5px solid rgba(0,85,255,.07)" }}>{h.grade}</span>}
+                          {h.board && <span style={{ padding: "3px 10px", borderRadius: 7, fontSize: 11, fontWeight: 800, letterSpacing: "-0.1px", background: "rgba(0,200,83,.1)", color: "#00C853" }}>{h.board}</span>}
+                          {h.plan?.lessons && <span style={{ padding: "3px 10px", borderRadius: 7, fontSize: 11, fontWeight: 800, letterSpacing: "-0.1px", background: "rgba(255,170,0,.12)", color: "#FFAA00" }}>{h.plan.lessons.length} lesson{h.plan.lessons.length === 1 ? "" : "s"}</span>}
+                        </div>
+                        <div style={{ fontSize: 12, color: "#5070B0", fontWeight: 600, letterSpacing: "-0.1px", display: "flex", alignItems: "center", gap: 6 }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                          </svg>
+                          {fmtDate(h.createdAt) || "Recently generated"}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        type="button"
+                        onClick={e => { e.stopPropagation(); onLoadHistory(h); }}
+                        className="lpd-press"
+                        style={{
+                          flex: 1, height: 42, borderRadius: 12,
+                          background: "linear-gradient(135deg, #0055FF, #1166FF)",
+                          color: "#fff",
+                          fontSize: 13, fontWeight: 700, letterSpacing: "-0.2px",
+                          border: "none", cursor: "pointer", fontFamily: "inherit",
+                          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                          boxShadow: "0 1px 2px rgba(0,85,255,.22), 0 3px 10px rgba(0,85,255,.28)",
+                        }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        Open Plan
+                      </button>
+                      <button
+                        type="button"
+                        onClick={e => {
+                          e.stopPropagation();
+                          onLoadHistory(h);
+                          setActiveTab("generate");
+                          setTimeout(onGenerate, 100);
+                        }}
+                        className="lpd-press"
+                        style={{
+                          flex: 1, height: 42, borderRadius: 12,
+                          background: "#F4F7FE", color: "#002080",
+                          border: "0.5px solid rgba(0,85,255,.07)",
+                          fontSize: 13, fontWeight: 700, letterSpacing: "-0.2px",
+                          cursor: "pointer", fontFamily: "inherit",
+                          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                        }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/>
+                        </svg>
+                        Regenerate
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </>
         )}
 

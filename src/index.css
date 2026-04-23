@@ -260,31 +260,31 @@ button[class*="rounded-"][class*="border"] {
 }
 .clickable-card:active,
 [role="button"][class*="rounded-"]:active {
-  transform: translateY(-2px) scale(0.99) !important;
-  transition: transform 0.1s ease !important;
+  transform: translateY(-1px) scale(0.985);
+  transition: transform 0.1s ease;
 }
 
-/* ── Button hover lift (primary/accent buttons) ── */
+/* ── Button hover lift (primary/accent buttons only — specific brand bg) ── */
 button[class*="bg-primary"],
 button[class*="bg-[#1e3272]"],
 button[class*="bg-[#1e3a8a]"],
 a[class*="bg-primary"] {
-  transition: transform 0.15s ease, box-shadow 0.2s ease !important;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
 }
 button[class*="bg-primary"]:hover,
 button[class*="bg-[#1e3272]"]:hover,
 button[class*="bg-[#1e3a8a]"]:hover,
 a[class*="bg-primary"]:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: 0 6px 20px rgba(30, 50, 114, 0.25) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(30, 50, 114, 0.25);
 }
-button:active, a:active { transform: scale(0.97) !important; }
+button:active, a:active { transform: scale(0.97); }
 
 /* ── Table row hover ── */
 tr[class*="hover"]:hover,
 tbody tr:hover {
-  background: rgba(30, 50, 114, 0.03) !important;
-  transition: background 0.15s ease !important;
+  background: rgba(30, 50, 114, 0.03);
+  transition: background 0.15s ease;
 }
 
 /* ── Page fade-in ── */
@@ -314,7 +314,9 @@ main > div,
    inline-styled cards, named card classes, and `.xx-card3d` scoped wrappers.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Baseline — shadow + transition + pointer for every card surface */
+/* Baseline — principal dashboard's EXACT blue halo for every card.
+   No `!important` so inline `style={{ boxShadow }}` from components still wins.
+   Crisp text on hover via backface-visibility + flat transform-style. */
 .clickable-card,
 .ds-card,
 .stat-card,
@@ -327,21 +329,25 @@ div[class*="rounded-xl"][class*="shadow-"],
 a[class*="rounded-2xl"],
 a[class*="rounded-3xl"],
 a[class*="rounded-xl"][class*="border"] {
+  /* BLUE_SHADOW_LG — identical to principal dashboard's signature */
   box-shadow:
-    0 0.5px 1px rgba(0, 85, 255, 0.05),
-    0 4px 14px rgba(0, 85, 255, 0.08),
-    0 12px 32px rgba(0, 85, 255, 0.06) !important;
+    0 0 0 0.5px rgba(0, 85, 255, 0.10),
+    0 4px 16px rgba(0, 85, 255, 0.12),
+    0 18px 44px rgba(0, 85, 255, 0.15);
   transition:
-    transform 0.32s cubic-bezier(0.2, 0.9, 0.3, 1),
-    box-shadow 0.32s cubic-bezier(0.2, 0.9, 0.3, 1) !important;
+    transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.22s ease;
   cursor: pointer;
-  transform-style: preserve-3d;
   will-change: transform, box-shadow;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: flat;
 }
 
-/* Strong 3D hover — DESKTOP (pointer: fine). Also applies on hover-capable
-   laptops/trackpads; touch devices are excluded via media query so they
-   don't get stuck in a hovered state. */
+/* Strong hover — DESKTOP. Matches principal dashboard's signature:
+   5px lift + 1.02 scale + intensified blue halo. No !important so
+   `tilt3D` JS handlers (which use setProperty !important) win on cards
+   that explicitly attach them. */
 @media (hover: hover) and (pointer: fine) {
   .clickable-card:hover,
   .ds-card:hover,
@@ -355,12 +361,11 @@ a[class*="rounded-xl"][class*="border"] {
   a[class*="rounded-2xl"]:hover,
   a[class*="rounded-3xl"]:hover,
   a[class*="rounded-xl"][class*="border"]:hover {
-    transform: translateY(-6px) rotateX(3deg) rotateY(-2deg) scale(1.025) !important;
+    transform: translate3d(0, -5px, 0) scale(1.02);
     box-shadow:
-      0 1px 2px rgba(0, 85, 255, 0.12),
-      0 32px 56px rgba(0, 85, 255, 0.24),
-      0 14px 26px rgba(0, 85, 255, 0.16),
-      0 4px 8px rgba(0, 85, 255, 0.08) !important;
+      0 0 0 0.5px rgba(0, 85, 255, 0.14),
+      0 8px 24px rgba(0, 85, 255, 0.16),
+      0 20px 46px rgba(0, 85, 255, 0.18);
     z-index: 2;
   }
 }
@@ -376,13 +381,13 @@ div[class*="rounded-3xl"]:active,
 div[class*="rounded-xl"][class*="border"]:active,
 a[class*="rounded-2xl"]:active,
 a[class*="rounded-3xl"]:active {
-  transform: translateY(-1px) scale(0.985) !important;
+  transform: translateY(-1px) scale(0.985);
   box-shadow:
     0 1px 2px rgba(0, 85, 255, 0.1),
-    0 6px 16px rgba(0, 85, 255, 0.14) !important;
+    0 6px 16px rgba(0, 85, 255, 0.14);
   transition:
     transform 0.1s ease,
-    box-shadow 0.1s ease !important;
+    box-shadow 0.1s ease;
 }
 
 /* Dark hero / gradient cards — softer tilt, warmer shadow */
@@ -393,11 +398,11 @@ a[class*="rounded-3xl"]:active {
   div[style*="linear-gradient(140deg, #000"]:hover,
   div[style*="linear-gradient(135deg, #1A"]:hover,
   div[style*="linear-gradient(140deg, #1A"]:hover {
-    transform: translateY(-6px) scale(1.02) !important;
+    transform: translate3d(0, -5px, 0) scale(1.02);
     box-shadow:
       0 2px 4px rgba(0, 8, 60, 0.22),
       0 26px 52px rgba(0, 8, 60, 0.34),
-      0 10px 22px rgba(0, 8, 60, 0.22) !important;
+      0 10px 22px rgba(0, 8, 60, 0.22);
   }
 }
 
@@ -414,18 +419,18 @@ a[class*="rounded-3xl"]:active {
   [class*="bg-slate-50"][class*="rounded-"]:hover,
   [class*="bg-sky-50"][class*="rounded-"]:hover,
   [class*="bg-teal-50"][class*="rounded-"]:hover {
-    transform: translateY(-6px) rotateX(3deg) rotateY(-2deg) scale(1.025) !important;
+    transform: translate3d(0, -5px, 0) scale(1.02);
     box-shadow:
-      0 1px 2px rgba(0, 85, 255, 0.12),
-      0 32px 56px rgba(0, 85, 255, 0.24),
-      0 14px 26px rgba(0, 85, 255, 0.16) !important;
+      0 0 0 0.5px rgba(0, 85, 255, 0.14),
+      0 8px 24px rgba(0, 85, 255, 0.16),
+      0 20px 46px rgba(0, 85, 255, 0.18);
     z-index: 2;
   }
 }
 
 /* Table rows — subtle hover on desktop tables */
 tbody tr:hover {
-  box-shadow: inset 3px 0 0 rgba(0, 85, 255, 0.3) !important;
+  box-shadow: inset 3px 0 0 rgba(0, 85, 255, 0.3);
 }
 
 /* Button cards / action tiles — lift on hover */
@@ -434,17 +439,17 @@ button[class*="rounded-3xl"],
 button[class*="rounded-xl"][class*="border"] {
   transition:
     transform 0.32s cubic-bezier(0.2, 0.9, 0.3, 1),
-    box-shadow 0.32s cubic-bezier(0.2, 0.9, 0.3, 1) !important;
+    box-shadow 0.32s cubic-bezier(0.2, 0.9, 0.3, 1);
 }
 @media (hover: hover) and (pointer: fine) {
   button[class*="rounded-2xl"]:not([disabled]):hover,
   button[class*="rounded-3xl"]:not([disabled]):hover,
   button[class*="rounded-xl"][class*="border"]:not([disabled]):hover {
-    transform: translateY(-4px) scale(1.02) !important;
+    transform: translate3d(0, -4px, 0) scale(1.02);
     box-shadow:
-      0 1px 2px rgba(0, 85, 255, 0.15),
-      0 20px 44px rgba(0, 85, 255, 0.24),
-      0 8px 16px rgba(0, 85, 255, 0.16) !important;
+      0 0 0 0.5px rgba(0, 85, 255, 0.14),
+      0 8px 24px rgba(0, 85, 255, 0.16),
+      0 20px 46px rgba(0, 85, 255, 0.18);
   }
 }
 

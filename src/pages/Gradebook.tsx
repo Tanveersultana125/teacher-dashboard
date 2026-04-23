@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+﻿import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { db } from "../lib/firebase";
 import {
@@ -372,7 +372,7 @@ export default function Gradebook() {
       <div style={{ fontFamily: 'inherit', minHeight: '100vh', background: '#EEF4FF' }} className="text-left pb-24">
 
         {/* Dark hero */}
-        <div className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 px-[22px] pb-6 bg-[#162E93] md:bg-[#08090C]">
+        <div className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 px-[22px] pb-6 bg-[#001A66] md:bg-[#08090C]">
           <button
             type="button"
             aria-label="Back to gradebook"
@@ -587,7 +587,7 @@ export default function Gradebook() {
   const letterGrade = (pct: number) => {
     if (pct >= 90) return { label: 'A', tone: 'a' as const, color: '#00C853' };
     if (pct >= 80) return { label: 'A', tone: 'a' as const, color: '#00C853' };
-    if (pct >= 70) return { label: 'B', tone: 'b' as const, color: '#0957F7' };
+    if (pct >= 70) return { label: 'B', tone: 'b' as const, color: '#0055FF' };
     if (pct >= 60) return { label: 'C', tone: 'c' as const, color: '#FFAA00' };
     if (pct >= 50) return { label: 'D', tone: 'd' as const, color: '#FF8800' };
     return { label: 'F', tone: 'f' as const, color: '#FF3355' };
@@ -599,7 +599,7 @@ export default function Gradebook() {
     return { cls: 'atrisk', label: 'At Risk' };
   };
   const avatarBg = (name: string) => {
-    const palette = ['#7B3FF4', '#00C853', '#0957F7', '#FF8800', '#00B8D4', '#C2255C', '#6741D9'];
+    const palette = ['#7B3FF4', '#00C853', '#0055FF', '#FF8800', '#00B8D4', '#C2255C', '#6741D9'];
     const sum = (name || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
     return palette[sum % palette.length];
   };
@@ -637,7 +637,7 @@ export default function Gradebook() {
           .gb-press { transition: transform .18s cubic-bezier(.34,1.56,.64,1); }
           .gb-press:active { transform: scale(.94); }
           .gb-score-input { transition: all .2s cubic-bezier(.2,.9,.3,1); }
-          .gb-score-input:focus { background: #fff !important; border-color: #0957F7 !important; box-shadow: 0 0 0 3px rgba(9,87,247,.14) !important; }
+          .gb-score-input:focus { background: #fff !important; border-color: #0055FF !important; box-shadow: 0 0 0 3px rgba(9,87,247,.14) !important; }
           @keyframes gbFadeInUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
           .gb-enter > * { animation: gbFadeInUp .5s cubic-bezier(.34,1.56,.64,1) both; }
           .gb-enter > *:nth-child(1) { animation-delay: .04s; }
@@ -657,7 +657,7 @@ export default function Gradebook() {
           {/* Page header */}
           <div style={{ padding: '8px 2px 14px' }}>
             <div style={{ fontSize: 9, fontWeight: 800, color: '#5070B0', letterSpacing: '1.8px', textTransform: 'uppercase', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 7 }}>
-              <span style={{ width: 5, height: 5, borderRadius: 2, background: '#0957F7', display: 'inline-block' }} />
+              <span style={{ width: 5, height: 5, borderRadius: 2, background: '#0055FF', display: 'inline-block' }} />
               Teacher Dashboard · Gradebook
             </div>
             <h1 style={{ fontSize: 28, fontWeight: 800, color: '#001040', letterSpacing: '-1.1px', lineHeight: 1.05, margin: 0 }}>Gradebook</h1>
@@ -710,7 +710,7 @@ export default function Gradebook() {
           <div
             className="gb-card3d"
             style={{
-              background: 'linear-gradient(135deg, #000820 0%, #001466 32%, #0033CC 68%, #0957F7 100%)',
+              background: 'linear-gradient(135deg, #000A33 0%, #001A66 32%, #0044CC 68%, #0055FF 100%)',
               borderRadius: 26, padding: 22, marginBottom: 14,
               position: 'relative', overflow: 'hidden',
               boxShadow: '0 1px 2px rgba(0,8,60,.15), 0 12px 32px rgba(0,8,60,.28)',
@@ -770,7 +770,7 @@ export default function Gradebook() {
           <div className="gb-legend-scroll" style={{ display: 'flex', gap: 6, padding: '10px 12px', background: '#fff', borderRadius: 14, marginBottom: 14, overflowX: 'auto', boxShadow: '0 0.5px 1px rgba(9,87,247,.04), 0 2px 8px rgba(9,87,247,.06)' }}>
             {[
               { c: '#00C853', l: 'Excellent 90+' },
-              { c: '#0957F7', l: 'Good 70–89' },
+              { c: '#0055FF', l: 'Good 70–89' },
               { c: '#FF8800', l: 'Average 50–69' },
               { c: '#FF3355', l: 'At Risk <50' },
             ].map(item => (
@@ -795,7 +795,7 @@ export default function Gradebook() {
                 aria-label="Export gradebook to Excel"
                 onClick={handleExport}
                 className="gb-press"
-                style={{ width: 30, height: 30, borderRadius: 10, background: '#fff', color: '#0957F7', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 0.5px 1px rgba(9,87,247,.06), 0 2px 8px rgba(9,87,247,.08)' }}
+                style={{ width: 30, height: 30, borderRadius: 10, background: '#fff', color: '#0055FF', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 0.5px 1px rgba(9,87,247,.06), 0 2px 8px rgba(9,87,247,.08)' }}
               >
                 <IcoDownload />
               </button>
@@ -805,7 +805,7 @@ export default function Gradebook() {
                 aria-expanded={showAddCol}
                 className="gb-press"
                 style={{
-                  height: 30, padding: '0 12px', borderRadius: 10, background: '#0957F7',
+                  height: 30, padding: '0 12px', borderRadius: 10, background: '#0055FF',
                   color: '#fff', fontSize: 11, fontWeight: 700, letterSpacing: '-0.1px',
                   display: 'flex', alignItems: 'center', gap: 5, border: 'none',
                   boxShadow: '0 1px 2px rgba(9,87,247,.2), 0 3px 8px rgba(9,87,247,.25)',
@@ -905,7 +905,7 @@ export default function Gradebook() {
                   onClick={handleAddColumn}
                   className="gb-press"
                   style={{
-                    flex: 1, padding: 10, borderRadius: 10, background: '#0957F7', border: 'none',
+                    flex: 1, padding: 10, borderRadius: 10, background: '#0055FF', border: 'none',
                     color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                     boxShadow: '0 1px 2px rgba(9,87,247,.2), 0 3px 8px rgba(9,87,247,.25)',
                   }}
@@ -952,7 +952,7 @@ export default function Gradebook() {
               color: '#5070B0', fontSize: 12,
               boxShadow: '0 0.5px 1px rgba(9,87,247,.04), 0 4px 14px rgba(9,87,247,.08)',
             }}>
-              No units yet — tap <strong style={{ color: '#0957F7' }}>+ Unit</strong> above to add one.
+              No units yet — tap <strong style={{ color: '#0055FF' }}>+ Unit</strong> above to add one.
             </div>
           ) : filtered.map(stu => {
             const key = (stu.email || stu.id).toLowerCase();
@@ -962,7 +962,7 @@ export default function Gradebook() {
             const bnd = band(pct);
             const avBg = avatarBg(stu.name || '');
 
-            const totalToneColor = grd.tone === 'a' ? '#00C853' : grd.tone === 'b' ? '#0957F7' : grd.tone === 'c' ? '#FFAA00' : grd.tone === 'd' ? '#FF8800' : '#FF3355';
+            const totalToneColor = grd.tone === 'a' ? '#00C853' : grd.tone === 'b' ? '#0055FF' : grd.tone === 'c' ? '#FFAA00' : grd.tone === 'd' ? '#FF8800' : '#FF3355';
 
             return (
               <div
@@ -1032,7 +1032,7 @@ export default function Gradebook() {
                           className="gb-press"
                           style={{
                             width: 28, height: 28, borderRadius: 9,
-                            background: 'rgba(9,87,247,.1)', color: '#0957F7',
+                            background: 'rgba(9,87,247,.1)', color: '#0055FF',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             flexShrink: 0, fontSize: 11, fontWeight: 800, letterSpacing: '-0.2px',
                             cursor: 'pointer',
@@ -1079,7 +1079,7 @@ export default function Gradebook() {
                   border: '0.5px solid rgba(9,87,247,.12)',
                 }}>
                   <div style={{ fontSize: 10, fontWeight: 800, color: '#5070B0', letterSpacing: '1.5px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#0957F7' }} />
+                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#0055FF' }} />
                     Total Score
                   </div>
                   <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: '-0.8px', lineHeight: 1, display: 'flex', alignItems: 'baseline', gap: 3, color: totalToneColor }}>
@@ -1103,7 +1103,7 @@ export default function Gradebook() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-                <div style={{ width: 42, height: 42, borderRadius: 13, background: '#0957F7', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div style={{ width: 42, height: 42, borderRadius: 13, background: '#0055FF', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
                   </svg>
@@ -1133,7 +1133,7 @@ export default function Gradebook() {
                     marginTop: idx > 0 ? 1 : 0,
                     borderTop: idx > 0 ? '0.5px solid rgba(9,87,247,.07)' : 'none',
                   }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 9, background: 'rgba(9,87,247,.1)', color: '#0957F7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 9, background: 'rgba(9,87,247,.1)', color: '#0055FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800 }}>
                       {col.name.startsWith('Unit ') ? `U${col.name.replace(/\D/g, '') || idx + 1}` : col.name.slice(0, 2).toUpperCase()}
                     </div>
                     <div style={{ flex: 1, fontSize: 12, fontWeight: 700, color: '#002080', letterSpacing: '-0.15px' }}>{col.name} avg</div>
@@ -1152,7 +1152,7 @@ export default function Gradebook() {
                 border: '0.5px solid rgba(9,87,247,.12)',
               }}>
                 <div style={{ fontSize: 10, fontWeight: 800, color: '#5070B0', letterSpacing: '1.5px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#0957F7' }} />
+                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#0055FF' }} />
                   Overall Avg
                 </div>
                 <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: '-0.8px', lineHeight: 1, display: 'flex', alignItems: 'baseline', gap: 3, color: classAvgPct >= 70 ? '#00C853' : classAvgPct >= 50 ? '#FF8800' : '#FF3355' }}>
@@ -1168,7 +1168,7 @@ export default function Gradebook() {
             <div
               className="gb-card3d"
               style={{
-                background: 'linear-gradient(140deg, #000820 0%, #001888 28%, #0033CC 64%, #0957F7 100%)',
+                background: 'linear-gradient(140deg, #000A33 0%, #001A66 28%, #0044CC 64%, #0055FF 100%)',
                 borderRadius: 24, padding: 20,
                 position: 'relative', overflow: 'hidden',
                 boxShadow: '0 1px 2px rgba(0,8,60,.18), 0 12px 32px rgba(0,8,60,.3)',
@@ -1209,137 +1209,584 @@ export default function Gradebook() {
         </div>
       </div>{/* ═══════════ END MOBILE VIEW ═══════════ */}
 
-      {/* ═══════════════════ DESKTOP VIEW ═══════════════════ */}
-      <div className="hidden md:block">
+      {/* ═══════════════════ DESKTOP VIEW — Mobile design, widescreen grid ═══════════════════ */}
+      <div
+        className="hidden md:block -mx-4 sm:-mx-6 md:-mx-8 md:-mt-8"
+        style={{ background: '#EEF4FF', minHeight: '100vh', fontVariantNumeric: 'tabular-nums' }}
+      >
+        <style>{`
+          .gbd-card3d { transition: transform .35s cubic-bezier(.2,.9,.3,1), box-shadow .35s cubic-bezier(.2,.9,.3,1); will-change: transform; }
+          @media (hover:hover) { .gbd-card3d:hover { transform: translateY(-3px) scale(1.004); box-shadow: 0 1px 2px rgba(9,87,247,.08), 0 24px 44px rgba(9,87,247,.18), 0 8px 16px rgba(9,87,247,.1); } }
+          .gbd-press { transition: transform .18s cubic-bezier(.34,1.56,.64,1); }
+          .gbd-press:active { transform: scale(.96); }
+          .gbd-score-input { transition: all .2s cubic-bezier(.2,.9,.3,1); }
+          .gbd-score-input:focus { background: #fff !important; border-color: #0055FF !important; box-shadow: 0 0 0 3px rgba(9,87,247,.14) !important; }
+          .gbd-scroll::-webkit-scrollbar { display: none; }
+          .gbd-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+        `}</style>
 
-        {/* Header row */}
-        <div className="flex items-start justify-between mb-6 gap-4">
-          <div>
-            <h1 className="text-[28px] font-bold text-slate-900 leading-tight tracking-tight">Gradebook</h1>
-            <p className="text-sm text-slate-500 mt-1">
-              {selectedClass ? `Complete academic record for ${selectedClass.name}` : 'Select a class to view gradebook'}
-            </p>
+        <div style={{ maxWidth: 1600, margin: '0 auto', padding: '32px 32px 48px' }}>
+
+          {/* Header row: title + class picker */}
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, marginBottom: 24, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 800, color: '#5070B0', letterSpacing: '1.8px', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ width: 6, height: 6, borderRadius: 2, background: '#0055FF', display: 'inline-block' }} />
+                Teacher Dashboard · Gradebook
+              </div>
+              <h1 style={{ fontSize: 40, fontWeight: 800, color: '#001040', letterSpacing: '-1.4px', lineHeight: 1.05, margin: 0 }}>Gradebook</h1>
+              <div style={{ fontSize: 14, color: '#5070B0', fontWeight: 500, marginTop: 8, letterSpacing: '-0.15px' }}>
+                {selectedClass ? `Complete academic record for ${selectedClass.name}.` : 'Select a class to view gradebook.'}
+              </div>
+            </div>
+
+            {/* Class picker */}
+            <div style={{ position: 'relative', minWidth: 280 }}>
+              <div
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '14px 18px', background: '#fff',
+                  borderRadius: 14,
+                  boxShadow: '0 0.5px 1px rgba(9,87,247,.04), 0 2px 10px rgba(9,87,247,.06)',
+                  cursor: 'pointer',
+                }}
+              >
+                <div style={{ width: 40, height: 40, borderRadius: 13, background: '#7B3FF4', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>
+                  </svg>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: '#5070B0', letterSpacing: '1.3px', textTransform: 'uppercase', marginBottom: 2 }}>Viewing</div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: '#001040', letterSpacing: '-0.3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {selectedClass ? selectedClass.name : (classes.length === 0 ? 'No classes' : 'Select class')}
+                  </div>
+                </div>
+                <div style={{ color: '#99AACC', fontSize: 24, fontWeight: 400, lineHeight: 1, marginTop: -3 }}>›</div>
+              </div>
+              <select
+                value={selectedClassId}
+                onChange={e => setSelectedClassId(e.target.value)}
+                aria-label="Select class"
+                style={{
+                  position: 'absolute', inset: 0, width: '100%', height: '100%',
+                  opacity: 0, cursor: 'pointer', border: 'none', background: 'transparent',
+                  appearance: 'none', WebkitAppearance: 'none',
+                }}
+              >
+                {classes.length === 0 && <option value="">No classes available</option>}
+                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <select
-              value={selectedClassId}
-              onChange={e => setSelectedClassId(e.target.value)}
-              className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 outline-none cursor-pointer"
-            >
-              {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+
+          {/* HERO — Class Average */}
+          <div
+            className="gbd-card3d"
+            style={{
+              background: 'linear-gradient(135deg, #000A33 0%, #001A66 32%, #0044CC 68%, #0055FF 100%)',
+              borderRadius: 28, padding: 32, marginBottom: 18,
+              position: 'relative', overflow: 'hidden',
+              boxShadow: '0 1px 2px rgba(0,8,60,.15), 0 12px 32px rgba(0,8,60,.28)',
+            }}
+          >
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(255,255,255,.09) 0%, transparent 45%)', pointerEvents: 'none' }} />
+            <div style={{ position: 'relative', zIndex: 2 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+                <div style={{ width: 52, height: 52, borderRadius: 15, background: 'rgba(255,255,255,.14)', backdropFilter: 'blur(22px)', WebkitBackdropFilter: 'blur(22px)', border: '0.5px solid rgba(255,255,255,.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+                  </svg>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,.72)', letterSpacing: '1.8px', textTransform: 'uppercase' }}>Class Average</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,.5)', marginTop: 3, fontWeight: 500, letterSpacing: '-0.1px' }}>
+                    {columns.length > 0 ? `${columns.length} ${columns.length === 1 ? 'unit' : 'units'} · ${selectedClass?.name || ''}` : 'No units yet'}
+                  </div>
+                </div>
+                <div style={{
+                  marginLeft: 'auto', width: 56, height: 56,
+                  background: `linear-gradient(145deg, ${avgLetter.color}, ${avgLetter.color}DD)`,
+                  color: '#fff', borderRadius: 16,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 28, fontWeight: 900, letterSpacing: '-0.6px',
+                  boxShadow: `0 1px 2px ${avgLetter.color}55, 0 8px 18px ${avgLetter.color}55, inset 0 1px 0 rgba(255,255,255,.25)`,
+                }}>
+                  {avgLetter.label}
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 32, flexWrap: 'wrap' }}>
+                <div>
+                  <div style={{ fontSize: 84, fontWeight: 800, color: '#fff', letterSpacing: '-3.8px', lineHeight: 1, marginBottom: 10, display: 'flex', alignItems: 'baseline', gap: 10 }}>
+                    {classAvgPct > 0 ? classAvgPct.toFixed(1) : '0.0'}
+                    <span style={{ fontSize: 32, fontWeight: 700, color: 'rgba(255,255,255,.6)', letterSpacing: '-0.6px' }}>/ 100</span>
+                  </div>
+                  <div style={{ fontSize: 14, color: 'rgba(255,255,255,.72)', fontWeight: 500, letterSpacing: '-0.15px' }}>
+                    <b style={{ color: '#fff', fontWeight: 700 }}>{avgBand.label} performance</b>
+                    {atRiskCount > 0 ? ` — ${atRiskCount} student${atRiskCount === 1 ? '' : 's'} need${atRiskCount === 1 ? 's' : ''} remediation.` : ' — all students on track.'}
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, background: 'rgba(255,255,255,.1)', borderRadius: 14, padding: 1, overflow: 'hidden', minWidth: 380 }}>
+                  <div style={{ background: 'rgba(0,20,80,.55)', padding: '16px 20px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 26, fontWeight: 800, color: '#fff', letterSpacing: '-0.8px' }}>{filtered.length}</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,.58)', letterSpacing: '1.1px', textTransform: 'uppercase', marginTop: 4 }}>Students</div>
+                  </div>
+                  <div style={{ background: 'rgba(0,20,80,.55)', padding: '16px 20px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 26, fontWeight: 800, color: '#6FFFAA', letterSpacing: '-0.8px' }}>{passingCount}</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,.58)', letterSpacing: '1.1px', textTransform: 'uppercase', marginTop: 4 }}>Passing</div>
+                  </div>
+                  <div style={{ background: 'rgba(0,20,80,.55)', padding: '16px 20px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 26, fontWeight: 800, color: '#FF9AA9', letterSpacing: '-0.8px' }}>{atRiskCount}</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,.58)', letterSpacing: '1.1px', textTransform: 'uppercase', marginTop: 4 }}>At Risk</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Legend + toolbar row */}
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
+            <div className="gbd-scroll" style={{ flex: 1, minWidth: 280, display: 'flex', gap: 8, padding: '12px 14px', background: '#fff', borderRadius: 14, overflowX: 'auto', boxShadow: '0 0.5px 1px rgba(9,87,247,.04), 0 2px 8px rgba(9,87,247,.06)' }}>
+              {[
+                { c: '#00C853', l: 'Excellent 90+' },
+                { c: '#0055FF', l: 'Good 70–89' },
+                { c: '#FF8800', l: 'Average 50–69' },
+                { c: '#FF3355', l: 'At Risk <50' },
+              ].map(item => (
+                <div key={item.l} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', background: '#F4F7FE', borderRadius: 100, fontSize: 11, fontWeight: 700, color: '#002080', letterSpacing: '-0.1px', flexShrink: 0 }}>
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: item.c }} />
+                  {item.l}
+                </div>
+              ))}
+            </div>
             <button
               type="button"
+              aria-label="Export gradebook to Excel"
               onClick={handleExport}
-              className="h-10 px-4 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              className="gbd-press"
+              style={{ width: 44, height: 44, borderRadius: 12, background: '#fff', color: '#0055FF', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 0.5px 1px rgba(9,87,247,.06), 0 2px 8px rgba(9,87,247,.08)' }}
             >
-              Export
+              <IcoDownload />
             </button>
-            {hasUnsaved && (
-              <button type="button" onClick={handleSave} className="h-10 px-4 rounded-lg bg-[#1e3272] text-white text-sm font-semibold hover:bg-[#162552]">
-                Save Changes
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Table card */}
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr>
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide sticky left-0 bg-slate-50 z-10">Student</th>
-                  {columns.map(col => (
-                    <th key={col.id} className="text-center px-4 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide whitespace-nowrap">
-                      {col.name}
-                    </th>
-                  ))}
-                  <th className="text-center px-4 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide bg-blue-50">Total</th>
-                  <th className="text-center px-4 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide bg-blue-50">Grade</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filtered.length === 0 || columns.length === 0 ? (
-                  <tr>
-                    <td colSpan={columns.length + 3} className="py-16 text-center text-sm text-slate-400">
-                      {columns.length === 0 ? 'No columns yet — add one in mobile view' : 'No students enrolled'}
-                    </td>
-                  </tr>
-                ) : (
-                  filtered.map(stu => {
-                    const key = (stu.email || stu.id).toLowerCase();
-                    const earned = columns.reduce((acc, c) => acc + (Number(localScores[`${key}_${c.id}`]) || 0), 0);
-                    const pct = totalMax > 0 ? (earned / totalMax) * 100 : 0;
-                    const grade = simpleGrade(pct);
-                    const av = avStyle(stu.name);
-                    return (
-                      <tr key={stu.id} className="hover:bg-slate-50">
-                        <td className="px-5 py-3 whitespace-nowrap sticky left-0 bg-white hover:bg-slate-50">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0"
-                              style={{ background: av.color, color: '#fff' }}
-                            >
-                              {getInitials(stu.name)}
-                            </div>
-                            <span className="text-sm font-semibold text-slate-900">{stu.name}</span>
-                          </div>
-                        </td>
-                        {columns.map(col => {
-                          const scoreKey = `${key}_${col.id}`;
-                          const val = localScores[scoreKey];
-                          return (
-                            <td key={col.id} className="px-4 py-3 text-center">
-                              <input
-                                type="number"
-                                value={val ?? ''}
-                                onChange={e => setLocalScores(p => ({ ...p, [scoreKey]: e.target.value }))}
-                                min="0"
-                                max={col.maxMarks}
-                                className="w-16 h-8 px-2 text-center text-sm border border-slate-200 rounded-md outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                              />
-                            </td>
-                          );
-                        })}
-                        <td className="px-4 py-3 text-center text-sm font-bold text-slate-900 bg-blue-50/50">{earned}</td>
-                        <td className="px-4 py-3 text-center bg-blue-50/50">
-                          <span className="text-sm font-bold" style={{ color: grade.color }}>{grade.label}</span>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-                {filtered.length > 0 && columns.length > 0 && (
-                  <tr className="bg-slate-50 font-semibold">
-                    <td className="px-5 py-3 text-sm text-slate-900 sticky left-0 bg-slate-50">Class Avg</td>
-                    {colAvgs.map((a, i) => (
-                      <td key={i} className="px-4 py-3 text-center text-sm text-slate-700">{a.toFixed(1)}</td>
-                    ))}
-                    <td className="px-4 py-3 text-center text-sm text-slate-900 bg-blue-100">{totalAvgEarned.toFixed(1)}</td>
-                    <td className="px-4 py-3 text-center text-sm bg-blue-100" style={{ color: avgGradeLabel.color }}>{avgGradeLabel.label}</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+            <button
+              type="button"
+              onClick={() => setShowAddCol(v => !v)}
+              aria-expanded={showAddCol}
+              className="gbd-press"
+              style={{
+                height: 44, padding: '0 18px', borderRadius: 12, background: '#0055FF',
+                color: '#fff', fontSize: 13, fontWeight: 700, letterSpacing: '-0.1px',
+                display: 'flex', alignItems: 'center', gap: 7, border: 'none',
+                boxShadow: '0 1px 2px rgba(9,87,247,.2), 0 3px 8px rgba(9,87,247,.25)',
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Add Unit
+            </button>
           </div>
 
-          {/* Legend footer */}
-          <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex flex-wrap gap-4">
-            {[
-              { dot: T.green2, lbl: 'Excellent (90%+)' },
-              { dot: T.blue, lbl: 'Good (70–89%)' },
-              { dot: T.amber, lbl: 'Average (50–69%)' },
-              { dot: T.red, lbl: 'At risk (<50%)' },
-            ].map((l, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full" style={{ background: l.dot }} />
-                <span className="text-xs text-slate-600">{l.lbl}</span>
+          {/* Section head: title + search + save */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+              <span style={{ fontSize: 18, fontWeight: 800, color: '#001040', letterSpacing: '-0.4px' }}>Student Grades</span>
+              <span style={{ fontSize: 13, color: '#5070B0', fontWeight: 600, letterSpacing: '-0.1px' }}>
+                {filtered.length} student{filtered.length === 1 ? '' : 's'} · {columns.length} unit{columns.length === 1 ? '' : 's'}
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              <div style={{ position: 'relative', width: 300 }}>
+                <div style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#5070B0', pointerEvents: 'none' }}>
+                  <IcoSearch />
+                </div>
+                <input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search student..."
+                  style={{
+                    width: '100%', padding: '11px 14px 11px 36px', borderRadius: 12,
+                    border: 'none', background: '#fff',
+                    fontSize: 13, color: '#001040', fontFamily: 'inherit', outline: 'none',
+                    boxShadow: '0 0.5px 1px rgba(9,87,247,.04), 0 2px 8px rgba(9,87,247,.06)',
+                  }}
+                />
               </div>
-            ))}
+              <button
+                type="button"
+                aria-label={saving ? 'Saving grades' : 'Save grades'}
+                onClick={handleSave}
+                disabled={saving || !hasUnsaved}
+                className="gbd-press"
+                style={{
+                  padding: '11px 18px', borderRadius: 12,
+                  background: hasUnsaved ? '#00C853' : '#EAF0FB',
+                  border: 'none',
+                  color: hasUnsaved ? '#fff' : '#5070B0',
+                  fontSize: 13, fontWeight: 700, letterSpacing: '-0.1px',
+                  cursor: hasUnsaved && !saving ? 'pointer' : 'not-allowed',
+                  fontFamily: 'inherit',
+                  display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
+                  opacity: saving ? 0.7 : 1,
+                  boxShadow: hasUnsaved ? '0 1px 2px rgba(0,200,83,.2), 0 3px 8px rgba(0,200,83,.25)' : 'none',
+                }}
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <IcoCheck />}
+                Save
+              </button>
+            </div>
           </div>
-        </div>
 
+          {/* Add column panel */}
+          {showAddCol && (
+            <div style={{
+              background: '#fff',
+              borderRadius: 18, padding: 20,
+              display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16,
+              boxShadow: '0 0.5px 1px rgba(9,87,247,.04), 0 4px 14px rgba(9,87,247,.08)',
+              border: '0.5px solid rgba(9,87,247,.1)',
+              flexWrap: 'wrap',
+            }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#5070B0', letterSpacing: '1.3px', textTransform: 'uppercase', flexShrink: 0 }}>
+                Add unit
+              </div>
+              <input
+                type="text"
+                value={newColName}
+                onChange={e => setNewColName(e.target.value)}
+                placeholder="Unit name (e.g. Unit 1, Quiz 1)"
+                onKeyDown={e => e.key === 'Enter' && handleAddColumn()}
+                style={{
+                  flex: 1, minWidth: 240, padding: '11px 14px', borderRadius: 11,
+                  border: '0.5px solid rgba(9,87,247,.15)', background: '#F4F7FE',
+                  fontSize: 14, color: '#001040', fontFamily: 'inherit', outline: 'none',
+                }}
+              />
+              <input
+                type="number"
+                value={newColMax}
+                onChange={e => setNewColMax(e.target.value)}
+                style={{
+                  width: 110, padding: '11px 14px', borderRadius: 11,
+                  border: '0.5px solid rgba(9,87,247,.15)', background: '#F4F7FE',
+                  fontSize: 14, color: '#001040', fontFamily: 'inherit', outline: 'none',
+                }}
+              />
+              <span style={{ fontSize: 12, color: '#5070B0', fontWeight: 600 }}>max marks</span>
+              <button
+                type="button"
+                onClick={handleAddColumn}
+                className="gbd-press"
+                style={{
+                  padding: '11px 20px', borderRadius: 11, background: '#0055FF', border: 'none',
+                  color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                  boxShadow: '0 1px 2px rgba(9,87,247,.2), 0 3px 8px rgba(9,87,247,.25)',
+                }}
+              >
+                Add unit
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowAddCol(false); setNewColName(''); setNewColMax('100'); }}
+                className="gbd-press"
+                style={{
+                  padding: '11px 18px', borderRadius: 11, background: '#F4F7FE',
+                  border: 'none', color: '#5070B0',
+                  fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+
+          {/* Loading / empty / student cards */}
+          {loading ? (
+            <div className="gbd-card3d" style={{
+              background: '#fff', borderRadius: 22, padding: '60px 24px',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
+              boxShadow: '0 0.5px 1px rgba(9,87,247,.04), 0 4px 14px rgba(9,87,247,.08)',
+            }}>
+              <Loader2 className="w-7 h-7 animate-spin" style={{ color: '#5070B0' }} />
+              <span style={{ fontSize: 13, color: '#5070B0' }}>Loading gradebook...</span>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="gbd-card3d" style={{
+              background: '#fff', borderRadius: 22, padding: '60px 24px', textAlign: 'center',
+              color: '#5070B0', fontSize: 14,
+              boxShadow: '0 0.5px 1px rgba(9,87,247,.04), 0 4px 14px rgba(9,87,247,.08)',
+            }}>
+              {search ? 'No students match your search.' : 'No students enrolled yet.'}
+            </div>
+          ) : columns.length === 0 ? (
+            <div className="gbd-card3d" style={{
+              background: '#fff', borderRadius: 22, padding: '60px 24px', textAlign: 'center',
+              color: '#5070B0', fontSize: 14,
+              boxShadow: '0 0.5px 1px rgba(9,87,247,.04), 0 4px 14px rgba(9,87,247,.08)',
+            }}>
+              No units yet — click <strong style={{ color: '#0055FF' }}>+ Add Unit</strong> above to add one.
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14, marginBottom: 18 }}>
+              {filtered.map(stu => {
+                const key = (stu.email || stu.id).toLowerCase();
+                const earned = columns.reduce((acc, c) => acc + (Number(localScores[`${key}_${c.id}`]) || 0), 0);
+                const pct = totalMax > 0 ? (earned / totalMax) * 100 : 0;
+                const grd = letterGrade(pct);
+                const bnd = band(pct);
+                const avBg = avatarBg(stu.name || '');
+
+                const totalToneColor = grd.tone === 'a' ? '#00C853' : grd.tone === 'b' ? '#0055FF' : grd.tone === 'c' ? '#FFAA00' : grd.tone === 'd' ? '#FF8800' : '#FF3355';
+
+                return (
+                  <div
+                    key={stu.email || stu.id}
+                    className="gbd-card3d"
+                    style={{
+                      background: '#fff', borderRadius: 22, padding: 22,
+                      position: 'relative', overflow: 'hidden',
+                      boxShadow: '0 0.5px 1px rgba(9,87,247,.04), 0 4px 14px rgba(9,87,247,.08)',
+                    }}
+                  >
+                    <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: totalToneColor }} />
+
+                    {/* Head */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+                      <div style={{
+                        width: 50, height: 50, borderRadius: 15,
+                        background: avBg, color: '#fff',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 14, fontWeight: 800, letterSpacing: '0.3px', flexShrink: 0,
+                      }}>
+                        {getInitials(stu.name || '')}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 17, fontWeight: 800, color: '#001040', letterSpacing: '-0.4px', lineHeight: 1.2 }}>{stu.name}</div>
+                        <div style={{ fontSize: 12, color: '#5070B0', marginTop: 4, fontWeight: 500, letterSpacing: '-0.1px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {stu.rollNo && (
+                            <span style={{ background: '#F4F7FE', color: '#002080', padding: '3px 9px', borderRadius: 7, fontSize: 11, fontWeight: 700 }}>Roll {stu.rollNo}</span>
+                          )}
+                          {stu.rollNo && <span style={{ color: '#99AACC' }}>·</span>}
+                          <span>{bnd.label}</span>
+                        </div>
+                      </div>
+                      <div style={{
+                        width: 56, height: 56, borderRadius: 17,
+                        background: grd.color, color: '#fff',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 28, fontWeight: 900, letterSpacing: '-0.9px', flexShrink: 0,
+                        boxShadow: `0 1px 2px ${grd.color}40, 0 8px 18px ${grd.color}55`,
+                        position: 'relative',
+                      }}>
+                        <span style={{ position: 'absolute', inset: 0, borderRadius: 17, background: 'linear-gradient(145deg, rgba(255,255,255,.25), transparent 50%)', pointerEvents: 'none' }} />
+                        {grd.label}
+                      </div>
+                    </div>
+
+                    {/* Unit rows */}
+                    <div style={{ background: '#F4F7FE', borderRadius: 15, padding: 1, marginBottom: 14 }}>
+                      {columns.map((col, idx) => {
+                        const scoreKey = `${key}_${col.id}`;
+                        const val = localScores[scoreKey];
+                        return (
+                          <div
+                            key={col.id}
+                            style={{
+                              display: 'flex', alignItems: 'center', padding: '12px 14px', gap: 12,
+                              background: '#fff', borderRadius: 14,
+                              marginTop: idx > 0 ? 1 : 0,
+                              borderTop: idx > 0 ? '0.5px solid rgba(9,87,247,.07)' : 'none',
+                              position: 'relative',
+                            }}
+                          >
+                            <div
+                              onClick={() => { setSelectedColForEdit(col); setView('enter-scores'); }}
+                              role="button"
+                              tabIndex={0}
+                              className="gbd-press"
+                              style={{
+                                width: 32, height: 32, borderRadius: 10,
+                                background: 'rgba(9,87,247,.1)', color: '#0055FF',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                flexShrink: 0, fontSize: 12, fontWeight: 800, letterSpacing: '-0.2px',
+                                cursor: 'pointer',
+                              }}
+                              aria-label={`Edit ${col.name} scores`}
+                            >
+                              {col.name.startsWith('Unit ') ? `U${col.name.replace(/\D/g, '') || idx + 1}` : col.name.slice(0, 2).toUpperCase()}
+                            </div>
+                            <div
+                              onClick={() => { setSelectedColForEdit(col); setView('enter-scores'); }}
+                              style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#002080', letterSpacing: '-0.15px', cursor: 'pointer' }}
+                            >
+                              {col.name}
+                            </div>
+                            <input
+                              type="number"
+                              value={val ?? ''}
+                              min={0}
+                              max={col.maxMarks}
+                              onChange={e => setLocalScores(p => ({ ...p, [scoreKey]: e.target.value }))}
+                              placeholder="—"
+                              className="gbd-score-input"
+                              style={{
+                                background: '#F4F7FE',
+                                border: '0.5px solid rgba(9,87,247,.1)',
+                                borderRadius: 11,
+                                padding: '8px 14px', width: 80,
+                                textAlign: 'center',
+                                fontSize: 14, fontWeight: 800, color: '#001040',
+                                fontFamily: 'inherit', letterSpacing: '-0.2px', outline: 'none',
+                              }}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Total */}
+                    <div style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '12px 14px',
+                      background: 'linear-gradient(90deg, rgba(9,87,247,.06), rgba(9,87,247,.03))',
+                      borderRadius: 13,
+                      border: '0.5px solid rgba(9,87,247,.12)',
+                    }}>
+                      <div style={{ fontSize: 11, fontWeight: 800, color: '#5070B0', letterSpacing: '1.5px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 7 }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#0055FF' }} />
+                        Total Score
+                      </div>
+                      <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: '-0.9px', lineHeight: 1, display: 'flex', alignItems: 'baseline', gap: 4, color: totalToneColor }}>
+                        {earned}
+                        <span style={{ fontSize: 14, fontWeight: 700, color: '#99AACC', letterSpacing: '-0.2px' }}>/ {totalMax}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* 2-column: Class Avg + AI Intelligence */}
+          {!loading && filtered.length > 0 && columns.length > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14 }}>
+
+              {/* Class Avg Card */}
+              <div
+                className="gbd-card3d"
+                style={{
+                  background: '#fff', borderRadius: 22, padding: 22,
+                  position: 'relative', overflow: 'hidden',
+                  boxShadow: '0 0.5px 1px rgba(9,87,247,.04), 0 4px 14px rgba(9,87,247,.08)',
+                  border: '0.5px solid rgba(9,87,247,.1)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: 14, background: '#0055FF', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+                    </svg>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 17, fontWeight: 800, color: '#001040', letterSpacing: '-0.4px' }}>Class Average</div>
+                    <div style={{ fontSize: 12, color: '#5070B0', fontWeight: 600, marginTop: 3, letterSpacing: '-0.1px' }}>Based on {filtered.length} students</div>
+                  </div>
+                  <div style={{
+                    width: 52, height: 52, borderRadius: 16,
+                    background: avgLetter.color, color: '#fff',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 26, fontWeight: 900,
+                    boxShadow: `0 1px 2px ${avgLetter.color}40, 0 8px 18px ${avgLetter.color}55`,
+                    position: 'relative',
+                  }}>
+                    <span style={{ position: 'absolute', inset: 0, borderRadius: 16, background: 'linear-gradient(145deg, rgba(255,255,255,.25), transparent 50%)' }} />
+                    {avgLetter.label}
+                  </div>
+                </div>
+
+                <div style={{ background: '#F4F7FE', borderRadius: 15, padding: 1, marginBottom: 14 }}>
+                  {columns.map((col, idx) => (
+                    <div key={col.id} style={{
+                      display: 'flex', alignItems: 'center', padding: '12px 14px', gap: 12,
+                      background: '#fff', borderRadius: 14,
+                      marginTop: idx > 0 ? 1 : 0,
+                      borderTop: idx > 0 ? '0.5px solid rgba(9,87,247,.07)' : 'none',
+                    }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(9,87,247,.1)', color: '#0055FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800 }}>
+                        {col.name.startsWith('Unit ') ? `U${col.name.replace(/\D/g, '') || idx + 1}` : col.name.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#002080', letterSpacing: '-0.15px' }}>{col.name} avg</div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: '#FF8800', letterSpacing: '-0.2px', padding: '8px 14px' }}>
+                        {colAvgs[idx] > 0 ? colAvgs[idx].toFixed(1) : '—'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '12px 14px',
+                  background: 'linear-gradient(90deg, rgba(9,87,247,.06), rgba(9,87,247,.03))',
+                  borderRadius: 13,
+                  border: '0.5px solid rgba(9,87,247,.12)',
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: '#5070B0', letterSpacing: '1.5px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#0055FF' }} />
+                    Overall Avg
+                  </div>
+                  <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: '-0.9px', lineHeight: 1, display: 'flex', alignItems: 'baseline', gap: 4, color: classAvgPct >= 70 ? '#00C853' : classAvgPct >= 50 ? '#FF8800' : '#FF3355' }}>
+                    {classAvgPct > 0 ? classAvgPct.toFixed(1) : '0.0'}
+                    <span style={{ fontSize: 14, fontWeight: 700, color: '#99AACC', letterSpacing: '-0.2px' }}>/ 100</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* AI Intelligence */}
+              <div
+                className="gbd-card3d"
+                style={{
+                  background: 'linear-gradient(140deg, #000A33 0%, #001A66 28%, #0044CC 64%, #0055FF 100%)',
+                  borderRadius: 26, padding: 28,
+                  position: 'relative', overflow: 'hidden',
+                  boxShadow: '0 1px 2px rgba(0,8,60,.18), 0 12px 32px rgba(0,8,60,.3)',
+                }}
+              >
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(255,255,255,.09) 0%, transparent 45%)', pointerEvents: 'none' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, position: 'relative', zIndex: 2 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(255,255,255,.14)', backdropFilter: 'blur(22px)', WebkitBackdropFilter: 'blur(22px)', border: '0.5px solid rgba(255,255,255,.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFDD55', fontSize: 22 }}>⚡</div>
+                  <div style={{ fontSize: 11, fontWeight: 900, color: 'rgba(255,255,255,.95)', letterSpacing: '1.9px', textTransform: 'uppercase' }}>AI Gradebook Intelligence</div>
+                  <div style={{ marginLeft: 'auto', background: 'rgba(123,63,244,.3)', border: '0.5px solid rgba(155,95,255,.5)', color: '#DCC8FF', padding: '5px 11px', borderRadius: 100, fontSize: 10, fontWeight: 800, letterSpacing: '0.5px' }}>Insight</div>
+                </div>
+                <div style={{ fontSize: 14, lineHeight: 1.6, color: 'rgba(255,255,255,.85)', letterSpacing: '-0.15px', marginBottom: 20, position: 'relative', zIndex: 2 }}>
+                  Class average is <strong style={{ color: '#fff', fontWeight: 700 }}>{classAvgPct.toFixed(1)}%</strong> — in the <strong style={{ color: '#fff', fontWeight: 700 }}>{avgBand.label}</strong> band.
+                  {atRiskCount > 0
+                    ? ` ${atRiskCount} student${atRiskCount === 1 ? '' : 's'} scored below 50 — schedule a `
+                    : ' All students are on track — consider '}
+                  <strong style={{ color: '#fff', fontWeight: 700 }}>{atRiskCount > 0 ? 'remediation session' : 'enrichment activities'}</strong> before the next unit.
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', background: 'rgba(255,255,255,.1)', borderRadius: 14, padding: 1, gap: 1, overflow: 'hidden', position: 'relative', zIndex: 2 }}>
+                  <div style={{ background: 'rgba(0,20,80,.55)', padding: '16px 8px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: '#FF9AA9', letterSpacing: '-0.6px' }}>{lowest}</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,.6)', letterSpacing: '1.1px', textTransform: 'uppercase', marginTop: 4 }}>Lowest</div>
+                  </div>
+                  <div style={{ background: 'rgba(0,20,80,.55)', padding: '16px 8px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.6px' }}>{classAvgPct.toFixed(1)}</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,.6)', letterSpacing: '1.1px', textTransform: 'uppercase', marginTop: 4 }}>Avg</div>
+                  </div>
+                  <div style={{ background: 'rgba(0,20,80,.55)', padding: '16px 8px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: '#6FFFAA', letterSpacing: '-0.6px' }}>{highest}</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,.6)', letterSpacing: '1.1px', textTransform: 'uppercase', marginTop: 4 }}>Highest</div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          <input type="file" ref={fileInputRef} className="hidden" accept=".xlsx,.xls" />
+
+        </div>
       </div>{/* ═══════════ END DESKTOP VIEW ═══════════ */}
 
     </div>

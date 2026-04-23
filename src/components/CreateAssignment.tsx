@@ -194,7 +194,7 @@ const CreateAssignment = ({ onCancel, onCreate }: { onCancel: () => void, onCrea
     BG: "#EEF4FF",
     CARD: "#FFFFFF",
     SURFACE: "#F4F7FE",
-    P: "#0957F7",
+    P: "#0055FF",
     T1: "#001040", T3: "#5070B0", T4: "#99AACC",
     GREEN: "#00C853",
     RED: "#FF3355",
@@ -202,7 +202,7 @@ const CreateAssignment = ({ onCancel, onCreate }: { onCancel: () => void, onCrea
     GOLD: "#FFAA00",
     SH: "0 0.5px 1px rgba(9,87,247,0.04), 0 4px 14px rgba(9,87,247,0.08)",
     SH_SM: "0 0.5px 1px rgba(9,87,247,0.04), 0 2px 10px rgba(9,87,247,0.06)",
-    HEADER_GRAD: "linear-gradient(160deg, #000820 0%, #001466 55%, #0033CC 100%)",
+    HEADER_GRAD: "linear-gradient(160deg, #000A33 0%, #001A66 55%, #0044CC 100%)",
   };
 
   const selClass = classes.find(c => c.id === selectedClassId);
@@ -517,7 +517,7 @@ const CreateAssignment = ({ onCancel, onCreate }: { onCancel: () => void, onCrea
 
       {/* ── Dark Hero ─────────────────────────────────────────────────────── */}
       <div
-        className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 px-[22px] pb-5 bg-[#162E93] md:bg-[#08090C]"
+        className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 px-[22px] pb-5 bg-[#001A66] md:bg-[#08090C]"
       >
         <p style={{ fontSize: 10, fontWeight: 500, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 5 }}>
           New assignment

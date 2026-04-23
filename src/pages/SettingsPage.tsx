@@ -174,7 +174,7 @@ const SettingsPage = () => {
     <div className="hidden md:block" style={{ minHeight: "100vh", background: "#EEF4FF" }}>
 
       {/* ═══ DARK HERO ═══════════════════════════════════════════════════ */}
-      <div className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 bg-[#162E93] md:bg-[#08090C]">
+      <div className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 bg-[#001A66] md:bg-[#08090C]">
         <div style={{ padding: "18px 22px 0" }}>
           <p style={{ fontSize: 9, fontWeight: 500, color: "rgba(255,255,255,0.28)", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 5 }}>
             Preferences

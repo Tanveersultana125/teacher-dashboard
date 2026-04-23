@@ -823,7 +823,7 @@ const ParentNotes = () => {
         style={{ display: "flex", flexDirection: "column", minHeight: "calc(100vh - 56px)", background: T.chatBg }}
       >
         {/* ── Dark chat header ─────────────────────────────────────────────── */}
-        <div className="bg-[#162E93] md:bg-[#08090C]" style={{ padding: "12px 22px 18px", flexShrink: 0 }}>
+        <div className="bg-[#001A66] md:bg-[#08090C]" style={{ padding: "12px 22px 18px", flexShrink: 0 }}>
           {/* Back link */}
           <button
             type="button"
@@ -1045,7 +1045,7 @@ const ParentNotes = () => {
 // ─────────────────────────────────────────────────────────────────────────────
 // Mobile-only sub-components (new mockup design)
 // ─────────────────────────────────────────────────────────────────────────────
-const MOB_AV_PALETTE = ["#FF3355", "#00C853", "#7B3FF4", "#16B8B0", "#FF8800", "#0957F7", "#FFAA00", "#C2255C"];
+const MOB_AV_PALETTE = ["#FF3355", "#00C853", "#7B3FF4", "#16B8B0", "#FF8800", "#0055FF", "#FFAA00", "#C2255C"];
 const mobAvColor = (name: string) => {
   const sum = (name || "").split("").reduce((a, c) => a + c.charCodeAt(0), 0);
   return MOB_AV_PALETTE[sum % MOB_AV_PALETTE.length];
@@ -1053,7 +1053,7 @@ const mobAvColor = (name: string) => {
 const mobClassChip = (name: string) => {
   const lower = (name || "").toLowerCase();
   if (lower.includes("shaik")) return { bg: "rgba(123,63,244,.12)", color: "#7B3FF4" };
-  return { bg: "rgba(9,87,247,.08)", color: "#0957F7" };
+  return { bg: "rgba(9,87,247,.08)", color: "#0055FF" };
 };
 const mobFmtTimeAgo = (ts: any): string => {
   const d: Date | null = ts?.toDate?.() || (ts instanceof Date ? ts : null);
@@ -1197,7 +1197,7 @@ const MobileParentNotesList = ({
         <div style={{ padding: "8px 2px 14px", display: "flex", alignItems: "flex-end", gap: 10 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 9, fontWeight: 800, color: "#5070B0", letterSpacing: "1.8px", textTransform: "uppercase", marginBottom: 6, display: "flex", alignItems: "center", gap: 7 }}>
-              <span style={{ width: 5, height: 5, borderRadius: 2, background: "#0957F7", display: "inline-block" }} />
+              <span style={{ width: 5, height: 5, borderRadius: 2, background: "#0055FF", display: "inline-block" }} />
               Teacher Dashboard · Parents
             </div>
             <h1 style={{ fontSize: 28, fontWeight: 800, color: "#001040", letterSpacing: "-1.1px", lineHeight: 1.05, margin: 0 }}>Parent Notes</h1>
@@ -1212,7 +1212,7 @@ const MobileParentNotesList = ({
             aria-label="New message"
             style={{
               height: 34, padding: "0 13px", borderRadius: 11,
-              background: "#0957F7", color: "#fff",
+              background: "#0055FF", color: "#fff",
               fontSize: 12, fontWeight: 700, letterSpacing: "-0.2px",
               display: "flex", alignItems: "center", gap: 5, border: "none",
               boxShadow: "0 1px 2px rgba(9,87,247,.2), 0 4px 10px rgba(9,87,247,.3)",
@@ -1230,7 +1230,7 @@ const MobileParentNotesList = ({
         <div
           className="pnl-card3d"
           style={{
-            background: "linear-gradient(135deg, #000820 0%, #001466 32%, #0033CC 68%, #0957F7 100%)",
+            background: "linear-gradient(135deg, #000A33 0%, #001A66 32%, #0044CC 68%, #0055FF 100%)",
             borderRadius: 26, padding: 22, marginBottom: 14,
             position: "relative", overflow: "hidden",
             boxShadow: "0 1px 2px rgba(0,8,60,.15), 0 12px 32px rgba(0,8,60,.28)",
@@ -1292,9 +1292,9 @@ const MobileParentNotesList = ({
         {/* 2x2 stats grid */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
           {[
-            { key: "total",    label: "Total Messages",  value: stats.total,         color: "#0957F7",
+            { key: "total",    label: "Total Messages",  value: stats.total,         color: "#0055FF",
               icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>,
-              sub: <span style={{ color: "#0957F7", fontWeight: 700 }}>● Sent by you</span>,
+              sub: <span style={{ color: "#0055FF", fontWeight: 700 }}>● Sent by you</span>,
               onClick: () => setActiveFilter("all") },
             { key: "pending",  label: "Pending Replies", value: countPending,        color: "#FF8800",
               icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
@@ -1397,7 +1397,7 @@ const MobileParentNotesList = ({
                 className="pnl-press"
                 style={{
                   flexShrink: 0, padding: "8px 14px", borderRadius: 100,
-                  background: active ? "#0957F7" : "#fff",
+                  background: active ? "#0055FF" : "#fff",
                   color: active ? "#fff" : "#5070B0",
                   fontSize: 12, fontWeight: 700, letterSpacing: "-0.2px",
                   boxShadow: active ? "0 1px 2px rgba(9,87,247,.2), 0 3px 10px rgba(9,87,247,.3)" : "0 0.5px 1px rgba(9,87,247,.04), 0 2px 6px rgba(9,87,247,.06)",
@@ -1489,7 +1489,7 @@ const MobileParentNotesList = ({
                       <div style={{
                         position: "absolute", top: -2, right: -2,
                         width: 12, height: 12, borderRadius: "50%",
-                        background: "#0957F7", border: "2.5px solid #fff",
+                        background: "#0055FF", border: "2.5px solid #fff",
                         boxShadow: "0 2px 5px rgba(9,87,247,.3)",
                       }} />
                     )}
@@ -1499,7 +1499,7 @@ const MobileParentNotesList = ({
                       <div style={{ fontSize: 14, fontWeight: 800, color: "#001040", letterSpacing: "-0.3px", lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1, minWidth: 0 }}>
                         {s.studentName}'s Parents
                       </div>
-                      <div style={{ fontSize: 10, fontWeight: unread > 0 ? 800 : 700, color: unread > 0 ? "#0957F7" : "#99AACC", letterSpacing: "-0.1px", flexShrink: 0 }}>
+                      <div style={{ fontSize: 10, fontWeight: unread > 0 ? 800 : 700, color: unread > 0 ? "#0055FF" : "#99AACC", letterSpacing: "-0.1px", flexShrink: 0 }}>
                         {has ? mobFmtTimeAgo(last.createdAt) : ""}
                       </div>
                     </div>
@@ -1563,7 +1563,7 @@ const MobileParentNotesList = ({
           <div
             className="pnl-card3d"
             style={{
-              background: "linear-gradient(140deg, #000820 0%, #001888 28%, #0033CC 64%, #0957F7 100%)",
+              background: "linear-gradient(140deg, #000A33 0%, #001A66 28%, #0044CC 64%, #0055FF 100%)",
               borderRadius: 24, padding: 20, marginTop: 14,
               position: "relative", overflow: "hidden",
               boxShadow: "0 1px 2px rgba(0,8,60,.18), 0 12px 32px rgba(0,8,60,.3)",
@@ -1634,7 +1634,7 @@ const MobileComposeSheet = ({
     { key: "good",       title: "Good Performance", dot: "#00C853", body: TEMPLATES[1].body },
     { key: "attendance", title: "Attendance",       dot: "#FF8800", body: TEMPLATES[2].body },
     { key: "missing",    title: "Missing Work",     dot: "#7B3FF4", body: TEMPLATES[3].body },
-    { key: "meeting",    title: "Meeting",          dot: "#0957F7", body: TEMPLATES[4].body },
+    { key: "meeting",    title: "Meeting",          dot: "#0055FF", body: TEMPLATES[4].body },
   ];
   const filtered = useMemo(() => {
     const q = composeSearch.trim().toLowerCase();
@@ -1678,7 +1678,7 @@ const MobileComposeSheet = ({
         <div style={{ width: 40, height: 5, background: "rgba(9,87,247,.2)", borderRadius: 100, margin: "10px auto 6px", flexShrink: 0 }} />
 
         <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 18px 14px", borderBottom: "0.5px solid rgba(9,87,247,.08)", flexShrink: 0 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 13, background: "#0957F7", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 13, background: "#0055FF", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
             </svg>
@@ -1774,7 +1774,7 @@ const MobileComposeSheet = ({
                   <div style={{
                     width: 20, height: 20, borderRadius: "50%",
                     border: isSel ? "none" : "1.5px solid rgba(9,87,247,.18)",
-                    background: isSel ? "#0957F7" : "transparent",
+                    background: isSel ? "#0055FF" : "transparent",
                     color: "#fff",
                     display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                     boxShadow: isSel ? "0 1px 2px rgba(9,87,247,.25), 0 3px 8px rgba(9,87,247,.3)" : "none",
@@ -1806,12 +1806,12 @@ const MobileComposeSheet = ({
                   className="pnc-press"
                   style={{
                     padding: "7px 12px", borderRadius: 100,
-                    background: active ? "#0957F7" : "#F4F7FE",
+                    background: active ? "#0055FF" : "#F4F7FE",
                     color: active ? "#fff" : "#002080",
                     fontSize: 11, fontWeight: 700, letterSpacing: "-0.15px",
                     display: "inline-flex", alignItems: "center", gap: 5,
                     cursor: "pointer", fontFamily: "inherit",
-                    border: active ? "0.5px solid #0957F7" : "0.5px solid rgba(9,87,247,.08)",
+                    border: active ? "0.5px solid #0055FF" : "0.5px solid rgba(9,87,247,.08)",
                     boxShadow: active ? "0 1px 2px rgba(9,87,247,.2), 0 3px 8px rgba(9,87,247,.25)" : "none",
                     transition: "all .18s cubic-bezier(.2,.9,.3,1)",
                   }}
@@ -1843,7 +1843,7 @@ const MobileComposeSheet = ({
             }}
             onFocus={e => {
               e.currentTarget.style.background = "#fff";
-              e.currentTarget.style.borderColor = "#0957F7";
+              e.currentTarget.style.borderColor = "#0055FF";
               e.currentTarget.style.boxShadow = "0 0 0 3px rgba(9,87,247,.12)";
             }}
             onBlur={e => {
@@ -1883,7 +1883,7 @@ const MobileComposeSheet = ({
             className="pnc-press"
             style={{
               flex: 1, height: 46, borderRadius: 14,
-              background: "linear-gradient(135deg, #4A85FF 0%, #0957F7 100%)",
+              background: "linear-gradient(135deg, #4A85FF 0%, #0055FF 100%)",
               color: "#fff",
               fontSize: 14, fontWeight: 800, border: "none",
               letterSpacing: "-0.2px",

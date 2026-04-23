@@ -39,7 +39,7 @@ const getInitials = (name: string) => {
 };
 
 // Mobile avatar color palette (mockup design)
-const MOB_AV_PALETTE = ['#7B3FF4', '#00C853', '#0957F7', '#FF8800', '#00B8D4', '#C2255C', '#6741D9'];
+const MOB_AV_PALETTE = ['#7B3FF4', '#00C853', '#0055FF', '#FF8800', '#00B8D4', '#C2255C', '#6741D9'];
 const mobAvatarColor = (name: string) => {
   const sum = (name || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
   return MOB_AV_PALETTE[sum % MOB_AV_PALETTE.length];
@@ -386,7 +386,7 @@ const ConceptMastery = () => {
           {/* Page Header */}
           <div style={{ padding: '8px 2px 14px' }}>
             <div style={{ fontSize: 9, fontWeight: 800, color: '#5070B0', letterSpacing: '1.8px', textTransform: 'uppercase', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 7 }}>
-              <span style={{ width: 5, height: 5, borderRadius: 2, background: '#0957F7', display: 'inline-block' }} />
+              <span style={{ width: 5, height: 5, borderRadius: 2, background: '#0055FF', display: 'inline-block' }} />
               Teacher Dashboard · Mastery
             </div>
             <h1 style={{ fontSize: 26, fontWeight: 800, color: '#001040', letterSpacing: '-1.1px', lineHeight: 1.05, margin: 0 }}>Concept Mastery</h1>
@@ -439,8 +439,8 @@ const ConceptMastery = () => {
               className="cm-press"
               style={{
                 width: 42, height: 42, borderRadius: 12,
-                background: showSearch ? '#0957F7' : '#fff',
-                color: showSearch ? '#fff' : '#0957F7',
+                background: showSearch ? '#0055FF' : '#fff',
+                color: showSearch ? '#fff' : '#0055FF',
                 border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0, cursor: 'pointer',
                 boxShadow: '0 0.5px 1px rgba(9,87,247,.04), 0 2px 8px rgba(9,87,247,.06)',
@@ -458,7 +458,7 @@ const ConceptMastery = () => {
               className="cm-press"
               style={{
                 width: 42, height: 42, borderRadius: 12,
-                background: '#fff', color: '#0957F7',
+                background: '#fff', color: '#0055FF',
                 border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0, cursor: masteryData.length === 0 ? 'not-allowed' : 'pointer',
                 opacity: masteryData.length === 0 ? 0.45 : 1,
@@ -496,7 +496,7 @@ const ConceptMastery = () => {
           <div
             className="cm-card3d"
             style={{
-              background: 'linear-gradient(135deg, #000820 0%, #001466 32%, #0033CC 68%, #0957F7 100%)',
+              background: 'linear-gradient(135deg, #000A33 0%, #001A66 32%, #0044CC 68%, #0055FF 100%)',
               borderRadius: 26, padding: 22, marginBottom: 14,
               position: 'relative', overflow: 'hidden',
               boxShadow: '0 1px 2px rgba(0,8,60,.15), 0 12px 32px rgba(0,8,60,.28)',
@@ -679,7 +679,7 @@ const ConceptMastery = () => {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                <div style={{ width: 40, height: 40, borderRadius: 13, background: '#0957F7', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 13, background: '#0055FF', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
                   </svg>
@@ -785,7 +785,7 @@ const ConceptMastery = () => {
               <div
                 className="cm-card3d"
                 style={{
-                  background: 'linear-gradient(140deg, #000820 0%, #001888 28%, #0033CC 64%, #0957F7 100%)',
+                  background: 'linear-gradient(140deg, #000A33 0%, #001A66 28%, #0044CC 64%, #0055FF 100%)',
                   borderRadius: 24, padding: 20,
                   position: 'relative', overflow: 'hidden',
                   boxShadow: '0 1px 2px rgba(0,8,60,.18), 0 12px 32px rgba(0,8,60,.3)',
@@ -835,7 +835,7 @@ const ConceptMastery = () => {
               boxShadow: '0 0.5px 1px rgba(9,87,247,.04), 0 4px 14px rgba(9,87,247,.08)',
               border: '0.5px solid rgba(9,87,247,.1)',
             }}>
-              <div style={{ width: 36, height: 36, borderRadius: 12, background: 'rgba(9,87,247,.1)', color: '#0957F7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 12, background: 'rgba(9,87,247,.1)', color: '#0055FF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/>
                 </svg>
