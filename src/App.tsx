@@ -9,6 +9,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { OfflineBanner } from "./components/OfflineBanner";
 import { GraduationCap, Loader2 } from "lucide-react";
 import TeacherLayout from "./components/TeacherLayout";
+import { SplashScreen } from "./components/SplashScreen";
 
 // Reload once on chunk-load failure (stale deployed HTML referencing a
 // hashed chunk that no longer exists). Prevents white-screens after deploys.
@@ -162,6 +163,8 @@ const App = () => (
           <ErrorBoundary>
             <OfflineBanner />
             <AppRoutes />
+            {/* Mobile-only brand splash — shows once per session, above everything */}
+            <SplashScreen />
           </ErrorBoundary>
         </BrowserRouter>
       </TooltipProvider>
