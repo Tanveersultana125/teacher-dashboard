@@ -152,11 +152,11 @@ button, a, [role="button"] {
   .ds-secondary     { font-size: 12px; font-weight: 400; line-height: 1.4;                            @apply text-slate-500; }
   .ds-caption       { font-size: 12px; font-weight: 400; line-height: 1.4;                            @apply text-slate-400; }
 
-  /* ── Buttons ───────────────────────────────────── */
+  /* ── Buttons (8px grid: px=16/12/20, py=8/12) ─── */
   /* Primary — filled, main CTA */
   .ds-btn-primary {
     @apply inline-flex items-center justify-center gap-2
-           px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap
+           px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap
            bg-[#1e3272] text-white shadow-sm
            hover:bg-[#162558]
            active:scale-[0.97]
@@ -165,7 +165,7 @@ button, a, [role="button"] {
   /* Secondary — outline, supporting action */
   .ds-btn-secondary {
     @apply inline-flex items-center justify-center gap-2
-           px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap
+           px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap
            bg-white text-slate-700 border border-slate-200
            hover:bg-slate-50
            active:scale-[0.97]
@@ -181,7 +181,7 @@ button, a, [role="button"] {
            transition-all duration-150 ease-out select-none;
   }
   /* Size modifiers — layer on top of a variant */
-  .ds-btn-sm { @apply px-3 py-1.5 text-xs rounded-lg; }
+  .ds-btn-sm { @apply px-3 py-1 text-xs rounded-lg; }
   .ds-btn-lg { @apply px-5 py-3; }
 
   /* ── Form controls ─────────────────────────────── */
@@ -202,19 +202,19 @@ button, a, [role="button"] {
            transition-shadow duration-150;
   }
 
-  /* ── Interactive list row ──────────────────────── */
+  /* ── Interactive list row (px=12, py=8 on grid) ── */
   .ds-list-item {
-    @apply w-full flex items-center gap-3 px-3 py-2.5 rounded-xl
+    @apply w-full flex items-center gap-3 px-3 py-2 rounded-xl
            text-left hover:bg-slate-50 active:bg-slate-100
            active:scale-[0.99] transition-all duration-150 ease-out;
   }
 
-  /* ── Status badges ─────────────────────────────── */
-  .ds-badge-green  { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700; }
-  .ds-badge-amber  { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50  text-amber-700;   }
-  .ds-badge-rose   { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50   text-rose-700;    }
-  .ds-badge-blue   { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50   text-blue-700;    }
-  .ds-badge-slate  { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600;   }
+  /* ── Status badges (px=8, py=4 on grid) ────────── */
+  .ds-badge-green  { @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700; }
+  .ds-badge-amber  { @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-amber-50  text-amber-700;   }
+  .ds-badge-rose   { @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-rose-50   text-rose-700;    }
+  .ds-badge-blue   { @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-blue-50   text-blue-700;    }
+  .ds-badge-slate  { @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600;   }
 
   /* ── Avatar ────────────────────────────────────── */
   .ds-avatar {
@@ -225,10 +225,27 @@ button, a, [role="button"] {
   .ds-divider { @apply border-t border-slate-100; }
 
   /* ── Legacy aliases (backward compat) ─────────── */
-  .stat-card    { @apply ds-card p-5 flex items-start justify-between; }
-  .content-card { @apply ds-card p-6; }
+  .stat-card    { @apply ds-card p-5 flex items-start justify-between; }   /* 20px */
+  .content-card { @apply ds-card p-5; }                                    /* 20px */
   .page-title   { @apply ds-page-title; }
   .page-subtitle { @apply ds-page-subtitle; }
+
+  /* ── Spacing primitives (8px grid) ─────────────────
+     Use to enforce predictable rhythm across pages.   */
+  .ds-page         { @apply px-6 py-8; }              /* 24 / 32 */
+  .ds-page-stack   { @apply space-y-8; }              /* 32 between major sections */
+  .ds-section      { @apply space-y-6; }              /* 24 between blocks within a section */
+  .ds-stack        { @apply space-y-3; }              /* 12 between text/inner elements */
+  .ds-stack-tight  { @apply space-y-2; }              /* 8  for label+value pairs */
+  .ds-stack-loose  { @apply space-y-4; }              /* 16 for card body groups */
+  .ds-row          { @apply flex items-center gap-3; }/* 12 inline */
+  .ds-row-tight    { @apply flex items-center gap-2; }/* 8  inline */
+  .ds-grid-cards   { @apply grid gap-4; }             /* 16 — card grids align column rhythm */
+  .ds-grid-cards-lg{ @apply grid gap-6; }             /* 24 — large card grids */
+  .ds-card-pad     { @apply p-4; }                    /* 16 — compact card padding */
+  .ds-card-pad-lg  { @apply p-5; }                    /* 20 — standard card padding */
+  .ds-card-header  { @apply mb-4; }                   /* 16 between card header and body */
+  .ds-section-gap  { @apply mt-8; }                   /* 32 above a new major section */
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -521,3 +538,83 @@ button[class*="rounded-xl"][class*="border"] {
 /* Sidebar nav items — no transform on hover.
    Sub-pixel translation animations re-rasterise the layer and blur
    icon + label mid-tween. Background-only feedback keeps text crisp. */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   8PX GRID NORMALISATION
+   Snap stray off-grid Tailwind utilities (p-3.5, py-2.5, gap-5, etc.) back
+   onto the allowed scale: 4 / 8 / 12 / 16 / 20 / 24 / 32 / 40.
+   No colour, layout, or component changes — spacing only.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Off-grid padding shorthand → nearest allowed value */
+[class~="p-1.5"]  { padding: 8px !important; }
+[class~="p-2.5"]  { padding: 12px !important; }
+[class~="p-3.5"]  { padding: 16px !important; }
+[class~="p-7"]    { padding: 24px !important; }   /* 28 → 24 */
+[class~="p-9"]    { padding: 32px !important; }   /* 36 → 32 */
+
+/* Off-grid axis padding */
+[class~="px-1.5"] { padding-left: 8px  !important; padding-right: 8px  !important; }
+[class~="px-2.5"] { padding-left: 12px !important; padding-right: 12px !important; }
+[class~="px-3.5"] { padding-left: 16px !important; padding-right: 16px !important; }
+[class~="px-7"]   { padding-left: 24px !important; padding-right: 24px !important; }
+[class~="py-1.5"] { padding-top: 8px  !important; padding-bottom: 8px  !important; }
+[class~="py-2.5"] { padding-top: 12px !important; padding-bottom: 12px !important; }
+[class~="py-3.5"] { padding-top: 16px !important; padding-bottom: 16px !important; }
+[class~="py-7"]   { padding-top: 24px !important; padding-bottom: 24px !important; }
+
+/* Off-grid margin */
+[class~="m-1.5"]  { margin: 8px !important; }
+[class~="m-2.5"]  { margin: 12px !important; }
+[class~="m-3.5"]  { margin: 16px !important; }
+[class~="mt-1.5"] { margin-top: 8px !important; }
+[class~="mt-2.5"] { margin-top: 12px !important; }
+[class~="mt-3.5"] { margin-top: 16px !important; }
+[class~="mb-1.5"] { margin-bottom: 8px !important; }
+[class~="mb-2.5"] { margin-bottom: 12px !important; }
+[class~="mb-3.5"] { margin-bottom: 16px !important; }
+
+/* Off-grid gaps in flex/grid containers */
+[class~="gap-1.5"] { gap: 8px  !important; }
+[class~="gap-2.5"] { gap: 12px !important; }
+[class~="gap-3.5"] { gap: 16px !important; }
+[class~="gap-5"]   { gap: 16px !important; }   /* 20 → 16 for grid rhythm */
+[class~="gap-7"]   { gap: 24px !important; }
+[class~="gap-9"]   { gap: 32px !important; }
+
+/* Off-grid space-y / space-x stacks */
+[class~="space-y-1.5"] > :not([hidden]) ~ :not([hidden]) { margin-top: 8px  !important; }
+[class~="space-y-2.5"] > :not([hidden]) ~ :not([hidden]) { margin-top: 12px !important; }
+[class~="space-y-3.5"] > :not([hidden]) ~ :not([hidden]) { margin-top: 16px !important; }
+[class~="space-y-5"]   > :not([hidden]) ~ :not([hidden]) { margin-top: 24px !important; }
+[class~="space-y-7"]   > :not([hidden]) ~ :not([hidden]) { margin-top: 24px !important; }
+[class~="space-y-9"]   > :not([hidden]) ~ :not([hidden]) { margin-top: 32px !important; }
+[class~="space-x-1.5"] > :not([hidden]) ~ :not([hidden]) { margin-left: 8px  !important; }
+[class~="space-x-2.5"] > :not([hidden]) ~ :not([hidden]) { margin-left: 12px !important; }
+[class~="space-x-3.5"] > :not([hidden]) ~ :not([hidden]) { margin-left: 16px !important; }
+[class~="space-x-5"]   > :not([hidden]) ~ :not([hidden]) { margin-left: 24px !important; }
+
+/* Card grids — guarantee row + column alignment with consistent gutter */
+.grid[class*="grid-cols-"] {
+  align-items: stretch;
+}
+.grid[class*="grid-cols-"] > * {
+  min-width: 0;   /* prevents 1fr blowouts that misalign columns */
+}
+
+/* Readable line-heights (1.4–1.6) on text-heavy elements
+   without overriding component-specific tighter settings. */
+p, li {
+  line-height: 1.5;
+}
+p + p {
+  margin-top: 12px;   /* 12px paragraph rhythm */
+}
+
+/* Card content rhythm — when a card directly stacks header + body + footer,
+   ensure 16px breathing space between them by default. */
+.ds-card > * + *,
+.content-card > * + *,
+.stat-card > * + * {
+  margin-top: 0;   /* opt-in — children control via .ds-stack* utilities */
+}
