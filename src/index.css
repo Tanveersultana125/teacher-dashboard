@@ -28,63 +28,64 @@ button, a, [role="button"] {
 @layer base {
   :root {
     /* ── Apple-style premium palette ─────────────────
-       Neutral base · single navy accent · desaturated status
-       (saturation reduced ~15–25% from prior values to feel calm) */
+       Neutral gray base · single refined accent · whisper-soft status.
+       Tuned to feel like macOS / iPadOS dashboards: low saturation,
+       gentle contrast, color reserved for meaning — not decoration. */
 
-    --background: 220 20% 98.5%;        /* off-white, faintly cool */
-    --foreground: 222 30% 12%;          /* near-black slate */
+    --background: 220 14% 98%;          /* neutral off-white, barely cool */
+    --foreground: 222 24% 11%;          /* near-black, calm slate */
 
     --card: 0 0% 100%;                  /* pure white surfaces */
-    --card-foreground: 222 30% 12%;
+    --card-foreground: 222 24% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 30% 12%;
+    --popover-foreground: 222 24% 11%;
 
-    --primary: 224 58% 25%;             /* brand navy — single accent */
+    --primary: 222 47% 22%;             /* refined deep navy — sole accent */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 18% 96%;           /* quiet panel */
-    --secondary-foreground: 222 30% 18%;
+    --secondary: 220 14% 96%;           /* quiet neutral panel */
+    --secondary-foreground: 222 22% 22%;
 
-    --muted: 220 16% 95.5%;
-    --muted-foreground: 220 10% 46%;    /* softer secondary text */
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 48%;     /* softer secondary text */
 
-    --accent: 224 58% 25%;
+    --accent: 222 47% 22%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 4 70% 54%;           /* desaturated red */
+    --destructive: 4 62% 52%;           /* muted coral, not alarm red */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 16% 92%;              /* lighter, less cool */
-    --input:  220 16% 92%;
-    --ring:   224 58% 25%;
+    --border: 220 13% 93%;              /* hairline neutral */
+    --input:  220 13% 93%;
+    --ring:   222 47% 22%;
 
     --radius: 0.75rem;
 
-    /* Edullent semantic tokens — desaturated for premium calm */
-    --edu-navy:        224 58% 25%;     /* unchanged — brand */
-    --edu-navy-light:  224 30% 45%;     /* less saturated */
-    --edu-blue:        214 70% 52%;     /* calmer than 217 91% 60% */
-    --edu-green:       150 45% 42%;     /* muted forest, not neon */
-    --edu-yellow:      42 78% 52%;      /* warm honey, not flag */
-    --edu-red:         4 70% 54%;       /* coral red, less alarm */
-    --edu-orange:      22 78% 52%;      /* burnt orange, calmer */
-    --edu-pink:        350 40% 92%;
-    --edu-light-blue:   214 60% 96%;
-    --edu-light-green:  150 40% 95%;
-    --edu-light-yellow: 42 80% 95%;
-    --edu-light-red:    4 70% 96%;
-    --edu-light-orange: 22 80% 95%;
+    /* Edullent semantic tokens — whisper-quiet for premium calm */
+    --edu-navy:        222 47% 22%;     /* refined brand navy */
+    --edu-navy-light:  222 22% 46%;     /* desaturated companion */
+    --edu-blue:        212 58% 50%;     /* calm signal blue */
+    --edu-green:       152 38% 40%;     /* muted forest, not neon */
+    --edu-yellow:      38 70% 52%;      /* honey amber, not flag */
+    --edu-red:         4 62% 52%;       /* muted coral */
+    --edu-orange:      22 64% 52%;      /* warm umber */
+    --edu-pink:        350 28% 94%;
+    --edu-light-blue:   212 50% 96.5%;
+    --edu-light-green:  152 32% 95.5%;
+    --edu-light-yellow: 38 70% 95.5%;
+    --edu-light-red:    4 60% 96.5%;
+    --edu-light-orange: 22 60% 95.5%;
 
     /* Sidebar — light minimal Apple style */
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 220 12% 38%;
-    --sidebar-primary: 224 58% 25%;
+    --sidebar-foreground: 220 10% 40%;
+    --sidebar-primary: 222 47% 22%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 18% 96%;            /* quiet hover, not navy */
-    --sidebar-accent-foreground: 224 58% 25%;
-    --sidebar-border: 220 16% 92%;
-    --sidebar-ring: 224 58% 25%;
+    --sidebar-accent: 220 14% 96%;            /* quiet hover, neutral */
+    --sidebar-accent-foreground: 222 47% 22%;
+    --sidebar-border: 220 13% 93%;
+    --sidebar-ring: 222 47% 22%;
   }
 }
 
@@ -162,8 +163,8 @@ button, a, [role="button"] {
   .ds-btn-primary {
     @apply inline-flex items-center justify-center gap-2
            px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap
-           bg-[#1e3272] text-white shadow-sm
-           hover:bg-[#162558]
+           bg-[#1d2c5a] text-white shadow-sm
+           hover:bg-[#152244]
            active:scale-[0.97]
            transition-all duration-150 ease-out select-none;
   }
