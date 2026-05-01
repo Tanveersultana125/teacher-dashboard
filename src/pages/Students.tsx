@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import StudentProfile from "@/components/StudentProfile";
 import { useAuth } from "../lib/AuthContext";
 import { db } from "../lib/firebase";
@@ -81,10 +82,39 @@ const scoreBarColor = (pct: number) =>
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function Students() {
   const { teacherData } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const [students, setStudents]             = useState<any[]>([]);
   const [loading, setLoading]               = useState(true);
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
+
+  // Cross-page handoff: when ConceptMasteryDetail's "View Profile" navigates
+  // here with location.state.autoOpenStudentId, auto-open that student's
+  // profile once the roster has loaded. We match on studentId first, then
+  // fall back to studentEmail (the dual-identifier story explained in
+  // memory file dual_query_pattern_studentid_email.md). After consuming the
+  // state we strip it via navigate(replace) so a back-button to this route
+  // doesn't re-fire the auto-select on every visit.
+  useEffect(() => {
+    const st = (location.state ?? {}) as {
+      autoOpenStudentId?: string;
+      autoOpenStudentEmail?: string;
+    };
+    const wantedId = st.autoOpenStudentId?.toLowerCase();
+    const wantedEmail = st.autoOpenStudentEmail?.toLowerCase();
+    if (!wantedId && !wantedEmail) return;
+    if (students.length === 0 || selectedStudent) return;
+    const match = students.find((s) => {
+      const sid = (s.id || "").toLowerCase();
+      const semail = (s.email || "").toLowerCase();
+      return (wantedId && sid === wantedId) || (wantedEmail && semail === wantedEmail);
+    });
+    if (match) setSelectedStudent(match);
+    // Clear the state regardless of whether a match was found — we don't want
+    // it firing again on subsequent re-renders or back-navigation.
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.state, location.pathname, navigate, students, selectedStudent]);
   const [search, setSearch]                 = useState('');
   const [filterStatus, setFilterStatus]     = useState('All');
   const [filterClass, setFilterClass]       = useState('All');

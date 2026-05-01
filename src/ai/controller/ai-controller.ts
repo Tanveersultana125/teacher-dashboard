@@ -46,48 +46,28 @@ async function callAIInsights(
 const hasData = (data: unknown): data is AIPayload =>
   !!data && typeof data === "object" && Object.keys(data as object).length > 0;
 
-const notImplemented = (name: string): AIResult => ({
-  status: "not_implemented",
-  message: `${name} is not yet wired to the AI backend.`,
-});
-
 export const AIController = {
 
-  // 1. DASHBOARD INSIGHTS
-  async getDashboardInsights(data: unknown): Promise<AIResult> {
-    if (!hasData(data)) return { status: "no_data", message: NO_DATA_MSG };
-    return callAIInsights("dashboard_insights", data, { logPrefix: "Dashboard" });
-  },
-
-  // 2. CLASS INSIGHTS
-  async getClassInsights(data: unknown): Promise<AIResult> {
-    if (!hasData(data)) return { status: "no_data", message: NO_DATA_MSG };
-    return callAIInsights("class_insights", data, { logPrefix: "Class" });
-  },
-
-  // 3. ASSIGNMENT CREATION INSIGHTS
-  async getAssignmentCreation(data: unknown): Promise<AIResult> {
-    if (!hasData(data)) return { status: "no_data", message: NO_DATA_MSG };
-    return callAIInsights("assignment_creation", data, { logPrefix: "AssignmentCreation" });
-  },
-
-  // 4. ASSIGNMENT GRADING INSIGHTS
-  async getAssignmentGrading(data: unknown): Promise<AIResult> {
-    if (!hasData(data)) return { status: "no_data", message: NO_DATA_MSG };
-    return callAIInsights("assignment_grading", data, { logPrefix: "Grading" });
-  },
-
-  // Stubs — these previously returned { status: "success", data: {} } which
-  // silently looked like success. Return `not_implemented` so callers can
-  // render an honest "coming soon" state instead of an empty success view.
-  async getTestCreation(_data: unknown): Promise<AIResult> { return notImplemented("getTestCreation"); },
-  async getResultAnalysis(_data: unknown): Promise<AIResult> { return notImplemented("getResultAnalysis"); },
-  async getConceptRemedial(_data: unknown): Promise<AIResult> { return notImplemented("getConceptRemedial"); },
-  async getClassGaps(_data: unknown): Promise<AIResult> { return notImplemented("getClassGaps"); },
-  async getRosterSummaries(_data: unknown): Promise<AIResult> { return notImplemented("getRosterSummaries"); },
-  async getStudentAnalytics(_data: unknown): Promise<AIResult> { return notImplemented("getStudentAnalytics"); },
-  async getParentNoteGeneration(_data: unknown): Promise<AIResult> { return notImplemented("getParentNoteGeneration"); },
-  async getClassReportCards(_data: unknown): Promise<AIResult> { return notImplemented("getClassReportCards"); },
+  // ─────────────────────────────────────────────────────────────────────────
+  // CLEANUP NOTE (2026-05-01):
+  //   12 dead methods removed in this pass — verified zero callers across the
+  //   entire repo (parent / teacher / principal / owner / functions / scripts):
+  //     • getDashboardInsights, getClassInsights, getAssignmentCreation,
+  //       getAssignmentGrading        — backend cloud function handlers exist
+  //                                     but no UI ever called them. Backend
+  //                                     handlers left in functions/src/index.ts
+  //                                     for future use; client-side dispatch
+  //                                     is gone.
+  //     • getConceptRemedial          — moved to system module. See
+  //                                     ai/system/concept-remedial.ts. The UI
+  //                                     (ConceptMasteryDetail.tsx) now imports
+  //                                     it directly.
+  //     • getTestCreation, getResultAnalysis, getClassGaps, getRosterSummaries,
+  //       getStudentAnalytics, getParentNoteGeneration, getClassReportCards
+  //                                   — both client AND backend dead. Pure
+  //                                     dead weight, removed cleanly.
+  //   `notImplemented` helper kept for any future stub need.
+  // ─────────────────────────────────────────────────────────────────────────
 
   // LEADERBOARD: Class action plan (Hinglish diagnosis + 4-5 actions)
   async getClassActionPlan(data: unknown): Promise<AIResult> {

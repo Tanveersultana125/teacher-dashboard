@@ -1,6 +1,17 @@
 import { useState } from "react";
 import { Loader2, Sparkles } from "lucide-react";
-import { AIController } from "../ai/controller/ai-controller";
+import { useNavigate } from "react-router-dom";
+import { generateConceptRemedial } from "../ai/system/concept-remedial";
+
+// Build the cross-page handoff payload once. Both target pages
+// (Students.tsx, ParentNotes.tsx) read these via useLocation().state.
+// We pass id AND email so the target can match either way (the
+// enrollment.studentId field isn't always the canonical students/{doc_id}).
+const buildStudentHandoff = (student: any) => ({
+  autoOpenStudentId:    student?.realId || student?.id || "",
+  autoOpenStudentEmail: (student?.email || "").toLowerCase(),
+  autoOpenStudentName:  student?.name || "",
+});
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const T = {
@@ -61,9 +72,16 @@ interface ConceptMasteryDetailProps {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 const ConceptMasteryDetail = ({ student, concepts, scores, className, onBack }: ConceptMasteryDetailProps) => {
+  const navigate = useNavigate();
   const [selectedRemedial, setSelectedRemedial] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiData, setAiData] = useState<any>(null);
+
+  // Cross-page handoff for the two header buttons.
+  const handleViewProfile = () =>
+    navigate("/students", { state: buildStudentHandoff(student) });
+  const handleContactParent = () =>
+    navigate("/parent-notes", { state: buildStudentHandoff(student) });
 
   // Build concept objects
   const mappedConcepts = concepts.map((c, i) => {
@@ -77,25 +95,30 @@ const ConceptMasteryDetail = ({ student, concepts, scores, className, onBack }: 
 
   const av = avStyle(student.name || "S");
 
-  // ── AI Remedial ─────────────────────────────────────────────────────────────
-  const handleRemedial = async (concept: string) => {
+  // ── Remedial plan (system-driven, no API call) ───────────────────────────
+  // Replaces the previous AIController.getConceptRemedial which was a broken
+  // stub returning `not_implemented`. See ai/system/concept-remedial.ts for
+  // the deterministic logic. Brief loading flicker preserved so the existing
+  // button-disabled UX still reads naturally.
+  const handleRemedial = (concept: string) => {
     setSelectedRemedial(concept);
     setIsGenerating(true);
     setAiData(null);
-    try {
-      const result = await AIController.getConceptRemedial({
-        student_name: student.name,
-        failed_concept: concept,
-        past_scores: mappedConcepts,
-      });
-      if (result.status === "success" && result.data) {
-        setAiData(result.data);
+    const c = mappedConcepts.find((m) => m.title === concept);
+    const score = c?.score ?? 0;
+    // Defer to a microtask so the spinner state visibly transitions; users
+    // expect a tiny "thinking" beat after clicking even though the compute
+    // itself is < 1ms.
+    queueMicrotask(() => {
+      try {
+        const data = generateConceptRemedial(student?.name || "", concept, score);
+        setAiData(data);
+      } catch (e) {
+        console.error("[ConceptRemedial] generation failed:", e);
+      } finally {
+        setIsGenerating(false);
       }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsGenerating(false);
-    }
+    });
   };
 
   // Recommended actions (dynamic)
@@ -226,6 +249,8 @@ const ConceptMasteryDetail = ({ student, concepts, scores, className, onBack }: 
         weak={weak}
         className={className}
         onBack={onBack}
+        onViewProfile={handleViewProfile}
+        onContactParent={handleContactParent}
         aiData={aiData}
         selectedRemedial={selectedRemedial}
         isGenerating={isGenerating}
@@ -296,7 +321,7 @@ const ConceptMasteryDetail = ({ student, concepts, scores, className, onBack }: 
 
             {/* Action buttons */}
             <div className="flex gap-2.5 md:shrink-0">
-              <button type="button" className="md:px-6" style={{
+              <button type="button" onClick={handleViewProfile} className="md:px-6" style={{
                 flex: 1, padding: "10px 16px",
                 background: "rgba(255,255,255,0.08)",
                 border: "1.5px solid rgba(255,255,255,0.15)",
@@ -306,7 +331,7 @@ const ConceptMasteryDetail = ({ student, concepts, scores, className, onBack }: 
               }}>
                 View Profile
               </button>
-              <button type="button" className="md:px-6" style={{
+              <button type="button" onClick={handleContactParent} className="md:px-6" style={{
                 flex: 1, padding: "10px 16px",
                 background: T.blue2,
                 border: "none", borderRadius: 12,
@@ -515,6 +540,8 @@ interface MobileDetailProps {
   weak: { title: string; score: number }[];
   className?: string;
   onBack: () => void;
+  onViewProfile: () => void;
+  onContactParent: () => void;
   aiData: any;
   selectedRemedial: string | null;
   isGenerating: boolean;
@@ -525,6 +552,7 @@ interface MobileDetailProps {
 
 const MobileConceptMasteryDetail = ({
   student, mappedConcepts, mastered, developing, weak, className, onBack,
+  onViewProfile, onContactParent,
   aiData, selectedRemedial, isGenerating, onRemedial, recommendedActions, hasRisk,
 }: MobileDetailProps) => {
   const avColor = mobAvatarColor(student.name || 'S');
@@ -609,6 +637,7 @@ const MobileConceptMasteryDetail = ({
           <div style={{ display: 'flex', gap: 8 }}>
             <button
               type="button"
+              onClick={onViewProfile}
               className="cmd-press"
               style={{
                 flex: 1, height: 38, borderRadius: 11,
@@ -626,6 +655,7 @@ const MobileConceptMasteryDetail = ({
             </button>
             <button
               type="button"
+              onClick={onContactParent}
               className="cmd-press"
               style={{
                 flex: 1, height: 38, borderRadius: 11,

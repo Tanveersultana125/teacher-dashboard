@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useRef, useMemo } from "react";
 import { Loader2, X, Send } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { db } from "../lib/firebase";
 import {
   collection, query, where, onSnapshot,
@@ -94,7 +94,18 @@ const getInitials = (name: string) => {
 const ParentNotes = () => {
   const { teacherData } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
+
+  // Cross-page handoff: ConceptMasteryDetail's "Contact Parent" button
+  // navigates here with location.state.autoOpenStudentId / Email. Auto-open
+  // the corresponding chat once the roster has loaded. Match by studentId
+  // first, fall back to studentEmail (dual-identifier policy — see
+  // memory/dual_query_pattern_studentid_email.md). Strip state after one
+  // pass so back-navigation doesn't re-fire it.
+  // Roster declared below in the main effect; we read it via a separate
+  // effect that watches both location.state and roster.
+  // (placeholder — actual effect appears after roster is declared)
   const [allNotes, setAllNotes]               = useState<any[]>([]);
   const [roster, setRoster]                   = useState<any[]>([]);
   const [loading, setLoading]                 = useState(true);
@@ -144,6 +155,27 @@ const ParentNotes = () => {
 
     return () => { unsub1(); unsub2(); };
   }, [teacherData?.id, teacherData?.schoolId, teacherData?.branchId]);
+
+  // Auto-open recipient when navigated here from ConceptMasteryDetail's
+  // "Contact Parent" button. Runs once roster has populated; matches by
+  // studentId then falls back to studentEmail.
+  useEffect(() => {
+    const st = (location.state ?? {}) as {
+      autoOpenStudentId?: string;
+      autoOpenStudentEmail?: string;
+    };
+    const wantedId = st.autoOpenStudentId?.toLowerCase();
+    const wantedEmail = st.autoOpenStudentEmail?.toLowerCase();
+    if (!wantedId && !wantedEmail) return;
+    if (roster.length === 0 || selectedStudent) return;
+    const match = roster.find((r: any) => {
+      const rid = (r.studentId || "").toLowerCase();
+      const remail = (r.studentEmail || "").toLowerCase();
+      return (wantedId && rid === wantedId) || (wantedEmail && remail === wantedEmail);
+    });
+    if (match) setSelectedStudent(match);
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.state, location.pathname, navigate, roster, selectedStudent]);
 
   // Scroll to bottom on new messages
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [allNotes, selectedStudent]);
