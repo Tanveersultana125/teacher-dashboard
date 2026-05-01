@@ -129,5 +129,26 @@ export const AIController = {
       logPrefix: "ExamPaper",
     });
   },
+
+  // PAPER CORRECTION — vision call over scanned student exam pages.
+  //   data.images: data:image/jpeg;base64,... array (one per page)
+  //   data.subject, data.grade, data.totalMarks, data.studentName, data.answerKey, data.notes
+  // Long timeout (4 min) because vision passes over multi-page papers can be slow.
+  async getPaperCorrection(data: {
+    images: string[];
+    subject?: string;
+    grade?: string;
+    totalMarks?: number;
+    studentName?: string;
+    answerKey?: string;
+    notes?: string;
+  }): Promise<AIResult> {
+    if (!data?.images?.length) return { status: "no_data", message: "Upload a scanned PDF first." };
+    if (import.meta.env.DEV) console.debug("[PaperCorrection] pages:", data.images.length);
+    return callAIInsights("paper_correction", data as unknown as AIPayload, {
+      timeoutMs: 240_000,
+      logPrefix: "PaperCorrection",
+    });
+  },
 };
 

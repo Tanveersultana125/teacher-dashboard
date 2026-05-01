@@ -3,12 +3,12 @@ import { Loader2 } from "lucide-react";
 import { useAuth } from "../lib/AuthContext";
 import { AIController } from "../ai/controller/ai-controller";
 import * as pdfjsLib from "pdfjs-dist";
+// Bundle the PDF.js worker via Vite so it loads from same-origin (CSP-safe).
+// The previous CDN URL was being blocked by CSP and triggered a `blob:`
+// "fake worker" fallback that is also blocked.
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
-// NOTE: PDF.js worker is loaded from unpkg CDN. Every summarize request hits
-// an external domain, which adds a small privacy/perf/availability cost.
-// For production, host the worker alongside the app bundle — Vite supports
-// `import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'`.
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 type KeyConcept = string | { concept?: string; explanation?: string; definition?: string };
 type Definition = { term: string; definition?: string; meaning?: string };

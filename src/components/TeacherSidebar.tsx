@@ -21,6 +21,7 @@ import {
   FileSpreadsheet,
   Star,
   Trophy,
+  ScanText,
 } from "lucide-react";
 
 // Sidebar nav grouped into logical sections so the long flat list reads as
@@ -51,6 +52,7 @@ const navSections: {
       { title: "Assignments",     path: "/assignments",     icon: FileText        },
       { title: "Tests & Exams",   path: "/tests",           icon: GraduationCap   },
       { title: "Exam Generator",  path: "/exam",            icon: FileSpreadsheet },
+      { title: "Paper Correction",path: "/paper-correction",icon: ScanText        },
       { title: "Gradebook",       path: "/gradebook",       icon: BookMarked      },
       { title: "Syllabus",        path: "/syllabus",        icon: Library         },
       { title: "Concept Mastery", path: "/concept-mastery", icon: Brain           },

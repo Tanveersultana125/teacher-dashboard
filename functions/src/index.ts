@@ -13,6 +13,13 @@ const openaiApiKey = defineSecret("OPENAI_API_KEY");
 const TEACHER_ROLES = new Set(["teacher", "principal", "owner"]);
 const MAX_PAYLOAD_CHARS = 40_000;
 const MAX_LESSON_TEXT_CHARS = 12_000;
+// Vision payloads (paper_correction) carry base64 page images and need a much
+// larger cap. Firebase Functions hard limit is 10 MB; we cap below that to
+// leave headroom for envelope + headers.
+const MAX_VISION_PAYLOAD_CHARS = 9_000_000;
+const MAX_PAPER_PAGES = 10;
+// Types that are allowed to use the vision payload size cap.
+const VISION_TYPES = new Set(["paper_correction"]);
 
 function requireRole(
   context: functions.https.CallableContext,
@@ -40,7 +47,7 @@ function safeJsonParse<T = any>(raw: string, label: string): T {
 }
 
 export const getTeacherAIInsights = functions
-  .runWith({ secrets: [openaiApiKey], timeoutSeconds: 60, memory: "512MB" })
+  .runWith({ secrets: [openaiApiKey], timeoutSeconds: 240, memory: "1GB" })
   .https.onCall(async (data: any, context) => {
     // Auth + role gate (was auth-only, missing role check).
     requireRole(context, TEACHER_ROLES);
@@ -50,9 +57,12 @@ export const getTeacherAIInsights = functions
     const openai = new OpenAI({ apiKey: openaiApiKey.value().trim() });
     const { type, payload } = data || {};
 
-    // Input bounds on payload — prevent prompt-cost amplification.
+    // Input bounds on payload — prevent prompt-cost amplification. Vision
+    // calls (paper_correction) carry image arrays so they get a much higher
+    // cap; everything else stays on the strict 40 KB limit.
     const payloadJson = JSON.stringify(payload ?? {});
-    if (payloadJson.length > MAX_PAYLOAD_CHARS) {
+    const cap = VISION_TYPES.has(type) ? MAX_VISION_PAYLOAD_CHARS : MAX_PAYLOAD_CHARS;
+    if (payloadJson.length > cap) {
       throw new functions.https.HttpsError("invalid-argument", "payload too large.");
     }
 
@@ -302,6 +312,95 @@ Return ONLY this JSON:
         "",
         "Generate the exam paper now as JSON.",
       ].filter(Boolean).join("\n");
+    } else if (type === "paper_correction") {
+      // Validate vision payload up-front so we don't bill an OpenAI call on
+      // garbage. `images` must be an array of data-URL JPEGs (data:image/...).
+      const images: unknown = (payload as any)?.images;
+      if (!Array.isArray(images) || images.length === 0) {
+        throw new functions.https.HttpsError("invalid-argument", "No page images provided.");
+      }
+      if (images.length > MAX_PAPER_PAGES) {
+        throw new functions.https.HttpsError(
+          "invalid-argument",
+          `Too many pages — max ${MAX_PAPER_PAGES} per submission.`,
+        );
+      }
+      for (const img of images) {
+        if (typeof img !== "string" || !img.startsWith("data:image/")) {
+          throw new functions.https.HttpsError("invalid-argument", "Bad image payload.");
+        }
+      }
+
+      systemPrompt = [
+        "You are a warm, experienced school teacher correcting a student's exam paper — NOT a robotic grader.",
+        "Tone: kind, specific, encouraging, like an actual human teacher writing comments in red pen.",
+        "Use Hinglish (Hindi + English mixed naturally) in feedback, comments, and improvement notes.",
+        "Keep question numbers, marks, and final scores in clean English/numbers.",
+        "Never shame the student. Always pair a weakness with a concrete, kind next step.",
+        "If a question is partially correct, give partial marks and explain WHY some marks were cut.",
+        "If handwriting is unclear or a question is unreadable, say so honestly in the comment.",
+        "Read every page carefully. The pages are in order — page 1 is the first image.",
+        "Return STRICT JSON only — no markdown fences, no commentary outside the JSON.",
+        "",
+        "JSON shape:",
+        "{",
+        '  "subject": string,',
+        '  "grade": string | null,',
+        '  "totalMarks": number,',
+        '  "marksScored": number,',
+        '  "percentage": number,                          // round to 1 decimal',
+        '  "grade_band": "A+" | "A" | "B" | "C" | "D" | "E" | "F",',
+        '  "overall_summary": string,                     // 2-3 Hinglish sentences, warm human teacher tone',
+        '  "questions": [                                 // one entry per question detected',
+        "    {",
+        '      "number": string,                          // "1", "2a", "Q3.ii" — match the paper',
+        '      "question_text": string,                   // brief paraphrase of the question',
+        '      "max_marks": number,',
+        '      "marks_awarded": number,',
+        '      "verdict": "correct" | "partial" | "wrong" | "blank" | "unreadable",',
+        '      "student_answer_summary": string,          // what the student wrote, in 1-2 lines',
+        '      "correct_answer": string,                  // the expected answer / approach in 1-3 lines',
+        '      "comment": string                          // Hinglish red-pen-style feedback, 1-3 sentences, kind + specific',
+        "    }",
+        "  ],",
+        '  "strengths": [string],                         // 3-5 Hinglish bullets — what student did WELL with examples',
+        '  "weaknesses": [string],                        // 3-5 Hinglish bullets — concept gaps, calculation slips, presentation issues',
+        '  "improvement_plan": [                          // 4-6 specific next steps, NOT generic "study more"',
+        "    {",
+        '      "area": string,                            // English label, e.g. "Linear equations"',
+        '      "action": string,                          // Hinglish — specific 1-week action, like "Roz 5 word problems solve karo from NCERT Ex 4.3"',
+        '      "priority": "high" | "medium" | "low"',
+        "    }",
+        "  ],",
+        '  "encouragement": string                        // 1-2 Hinglish sentences — genuine, specific, never fake',
+        "}",
+        "",
+        "Rules:",
+        "- marksScored MUST equal sum of marks_awarded across all questions.",
+        "- percentage MUST equal round(marksScored / totalMarks * 100, 1).",
+        "- grade_band: A+ ≥90, A 80-89, B 70-79, C 60-69, D 50-59, E 40-49, F <40.",
+        "- If a page is unreadable, mark affected questions with verdict=\"unreadable\" and 0 marks.",
+        "- Improvement plan must reference SPECIFIC mistakes the student made, not generic advice.",
+      ].join("\n");
+
+      const p = (payload as any) || {};
+      const meta = [
+        `Subject: ${p.subject || "(not specified — infer from paper)"}`,
+        p.grade ? `Grade: ${p.grade}` : null,
+        p.totalMarks ? `Total Marks (declared by teacher): ${p.totalMarks}` : "Total Marks: infer from the paper",
+        p.studentName ? `Student: ${p.studentName}` : null,
+        p.answerKey ? `\nTeacher's answer key / marking scheme:\n${String(p.answerKey).slice(0, 6000)}` : null,
+        p.notes ? `\nTeacher notes for grading: ${String(p.notes).slice(0, 1000)}` : null,
+      ].filter(Boolean).join("\n");
+
+      userPrompt = [
+        "Correct this scanned student exam paper end-to-end.",
+        "",
+        meta,
+        "",
+        `Pages attached: ${images.length} (in order).`,
+        "Read every question on every page, mark it, and produce the JSON.",
+      ].join("\n");
     } else if (type === "teacher_self_action_plan") {
       systemPrompt = "You are a senior educator performance coach. Give honest, constructive feedback to a teacher to help them improve their professional metrics. Use Hinglish naturally in diagnosis and action reasons. Keep action titles in English. Never demoralize. Respond ONLY in valid JSON.";
       userPrompt = `Generate self-improvement actions for a teacher based on their composite metrics across classes.
@@ -336,17 +435,32 @@ Return ONLY this JSON:
       type === "lesson_plan_generation" ? 4096 :
       type === "lesson_summary" ? 3000 :
       type === "exam_paper_generation" ? 4096 :
+      type === "paper_correction" ? 4096 :
       type === "class_action_plan" ? 1500 :
       type === "student_action_plan" ? 1500 :
       type === "teacher_self_action_plan" ? 1500 :
       1024;
+
+    // Vision types attach base64 page images to the user message so the
+    // model can actually look at the scanned paper. Everything else stays
+    // on the simple text-only path.
+    const userContent: OpenAI.Chat.Completions.ChatCompletionContentPart[] | string =
+      type === "paper_correction"
+        ? [
+            { type: "text", text: userPrompt },
+            ...((payload as any).images as string[]).map((dataUrl: string) => ({
+              type: "image_url" as const,
+              image_url: { url: dataUrl, detail: "high" as const },
+            })),
+          ]
+        : userPrompt;
 
     try {
       const completion = await openai.chat.completions.create({
         model: "gpt-4.1-mini",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
+          { role: "user", content: userContent },
         ],
         response_format: { type: "json_object" },
         max_tokens: maxTokens,
