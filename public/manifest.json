@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Edullent — Teacher Dashboard",
-  "short_name": "Teacher",
+  "name": "edullent-teacher",
+  "short_name": "edullent-teacher",
   "description": "AI-powered teacher dashboard for managing students, classes, attendance, grades, and communication.",
   "theme_color": "#1e3272",
   "background_color": "#1e3272",
