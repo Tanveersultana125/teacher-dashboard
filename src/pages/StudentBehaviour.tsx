@@ -168,6 +168,11 @@ export default function StudentBehaviour() {
         const matched = snap.docs
           .map(d => ({ id: d.id, ...(d.data() as any) }))
           .filter(d => {
+            // Hide resolved/closed incidents — parity with parent dashboard.
+            // Status casing normalised (principal writes "Resolved", teacher
+            // writes "resolved").
+            const stRaw = String(d.status || "").toLowerCase();
+            if (stRaw === "resolved" || stRaw === "closed") return false;
             // Modern schema match
             if (d.studentId && d.studentId === selectedId) return true;
             if (d.studentEmail && selectedEmail && String(d.studentEmail).toLowerCase() === selectedEmail) return true;
