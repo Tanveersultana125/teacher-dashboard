@@ -44,6 +44,16 @@ export default function CreateTest({ onCancel, onCreate }: { onCancel: () => voi
   const [topics, setTopics] = useState<string[]>([]);
   const [newTopic, setNewTopic] = useState("");
   const [qTypes, setQTypes] = useState<string[]>(['MCQ', 'Short Answer', 'Long Answer']);
+
+  // Exam categories — driven by principal-dashboard's `exam_structure`
+  // collection (cross-dashboard linkage). Falls back to a sensible default
+  // set ONLY when the school hasn't configured any exam types yet.
+  // Each configured type may carry maxMarks / passingMarks / weightPct
+  // which auto-fill the marks field when the teacher picks that category.
+  const DEFAULT_EXAM_CATEGORIES = ['Unit Test', 'Mid-term', 'Final'];
+  type ExamCategoryConfig = { maxMarks?: number; passingMarks?: number; weightPct?: number; applicableClasses?: string };
+  const [examCategories, setExamCategories] = useState<string[]>(DEFAULT_EXAM_CATEGORIES);
+  const [examCategoryConfig, setExamCategoryConfig] = useState<Map<string, ExamCategoryConfig>>(new Map());
   
   const [settings, setSettings] = useState({
      immediateResults: true,
@@ -76,6 +86,55 @@ export default function CreateTest({ onCancel, onCreate }: { onCancel: () => voi
     });
     return () => unsub();
   }, [teacherData?.id, teacherData?.schoolId, teacherData?.branchId]);
+
+  // Subscribe to `exam_structure` (principal-configured exam types) so the
+  // category dropdown reflects what the school has actually defined. This
+  // is the cross-dashboard linkage that the previous hardcoded list
+  // silently broke (memory: cross_dashboard_linking_rule).
+  useEffect(() => {
+    if (!teacherData?.schoolId) return;
+    const schoolId = teacherData.schoolId as string;
+    const branchId = teacherData.branchId as string | undefined;
+    const inBranch = (raw: any): boolean =>
+      !branchId || !raw?.branchId || raw.branchId === branchId;
+
+    const unsub = onSnapshot(
+      query(collection(db, "exam_structure"), where("schoolId", "==", schoolId)),
+      (snap) => {
+        const docs = snap.docs
+          .map(d => ({ id: d.id, ...(d.data() as Record<string, unknown>) }))
+          .filter(inBranch);
+        if (docs.length === 0) {
+          // No configured types — fall back to defaults so the teacher
+          // still has SOMETHING to pick from.
+          setExamCategories(DEFAULT_EXAM_CATEGORIES);
+          setExamCategoryConfig(new Map());
+          return;
+        }
+        const names: string[] = [];
+        const map = new Map<string, ExamCategoryConfig>();
+        docs.forEach((d: any) => {
+          const name = String(d.name || "").trim();
+          if (!name || map.has(name)) return; // dedup defensively
+          names.push(name);
+          map.set(name, {
+            maxMarks:          typeof d.maxMarks === "number" ? d.maxMarks : undefined,
+            passingMarks:      typeof d.passingMarks === "number" ? d.passingMarks : undefined,
+            weightPct:         typeof d.weightPct === "number" ? d.weightPct : undefined,
+            applicableClasses: typeof d.applicableClasses === "string" ? d.applicableClasses : undefined,
+          });
+        });
+        setExamCategories(names);
+        setExamCategoryConfig(map);
+        // If the current selected category isn't in the configured list,
+        // realign to the first configured type so we don't save a stale
+        // hardcoded value the principal didn't define.
+        setFormData(prev => names.includes(prev.category) ? prev : { ...prev, category: names[0] });
+      },
+      (err) => console.warn("[CreateTest] exam_structure listener failed:", err),
+    );
+    return () => unsub();
+  }, [teacherData?.schoolId, teacherData?.branchId]);
 
   const handleSave = async (status: "Upcoming" | "Draft" = "Upcoming") => {
     const title = formData.title.trim();
@@ -326,12 +385,26 @@ export default function CreateTest({ onCancel, onCreate }: { onCancel: () => voi
               <div className="text-[22px] font-normal -mt-[3px]" style={{ color: MA.T4 }}>›</div>
               <select aria-label="Test category"
                 value={formData.category}
-                onChange={e => setFormData({ ...formData, category: e.target.value })}
+                onChange={e => {
+                  const newCategory = e.target.value;
+                  setFormData(prev => {
+                    const cfg = examCategoryConfig.get(newCategory);
+                    // Auto-fill marks ONLY if the user hasn't already typed a
+                    // value. Don't clobber a manual override.
+                    const shouldAutoFillMarks =
+                      cfg?.maxMarks != null && (!prev.marks || prev.marks.trim() === "");
+                    return {
+                      ...prev,
+                      category: newCategory,
+                      ...(shouldAutoFillMarks ? { marks: String(cfg!.maxMarks) } : {}),
+                    };
+                  });
+                }}
                 className="absolute inset-0 opacity-0 cursor-pointer"
                 style={{ fontFamily: MA.FONT }}>
-                <option value="Unit Test">Unit Test</option>
-                <option value="Mid-term">Mid-term</option>
-                <option value="Final">Final</option>
+                {examCategories.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -975,12 +1048,24 @@ export default function CreateTest({ onCancel, onCreate }: { onCancel: () => voi
                   <div className="text-[20px] font-normal -mt-[3px]" style={{ color: MA.T4 }}>›</div>
                   <select aria-label="Test category"
                     value={formData.category}
-                    onChange={e => setFormData({ ...formData, category: e.target.value })}
+                    onChange={e => {
+                      const newCategory = e.target.value;
+                      setFormData(prev => {
+                        const cfg = examCategoryConfig.get(newCategory);
+                        const shouldAutoFillMarks =
+                          cfg?.maxMarks != null && (!prev.marks || prev.marks.trim() === "");
+                        return {
+                          ...prev,
+                          category: newCategory,
+                          ...(shouldAutoFillMarks ? { marks: String(cfg!.maxMarks) } : {}),
+                        };
+                      });
+                    }}
                     className="absolute inset-0 opacity-0 cursor-pointer"
                     style={{ fontFamily: MA.FONT }}>
-                    <option value="Unit Test">Unit Test</option>
-                    <option value="Mid-term">Mid-term</option>
-                    <option value="Final">Final</option>
+                    {examCategories.map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
                   </select>
                 </div>
               </div>
