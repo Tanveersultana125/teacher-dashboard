@@ -23,6 +23,7 @@ import {
   Trophy,
   ScanText,
   Award,
+  Calendar,
 } from "lucide-react";
 
 // Sidebar nav grouped into logical sections so the long flat list reads as
@@ -42,6 +43,7 @@ const navSections: {
     title: "Classroom",
     items: [
       { title: "My Classes",  path: "/my-classes",        icon: BookOpen       },
+      { title: "Timetable",   path: "/timetable",         icon: Calendar       },
       { title: "Students",    path: "/students",          icon: Users          },
       { title: "Attendance",  path: "/attendance",        icon: ClipboardCheck },
       { title: "Behaviour",   path: "/student-behaviour", icon: Star           },
