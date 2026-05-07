@@ -1418,16 +1418,17 @@ export default function Students() {
             onClick={() => !inviting && setInviteOpen(false)}
           />
 
-          {/* Bottom sheet (mobile) */}
+          {/* Bottom sheet (mobile) — `flex flex-col` MUST come from Tailwind
+              classes, not inline style. Inline `display: flex` overrode the
+              `md:hidden` rule's `display: none`, so the sheet rendered on
+              desktop too. */}
           <div
-            className="md:hidden fixed left-0 right-0 bottom-0 z-[61]"
+            className="md:hidden fixed left-0 right-0 bottom-0 z-[61] flex flex-col"
             role="dialog" aria-modal="true" aria-label="Invite Student"
             style={{
               background: MA.CARD,
               borderRadius: "26px 26px 0 0",
               maxHeight: "88vh",
-              display: "flex",
-              flexDirection: "column",
               boxShadow: "0 -20px 60px rgba(0,8,60,0.3)",
               animation: "sheetUp .45s cubic-bezier(.34,1.56,.64,1) both",
               fontFamily: MA.FONT,
@@ -1711,7 +1712,16 @@ export default function Students() {
                 <button type="button"
                   onClick={handleInvite}
                   disabled={inviting}
-                  style={{ padding: '9px 18px', borderRadius: 9, background: T.ink0, border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, cursor: inviting ? 'not-allowed' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6, opacity: inviting ? 0.7 : 1 }}
+                  style={{
+                    padding: '9px 18px', borderRadius: 9,
+                    background: MA.P, border: 'none', color: '#fff',
+                    fontSize: 12, fontWeight: 700,
+                    cursor: inviting ? 'not-allowed' : 'pointer',
+                    fontFamily: 'inherit',
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    opacity: inviting ? 0.7 : 1,
+                    boxShadow: "0 1px 2px rgba(9,87,247,0.25), 0 4px 10px rgba(9,87,247,0.30)",
+                  }}
                 >
                   {inviting ? <Loader2 size={13} className="animate-spin" /> : <Mail size={13} />}
                   {inviting ? 'Sending…' : 'Send invite'}

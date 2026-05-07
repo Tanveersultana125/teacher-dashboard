@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import MarkAttendance from "@/components/MarkAttendance";
 import { db } from "../lib/firebase";
 import {
-  collection, query, where, onSnapshot, getDocs,
+  collection, query, where, onSnapshot,
   type QueryConstraint, type DocumentData,
 } from "firebase/firestore";
 import { useAuth } from "../lib/AuthContext";
@@ -93,23 +93,56 @@ const IcoCheck = ({ color = '#fff', size = 14 }: { color?: string; size?: number
   </svg>
 );
 // ── Main component ────────────────────────────────────────────────────────────
+// localStorage key — selectedClassId persistence per-teacher (multi-class
+// teachers shouldn't lose context on refresh).
+const SELECTED_CLASS_KEY = (teacherId: string) => `teacher_attendance_selected_class:${teacherId}`;
+
 const Attendance = () => {
   const { teacherData } = useAuth();
   const navigate = useNavigate();
 
   const [marking, setMarking]               = useState(false);
   const [markingClassId, setMarkingClassId] = useState<string>("");
-  const [loading, setLoading]               = useState(true);
+  // Split loading flags — page renders as soon as classes are ready; records
+  // stream in without flipping the page back to a full loader (prevents the
+  // flicker that happens when classes.length changes mid-session).
+  const [classesLoading, setClassesLoading] = useState(true);
   const [classes, setClasses]               = useState<ClassDoc[]>([]);
   const [enrollments, setEnrollments]       = useState<EnrollmentDoc[]>([]);
   const [records, setRecords]               = useState<AttendanceRecord[]>([]);
-  const [selectedClassId, setSelectedClassId] = useState<string>("");
+  // Bumped after MarkAttendance saves — forces the records onSnapshot to
+  // tear down and re-subscribe so we never display stale "not marked" state
+  // while waiting for a snapshot fire to land.
+  const [refreshKey, setRefreshKey]         = useState(0);
+  // Hydrate selectedClassId from localStorage on mount; empty when no teacher
+  // (gets resolved in the classes effect once we know who's signed in).
+  const [selectedClassId, setSelectedClassId] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    try { return localStorage.getItem("teacher_attendance_selected_class") || ""; }
+    catch { return ""; }
+  });
 
-  // 1. Classes
+  // Persist selectedClassId on every change (per-teacher key once teacher
+  // resolves, plus a generic key as fallback during initial mount).
+  useEffect(() => {
+    if (!selectedClassId) return;
+    try {
+      localStorage.setItem("teacher_attendance_selected_class", selectedClassId);
+      if (teacherData?.id) {
+        localStorage.setItem(SELECTED_CLASS_KEY(teacherData.id), selectedClassId);
+      }
+    } catch { /* localStorage may be disabled — silent fail is fine */ }
+  }, [selectedClassId, teacherData?.id]);
+
+  // 1. Classes — branchId IS valid here (resolution entity, eligible for
+  // strict branch isolation). See bug_pattern_branch_filter_on_event_streams
+  // memory: branchId belongs ONLY on resolution entities (classes/teachers/
+  // assignments), NEVER on event streams (attendance/scores/notes).
   useEffect(() => {
     if (!teacherData?.id || !teacherData?.schoolId) return;
     const schoolId = teacherData.schoolId;
     const branchId = teacherData.branchId as string | undefined;
+    const teacherId = teacherData.id;
     const tenant: QueryConstraint[] = branchId
       ? [where("schoolId", "==", schoolId), where("branchId", "==", branchId)]
       : [where("schoolId", "==", schoolId)];
@@ -117,86 +150,126 @@ const Attendance = () => {
       query(
         collection(db, "classes"),
         ...tenant,
-        where("teacherId", "==", teacherData.id),
+        where("teacherId", "==", teacherId),
       ),
       (snap) => {
         const cls: ClassDoc[] = snap.docs.map(d => ({ ...d.data(), id: d.id }));
         setClasses(cls);
-        setSelectedClassId(p => p || cls[0]?.id || "");
-        if (!cls.length) setLoading(false);
+        // Prefer per-teacher persisted choice; fall back to generic key, then
+        // first available class. If the persisted class no longer exists in
+        // this teacher's roster (e.g., reassigned), drop back to first.
+        setSelectedClassId(prev => {
+          let pref = prev;
+          if (!pref) {
+            try {
+              pref = localStorage.getItem(SELECTED_CLASS_KEY(teacherId)) ||
+                     localStorage.getItem("teacher_attendance_selected_class") || "";
+            } catch { /* noop */ }
+          }
+          if (pref && cls.some(c => c.id === pref)) return pref;
+          return cls[0]?.id || "";
+        });
+        setClassesLoading(false);
       }
     );
   }, [teacherData?.id, teacherData?.schoolId, teacherData?.branchId]);
 
-  // 2. Enrollments
+  // 2. Enrollments — live listener (was one-shot getDocs, which missed
+  // mid-session enrollment changes). Per-class onSnapshot with a Map-based
+  // accumulator keyed by classId so a single class update only replaces its
+  // own slice.
   useEffect(() => {
     if (!classes.length || !teacherData?.schoolId) { setEnrollments([]); return; }
     const schoolId = teacherData.schoolId;
-    const branchId = teacherData.branchId as string | undefined;
-    const tenant: QueryConstraint[] = branchId
-      ? [where("schoolId", "==", schoolId), where("branchId", "==", branchId)]
-      : [where("schoolId", "==", schoolId)];
-    let ignore = false;
-    Promise.all(classes.map(c => getDocs(query(
-      collection(db, "enrollments"),
-      ...tenant,
-      where("classId", "==", c.id),
-    ))))
-      .then(snaps => {
-        if (ignore) return;
-        const all: EnrollmentDoc[] = [];
-        snaps.forEach(s => s.docs.forEach(d => all.push({ ...d.data(), id: d.id })));
-        setEnrollments(all);
-      })
-      .catch(e => console.error("[Attendance] enrollments fetch failed", e));
-    return () => { ignore = true; };
-  }, [classes, teacherData?.schoolId, teacherData?.branchId]);
+    const byClass = new Map<string, EnrollmentDoc[]>();
+    const flush = () => {
+      const all: EnrollmentDoc[] = [];
+      byClass.forEach(rows => rows.forEach(r => all.push(r)));
+      setEnrollments(all);
+    };
+    const unsubs = classes.map(c => onSnapshot(
+      query(
+        collection(db, "enrollments"),
+        where("schoolId", "==", schoolId),
+        where("classId", "==", c.id),
+      ),
+      snap => {
+        byClass.set(c.id, snap.docs.map(d => ({ ...d.data(), id: d.id })));
+        flush();
+      },
+      err => console.warn("[Attendance/enrollments]", c.id, err.code),
+    ));
+    return () => unsubs.forEach(u => u());
+  }, [classes, teacherData?.schoolId]);
 
-  // 3. Attendance records
+  // 3. Attendance records — schoolId + teacherId only. NEVER branchId on
+  // event streams (silent killer pattern: fresh writes hidden during
+  // inference-lag window). teacherId already enforces branch boundary
+  // because each teacher belongs to exactly one branch. Loading flag NOT
+  // re-set on subsequent runs — first snapshot drops the page-loader and
+  // any later re-fires (classes.length change) just stream new data into
+  // place without flicker.
   useEffect(() => {
-    if (!teacherData?.id || !teacherData?.schoolId || !classes.length) { setRecords([]); setLoading(false); return; }
-    const schoolId = teacherData.schoolId;
-    const branchId = teacherData.branchId as string | undefined;
-    const tenant: QueryConstraint[] = branchId
-      ? [where("schoolId", "==", schoolId), where("branchId", "==", branchId)]
-      : [where("schoolId", "==", schoolId)];
-    setLoading(true);
+    if (!teacherData?.id || !teacherData?.schoolId || !classes.length) { setRecords([]); return; }
     return onSnapshot(
       query(
         collection(db, "attendance"),
-        ...tenant,
+        where("schoolId", "==", teacherData.schoolId),
         where("teacherId", "==", teacherData.id),
       ),
       (snap) => {
         setRecords(snap.docs.map(d => ({ ...d.data(), id: d.id } as AttendanceRecord)));
-        setLoading(false);
       }
     );
-  }, [teacherData?.id, teacherData?.schoolId, teacherData?.branchId, classes.length]);
+  }, [teacherData?.id, teacherData?.schoolId, classes.length, refreshKey]);
+
+  const loading = classesLoading;
 
   const todayStr = todayISO();
 
-  // Stats
+  // Defensive class match — primary check is classId === selectedClassId, but
+  // also accept className === selectedClass.name as a fallback so legacy
+  // records (imported from Excel uploads or written by older code paths that
+  // stored only className) still match. Without this fallback, a teacher
+  // could mark attendance, see the success toast, and the day card would
+  // still show "Not marked" because the historical/imported records used a
+  // different identifier shape.
+  const selectedClass = classes.find(c => c.id === selectedClassId);
+  const recordMatchesSelectedClass = (r: AttendanceRecord) => {
+    if (!selectedClassId) return false;
+    if (r.classId === selectedClassId) return true;
+    if (selectedClass && (r as { className?: string }).className === selectedClass.name) return true;
+    return false;
+  };
+
+  // Stats — hero rate is now scoped to TODAY + selectedClassId so the
+  // "Today · {className}" header is honest. Cumulative all-time rate was
+  // misleading. Includes a separate `hasAnyRecord` flag so genuine 0% turnout
+  // (everyone absent today) renders as "0.0%" instead of "No data".
   const stats = useMemo(() => {
-    const todayRec = records.filter(r => r.date === todayStr);
-    const total = records.length;
-    const pres  = records.filter(r => r.status === "present" || r.status === "late").length;
-    const rate  = total > 0 ? (pres / total) * 100 : 0;
+    const todayRec = records.filter(r => r.date === todayStr && (!selectedClassId || recordMatchesSelectedClass(r)));
+    const presentToday = todayRec.filter(r => r.status === "present").length;
+    const absentToday  = todayRec.filter(r => r.status === "absent").length;
+    const lateToday    = todayRec.filter(r => r.status === "late").length;
+    const totalToday   = todayRec.length;
+    const rate = totalToday > 0 ? ((presentToday + lateToday) / totalToday) * 100 : 0;
     return {
       rateNum: Number(rate.toFixed(1)),
-      rateStr: total > 0 ? `${rate.toFixed(1)}%` : "0%",
-      presentToday: todayRec.filter(r => r.status === "present").length,
-      absentToday:  todayRec.filter(r => r.status === "absent").length,
-      lateToday:    todayRec.filter(r => r.status === "late").length,
+      hasAnyRecord: totalToday > 0,
+      presentToday, absentToday, lateToday,
     };
-  }, [records, todayStr]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [records, todayStr, selectedClassId, selectedClass?.name]);
 
-  // Weekly days (5 past + today + 2 upcoming)
+  // Weekly days — 5 cards (2 past + today + 2 upcoming) so the entire row
+  // fits on screen without horizontal scrolling. Used to be 8 cards which
+  // forced a swipe interaction users disliked, and pushed today's card off
+  // the visible area into a horizontal scroll region.
   const weeklyDays = useMemo(() => {
     const todayDate = new Date(); todayDate.setHours(0,0,0,0);
     const makeDay = (d: Date, isFuture = false) => {
       const dateStr = d.toLocaleDateString("en-CA");
-      const dayRecs = records.filter(r => r.date === dateStr && r.classId === selectedClassId);
+      const dayRecs = records.filter(r => r.date === dateStr && recordMatchesSelectedClass(r));
       const pres    = dayRecs.filter(r => r.status === "present" || r.status === "late").length;
       const abs     = dayRecs.filter(r => r.status === "absent").length;
       const total   = enrollments.filter(e => e.classId === selectedClassId).length || 1;
@@ -215,7 +288,7 @@ const Attendance = () => {
     };
     const past: ReturnType<typeof makeDay>[] = [];
     const cur = new Date(todayDate); cur.setDate(cur.getDate() - 1);
-    while (past.length < 5) {
+    while (past.length < 2) {
       if (cur.getDay() !== 0 && cur.getDay() !== 6) past.unshift(makeDay(new Date(cur)));
       cur.setDate(cur.getDate() - 1);
     }
@@ -226,18 +299,23 @@ const Attendance = () => {
       if (fut.getDay() !== 0 && fut.getDay() !== 6) upcoming.push(makeDay(new Date(fut), true));
     }
     return [...past, makeDay(todayDate), ...upcoming];
-  }, [records, enrollments, selectedClassId, todayStr]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [records, enrollments, selectedClassId, todayStr, selectedClass?.name]);
 
-  // Concerns
+  // Concerns — month-to-date, scoped to the currently-selected class. Used to
+  // be teacher-wide which conflicted with the visual context (panel sits
+  // beside the class-tabbed Weekly Overview).
   const concerns = useMemo(() => {
     const ms = todayStr.slice(0, 7);
     const map: Record<string, { name: string; absent: number; late: number }> = {};
-    records.filter(r => r.date?.startsWith(ms)).forEach(r => {
-      const k = r.studentId || r.studentEmail; if (!k) return;
-      if (!map[k]) map[k] = { name: r.studentName || "Student", absent: 0, late: 0 };
-      if (r.status === "absent") map[k].absent++;
-      if (r.status === "late")   map[k].late++;
-    });
+    records
+      .filter(r => r.date?.startsWith(ms) && (!selectedClassId || recordMatchesSelectedClass(r)))
+      .forEach(r => {
+        const k = r.studentId || r.studentEmail; if (!k) return;
+        if (!map[k]) map[k] = { name: r.studentName || "Student", absent: 0, late: 0 };
+        if (r.status === "absent") map[k].absent++;
+        if (r.status === "late")   map[k].late++;
+      });
     return Object.values(map).filter(s => s.absent >= 2 || s.late >= 3)
       .sort((a, b) => (b.absent + b.late) - (a.absent + a.late)).slice(0, 3)
       .map(s => ({
@@ -247,11 +325,31 @@ const Attendance = () => {
           ? { text: "At risk",   bg: T.redL,   color: T.red   }
           : { text: "Follow up", bg: T.amberL, color: T.amber },
       }));
-  }, [records, todayStr]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [records, todayStr, selectedClassId, selectedClass?.name]);
 
-  const activeClass  = classes.find(c => c.id === selectedClassId);
+  const activeClass  = selectedClass;
 
-  if (marking) return <MarkAttendance initialClassId={markingClassId || selectedClassId} onBack={() => setMarking(false)} />;
+  // Sync selectedClassId from MarkAttendance — if the user switched classes
+  // inside that screen and saved a different one, Attendance must reflect
+  // that, otherwise the day card for the original class would still show
+  // "Tap to mark" even though the OTHER class was just marked.
+  // Also bump refreshKey so the records onSnapshot re-subscribes — guards
+  // against the rare case where the live snapshot hasn't yet observed our
+  // own write, leaving the day card stuck on "Not marked" / "Tap to mark"
+  // even though the data exists in Firestore.
+  if (marking) return <MarkAttendance
+    initialClassId={markingClassId || selectedClassId}
+    onBack={(savedClassId) => {
+      setMarking(false);
+      if (savedClassId) {
+        if (savedClassId !== selectedClassId) {
+          setSelectedClassId(savedClassId);
+        }
+        setRefreshKey(k => k + 1);
+      }
+    }}
+  />;
 
   if (loading) return (
     <div className="h-[60vh] flex items-center justify-center">
@@ -301,27 +399,27 @@ const Attendance = () => {
               </div>
               <div className="ml-auto flex items-center gap-[6px] px-3 py-[5px] rounded-full text-[10px] font-bold"
                 style={{
-                  background: stats.rateNum >= 85 ? "rgba(0,232,102,0.18)" : stats.rateNum >= 70 ? "rgba(255,170,0,0.22)" : stats.rateNum > 0 ? "rgba(255,51,85,0.18)" : "rgba(255,255,255,0.14)",
-                  border: `0.5px solid ${stats.rateNum >= 85 ? "rgba(0,232,102,0.5)" : stats.rateNum >= 70 ? "rgba(255,170,0,0.5)" : stats.rateNum > 0 ? "rgba(255,51,85,0.5)" : "rgba(255,255,255,0.22)"}`,
-                  color: stats.rateNum >= 85 ? "#6FFFAA" : stats.rateNum >= 70 ? "#FFD166" : stats.rateNum > 0 ? "#FF99AA" : "rgba(255,255,255,0.72)",
+                  background: !stats.hasAnyRecord ? "rgba(255,255,255,0.14)" : stats.rateNum >= 85 ? "rgba(0,232,102,0.18)" : stats.rateNum >= 70 ? "rgba(255,170,0,0.22)" : "rgba(255,51,85,0.18)",
+                  border: `0.5px solid ${!stats.hasAnyRecord ? "rgba(255,255,255,0.22)" : stats.rateNum >= 85 ? "rgba(0,232,102,0.5)" : stats.rateNum >= 70 ? "rgba(255,170,0,0.5)" : "rgba(255,51,85,0.5)"}`,
+                  color: !stats.hasAnyRecord ? "rgba(255,255,255,0.72)" : stats.rateNum >= 85 ? "#6FFFAA" : stats.rateNum >= 70 ? "#FFD166" : "#FF99AA",
                   letterSpacing: "0.3px",
                 }}>
                 <span className="w-[6px] h-[6px] rounded-full" style={{
-                  background: stats.rateNum >= 85 ? "#00FF88" : stats.rateNum >= 70 ? "#FFCC22" : stats.rateNum > 0 ? "#FF5577" : "#fff",
-                  boxShadow: `0 0 8px ${stats.rateNum >= 85 ? "#00FF88" : stats.rateNum >= 70 ? "#FFCC22" : stats.rateNum > 0 ? "#FF5577" : "#fff"}`,
+                  background: !stats.hasAnyRecord ? "#fff" : stats.rateNum >= 85 ? "#00FF88" : stats.rateNum >= 70 ? "#FFCC22" : "#FF5577",
+                  boxShadow: `0 0 8px ${!stats.hasAnyRecord ? "#fff" : stats.rateNum >= 85 ? "#00FF88" : stats.rateNum >= 70 ? "#FFCC22" : "#FF5577"}`,
                 }} />
-                {stats.rateNum >= 85 ? "On Track" : stats.rateNum >= 70 ? "Watch" : stats.rateNum > 0 ? "Low" : "No data"}
+                {!stats.hasAnyRecord ? "No data" : stats.rateNum >= 85 ? "On Track" : stats.rateNum >= 70 ? "Watch" : "Low"}
               </div>
             </div>
             <div className="text-[56px] font-bold text-white leading-none mb-[8px] flex items-baseline gap-[2px]" style={{ letterSpacing: "-2.6px" }}>
-              {stats.rateNum > 0 ? stats.rateNum.toFixed(1) : "—"}
-              {stats.rateNum > 0 && <span className="text-[28px] font-bold" style={{ color: "rgba(255,255,255,0.68)", letterSpacing: "-0.8px" }}>%</span>}
+              {stats.hasAnyRecord ? stats.rateNum.toFixed(1) : "—"}
+              {stats.hasAnyRecord && <span className="text-[28px] font-bold" style={{ color: "rgba(255,255,255,0.68)", letterSpacing: "-0.8px" }}>%</span>}
             </div>
             <div className="text-[13px] font-medium mb-[20px]" style={{ color: "rgba(255,255,255,0.72)", letterSpacing: "-0.15px" }}>
               <b className="text-white font-bold">
-                {stats.rateNum >= 85 ? "Excellent turnout" : stats.rateNum >= 70 ? "Steady turnout" : stats.rateNum > 0 ? "Needs attention" : "No records yet"}
+                {!stats.hasAnyRecord ? "No records yet" : stats.rateNum >= 85 ? "Excellent turnout" : stats.rateNum >= 70 ? "Steady turnout" : stats.rateNum > 0 ? "Needs attention" : "Critical turnout"}
               </b>
-              {stats.rateNum > 0 ? " today — tracking overall performance." : " — mark today to start tracking."}
+              {stats.hasAnyRecord ? " today — tracking class performance." : " — mark today to start tracking."}
             </div>
             <div className="grid grid-cols-3 gap-[1px] rounded-[14px] overflow-hidden p-[1px]" style={{ background: "rgba(255,255,255,0.1)" }}>
               <div className="py-[13px] px-[6px] text-center" style={{ background: "rgba(0,20,80,0.55)" }}>
@@ -347,7 +445,7 @@ const Attendance = () => {
             className="w-full h-[48px] rounded-[14px] flex items-center justify-center gap-[6px] active:scale-[0.98] transition-transform"
             style={{ background: MA.GREEN, color: "#fff", fontSize: 13, fontWeight: 700, letterSpacing: "-0.2px", fontFamily: MA.FONT }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            Mark today's attendance
+            {stats.hasAnyRecord ? "Edit today's attendance" : "Mark today's attendance"}
           </button>
         </div>
 
@@ -424,22 +522,28 @@ const Attendance = () => {
                 )}
               </div>
             </div>
-            <button type="button" onClick={() => navigate('/reports')}
-              className="text-[12px] font-bold flex items-center gap-[2px] active:opacity-70" style={{ color: MA.P }}>
+            <button type="button"
+              onClick={() => selectedClassId && navigate(`/my-classes/${selectedClassId}`)}
+              disabled={!selectedClassId}
+              aria-label="Open this class's full attendance log"
+              className="text-[12px] font-bold flex items-center gap-[2px] active:opacity-70 disabled:opacity-40" style={{ color: MA.P }}>
               View all <span className="text-[18px] opacity-80 -mt-[3px]">›</span>
             </button>
           </div>
 
-          <div className="flex gap-[10px] overflow-x-auto pb-1 -mx-[16px] px-[16px]" style={{ scrollbarWidth: "none" as const }}>
+          {/* Fixed 5-col grid — fits the full week-view on screen, no swipe. */}
+          <div className="grid grid-cols-5 gap-[6px]">
             {weeklyDays.map((day, i) => {
               const isPending = day.isToday && !day.hasData && !day.isWeekend;
               const onClickCard = isPending ? () => { setMarkingClassId(selectedClassId); setMarking(true); } : undefined;
               return (
                 <div key={i}
                   onClick={onClickCard}
+                  onKeyDown={onClickCard ? (e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClickCard(); } }) : undefined}
                   role={onClickCard ? "button" : undefined}
                   tabIndex={onClickCard ? 0 : undefined}
-                  className={`flex-shrink-0 w-[128px] rounded-[16px] p-[12px] relative overflow-hidden ${onClickCard ? "active:scale-[0.97]" : ""}`}
+                  aria-label={onClickCard ? "Mark today's attendance" : undefined}
+                  className={`min-w-0 rounded-[14px] p-[8px] relative overflow-hidden ${onClickCard ? "active:scale-[0.97]" : ""}`}
                   style={{
                     background: day.isToday ? "linear-gradient(145deg, #0055FF 0%, #2970FF 100%)" : MA.SURFACE,
                     boxShadow: day.isToday ? "0 1px 2px rgba(9,87,247,0.2), 0 6px 16px rgba(9,87,247,0.35)" : "none",
@@ -448,55 +552,26 @@ const Attendance = () => {
                     transition: "transform .15s ease",
                   }}>
                   {day.isToday && (
-                    <>
-                      <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 45%)" }} />
-                      <div className="absolute top-[10px] right-[10px] text-[8px] font-bold px-[7px] py-[3px] rounded-full uppercase"
-                        style={{ background: "rgba(255,255,255,0.25)", backdropFilter: "blur(8px)", color: "#fff", border: "0.5px solid rgba(255,255,255,0.3)", letterSpacing: "0.5px" }}>
-                        Today
-                      </div>
-                    </>
-                  )}
-                  {day.isFuture && (
-                    <div className="absolute top-[10px] right-[10px] text-[8px] font-bold px-[7px] py-[3px] rounded-full uppercase"
-                      style={{ background: "rgba(9,87,247,0.1)", color: MA.P, letterSpacing: "0.5px" }}>
-                      Upcoming
-                    </div>
+                    <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 45%)" }} />
                   )}
                   <div className="relative z-[2]">
-                    <div className="text-[9px] font-bold uppercase" style={{ color: day.isToday ? "rgba(255,255,255,0.8)" : MA.T3, letterSpacing: "1.3px", marginBottom: 3 }}>
-                      {day.label}
+                    <div className="text-[8px] font-bold uppercase truncate" style={{ color: day.isToday ? "rgba(255,255,255,0.8)" : MA.T3, letterSpacing: "1.1px", marginBottom: 2 }}>
+                      {day.isToday ? "Today" : day.label}
                     </div>
-                    <div className="text-[17px] font-bold mb-[10px]" style={{ color: day.isToday ? "#fff" : MA.T1, letterSpacing: "-0.5px" }}>
+                    <div className="text-[12px] font-bold mb-[6px] truncate" style={{ color: day.isToday ? "#fff" : MA.T1, letterSpacing: "-0.3px" }}>
                       {day.dateLabel}
                     </div>
                     {day.hasData ? (
-                      <>
-                        <div className="flex flex-col gap-[5px] mb-[10px]">
-                          <div className="flex justify-between items-center text-[10px]">
-                            <span className="font-semibold" style={{ color: day.isToday ? "rgba(255,255,255,0.7)" : MA.T3 }}>Present</span>
-                            <span className="font-bold" style={{ color: day.isToday ? "#6FFFAA" : MA.GREEN, letterSpacing: "-0.2px" }}>{day.present}</span>
-                          </div>
-                          <div className="flex justify-between items-center text-[10px]">
-                            <span className="font-semibold" style={{ color: day.isToday ? "rgba(255,255,255,0.7)" : MA.T3 }}>Absent</span>
-                            <span className="font-bold" style={{ color: day.isToday ? "#FF9AA9" : MA.RED, letterSpacing: "-0.2px" }}>{day.absent}</span>
-                          </div>
-                        </div>
-                        <div className="text-[17px] font-bold" style={{
-                          color: day.isToday ? "#fff" : (parseFloat(day.rate!) >= 85 ? MA.GREEN : parseFloat(day.rate!) >= 70 ? MA.ORANGE : MA.RED),
-                          letterSpacing: "-0.5px",
-                        }}>{day.rate}</div>
-                      </>
+                      <div className="text-[13px] font-bold truncate" style={{
+                        color: day.isToday ? "#fff" : (parseFloat(day.rate!) >= 85 ? MA.GREEN : parseFloat(day.rate!) >= 70 ? MA.ORANGE : MA.RED),
+                        letterSpacing: "-0.4px",
+                      }}>{day.rate}</div>
+                    ) : isPending ? (
+                      <div className="text-[10px] font-bold truncate" style={{ color: MA.P }}>Tap ›</div>
                     ) : (
-                      <>
-                        <div className="flex flex-col gap-[5px] mb-[10px]" style={{ minHeight: 50 }} />
-                        {isPending ? (
-                          <div className="text-[11px] font-bold" style={{ color: MA.P }}>Tap to mark ›</div>
-                        ) : (
-                          <div className="text-[10px] font-semibold italic" style={{ color: day.isFuture ? MA.P : day.isForgotten ? MA.ORANGE : MA.T4, letterSpacing: "-0.1px" }}>
-                            {day.isWeekend ? "Weekend" : day.isFuture ? "Upcoming" : day.isForgotten ? "Not marked" : "—"}
-                          </div>
-                        )}
-                      </>
+                      <div className="text-[9px] font-semibold italic truncate" style={{ color: day.isFuture ? MA.P : day.isForgotten ? MA.ORANGE : MA.T4 }}>
+                        {day.isWeekend ? "Off" : day.isFuture ? "Upcoming" : day.isForgotten ? "Not marked" : "—"}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -515,7 +590,7 @@ const Attendance = () => {
               <div>
                 <div className="text-[14px] font-bold" style={{ color: MA.T1, letterSpacing: "-0.3px" }}>Attendance Concerns</div>
                 <div className="text-[11px] font-semibold mt-[1px]" style={{ color: MA.T3, letterSpacing: "-0.1px" }}>
-                  {concerns.length === 0 ? "No flagged students" : `${concerns.length} student${concerns.length === 1 ? "" : "s"} need follow up`}
+                  {concerns.length === 0 ? "No flagged students" : `${concerns.length} student${concerns.length === 1 ? "" : "s"} need follow up`}{activeClass ? ` · ${activeClass.name}` : ""}
                 </div>
               </div>
             </div>
@@ -563,11 +638,13 @@ const Attendance = () => {
           )}
         </div>
 
-        {/* AI Intelligence */}
+        {/* Attendance Insights — rule-based summary, was previously labeled
+            "AI" which violated the AI strategy memo (no model behind these
+            threshold templates). Renamed for honesty. */}
         {(() => {
           const unmarkedCount = weeklyDays.filter(d => d.isForgotten).length;
           const roster = enrollments.filter(e => e.classId === selectedClassId).length;
-          const rateLabel = stats.rateNum > 0 ? `${stats.rateNum.toFixed(1)}%` : "—";
+          const rateLabel = stats.hasAnyRecord ? `${stats.rateNum.toFixed(1)}%` : "—";
           return (
             <div className="mx-4 mb-[14px] rounded-[24px] p-[20px] relative overflow-hidden"
               style={{
@@ -577,36 +654,35 @@ const Attendance = () => {
               <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.09) 0%, transparent 45%)" }} />
               <div className="relative z-[2]">
                 <div className="flex items-center gap-[11px] mb-[12px]">
-                  <div className="w-10 h-10 rounded-[13px] flex items-center justify-center text-[19px]"
+                  <div className="w-10 h-10 rounded-[13px] flex items-center justify-center"
                     style={{
                       background: "rgba(255,255,255,0.14)",
                       backdropFilter: "blur(22px)",
                       WebkitBackdropFilter: "blur(22px)",
                       border: "0.5px solid rgba(255,255,255,0.22)",
-                      color: "#FFDD55",
-                    }}>⚡</div>
-                  <div className="text-[10px] font-bold uppercase" style={{ color: "rgba(255,255,255,0.95)", letterSpacing: "1.8px" }}>
-                    AI Attendance Intelligence
+                    }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
                   </div>
-                  <div className="ml-auto px-[9px] py-[4px] rounded-full text-[9px] font-bold"
-                    style={{ background: "rgba(123,63,244,0.3)", border: "0.5px solid rgba(155,95,255,0.5)", color: "#DCC8FF", letterSpacing: "0.5px" }}>
-                    Live
+                  <div className="text-[10px] font-bold uppercase" style={{ color: "rgba(255,255,255,0.95)", letterSpacing: "1.8px" }}>
+                    Attendance Insights
                   </div>
                 </div>
                 <div className="text-[13px] leading-[1.6] mb-[14px]" style={{ color: "rgba(255,255,255,0.85)", letterSpacing: "-0.15px" }}>
-                  {stats.rateNum >= 85 ? (
-                    <>Turnout is <strong className="text-white font-bold">strong</strong> with an overall rate of <strong className="text-white font-bold">{rateLabel}</strong>.{unmarkedCount > 0 && <> <strong className="text-white font-bold">{unmarkedCount} day{unmarkedCount === 1 ? "" : "s"}</strong> {unmarkedCount === 1 ? "was" : "were"} unmarked — mark retroactively to improve accuracy.</>}</>
+                  {!stats.hasAnyRecord ? (
+                    <>No attendance has been recorded yet. <strong className="text-white font-bold">Tap "Mark today"</strong> to begin tracking turnout for this class.</>
+                  ) : stats.rateNum >= 85 ? (
+                    <>Turnout is <strong className="text-white font-bold">strong</strong> at <strong className="text-white font-bold">{rateLabel}</strong>.{unmarkedCount > 0 && <> <strong className="text-white font-bold">{unmarkedCount} day{unmarkedCount === 1 ? "" : "s"}</strong> {unmarkedCount === 1 ? "was" : "were"} unmarked — mark retroactively to improve accuracy.</>}</>
                   ) : stats.rateNum >= 70 ? (
                     <>Turnout is <strong className="text-white font-bold">steady</strong> at <strong className="text-white font-bold">{rateLabel}</strong>. Keep an eye on repeat absences this week.</>
                   ) : stats.rateNum > 0 ? (
-                    <>Overall rate of <strong className="text-white font-bold">{rateLabel}</strong> is <strong className="text-white font-bold">below target</strong>. Review concerns and follow up with parents.</>
+                    <>Today's rate of <strong className="text-white font-bold">{rateLabel}</strong> is <strong className="text-white font-bold">below target</strong>. Review concerns and follow up with parents.</>
                   ) : (
-                    <>No attendance has been recorded yet. <strong className="text-white font-bold">Tap "Mark today"</strong> to begin tracking turnout for this class.</>
+                    <>Today's rate is <strong className="text-white font-bold">0%</strong>. Every student is currently marked absent — confirm or correct.</>
                   )}
                 </div>
                 <div className="grid grid-cols-3 gap-[1px] rounded-[12px] overflow-hidden p-[1px]" style={{ background: "rgba(255,255,255,0.1)" }}>
                   <div className="py-[11px] px-[4px] text-center" style={{ background: "rgba(0,20,80,0.55)" }}>
-                    <div className="text-[17px] font-bold" style={{ color: stats.rateNum >= 85 ? "#6FFFAA" : "#fff", letterSpacing: "-0.4px" }}>{rateLabel}</div>
+                    <div className="text-[17px] font-bold" style={{ color: stats.hasAnyRecord && stats.rateNum >= 85 ? "#6FFFAA" : "#fff", letterSpacing: "-0.4px" }}>{rateLabel}</div>
                     <div className="text-[8px] font-bold uppercase mt-[3px]" style={{ color: "rgba(255,255,255,0.6)", letterSpacing: "1px" }}>Rate</div>
                   </div>
                   <div className="py-[11px] px-[4px] text-center" style={{ background: "rgba(0,20,80,0.55)" }}>
@@ -665,29 +741,29 @@ const Attendance = () => {
                 </div>
                 <div className="ml-auto flex items-center gap-[6px] px-4 py-[7px] rounded-full text-[11px] font-bold"
                   style={{
-                    background: stats.rateNum >= 85 ? "rgba(0,232,102,0.18)" : stats.rateNum >= 70 ? "rgba(255,170,0,0.22)" : stats.rateNum > 0 ? "rgba(255,51,85,0.18)" : "rgba(255,255,255,0.14)",
-                    border: `0.5px solid ${stats.rateNum >= 85 ? "rgba(0,232,102,0.5)" : stats.rateNum >= 70 ? "rgba(255,170,0,0.5)" : stats.rateNum > 0 ? "rgba(255,51,85,0.5)" : "rgba(255,255,255,0.22)"}`,
-                    color: stats.rateNum >= 85 ? "#6FFFAA" : stats.rateNum >= 70 ? "#FFD166" : stats.rateNum > 0 ? "#FF99AA" : "rgba(255,255,255,0.72)",
+                    background: !stats.hasAnyRecord ? "rgba(255,255,255,0.14)" : stats.rateNum >= 85 ? "rgba(0,232,102,0.18)" : stats.rateNum >= 70 ? "rgba(255,170,0,0.22)" : "rgba(255,51,85,0.18)",
+                    border: `0.5px solid ${!stats.hasAnyRecord ? "rgba(255,255,255,0.22)" : stats.rateNum >= 85 ? "rgba(0,232,102,0.5)" : stats.rateNum >= 70 ? "rgba(255,170,0,0.5)" : "rgba(255,51,85,0.5)"}`,
+                    color: !stats.hasAnyRecord ? "rgba(255,255,255,0.72)" : stats.rateNum >= 85 ? "#6FFFAA" : stats.rateNum >= 70 ? "#FFD166" : "#FF99AA",
                     letterSpacing: "0.3px",
                   }}>
                   <span className="w-[6px] h-[6px] rounded-full" style={{
-                    background: stats.rateNum >= 85 ? "#00FF88" : stats.rateNum >= 70 ? "#FFCC22" : stats.rateNum > 0 ? "#FF5577" : "#fff",
-                    boxShadow: `0 0 8px ${stats.rateNum >= 85 ? "#00FF88" : stats.rateNum >= 70 ? "#FFCC22" : stats.rateNum > 0 ? "#FF5577" : "#fff"}`,
+                    background: !stats.hasAnyRecord ? "#fff" : stats.rateNum >= 85 ? "#00FF88" : stats.rateNum >= 70 ? "#FFCC22" : "#FF5577",
+                    boxShadow: `0 0 8px ${!stats.hasAnyRecord ? "#fff" : stats.rateNum >= 85 ? "#00FF88" : stats.rateNum >= 70 ? "#FFCC22" : "#FF5577"}`,
                   }} />
-                  {stats.rateNum >= 85 ? "On Track" : stats.rateNum >= 70 ? "Watch" : stats.rateNum > 0 ? "Low" : "No data"}
+                  {!stats.hasAnyRecord ? "No data" : stats.rateNum >= 85 ? "On Track" : stats.rateNum >= 70 ? "Watch" : "Low"}
                 </div>
               </div>
               <div className="flex items-end justify-between gap-8 flex-wrap">
                 <div>
                   <div className="text-[84px] font-bold text-white leading-none mb-[6px] flex items-baseline gap-[2px]" style={{ letterSpacing: "-3.8px" }}>
-                    {stats.rateNum > 0 ? stats.rateNum.toFixed(1) : "—"}
-                    {stats.rateNum > 0 && <span className="text-[40px] font-bold" style={{ color: "rgba(255,255,255,0.68)", letterSpacing: "-1px" }}>%</span>}
+                    {stats.hasAnyRecord ? stats.rateNum.toFixed(1) : "—"}
+                    {stats.hasAnyRecord && <span className="text-[40px] font-bold" style={{ color: "rgba(255,255,255,0.68)", letterSpacing: "-1px" }}>%</span>}
                   </div>
                   <div className="text-[14px] font-medium" style={{ color: "rgba(255,255,255,0.72)", letterSpacing: "-0.15px" }}>
                     <b className="text-white font-bold">
-                      {stats.rateNum >= 85 ? "Excellent turnout" : stats.rateNum >= 70 ? "Steady turnout" : stats.rateNum > 0 ? "Needs attention" : "No records yet"}
+                      {!stats.hasAnyRecord ? "No records yet" : stats.rateNum >= 85 ? "Excellent turnout" : stats.rateNum >= 70 ? "Steady turnout" : stats.rateNum > 0 ? "Needs attention" : "Critical turnout"}
                     </b>
-                    {stats.rateNum > 0 ? " today — tracking overall performance." : " — mark today to start tracking."}
+                    {stats.hasAnyRecord ? " today — tracking class performance." : " — mark today to start tracking."}
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-[1px] rounded-[14px] overflow-hidden p-[1px] min-w-[380px]" style={{ background: "rgba(255,255,255,0.1)" }}>
@@ -717,7 +793,7 @@ const Attendance = () => {
               <div className="w-11 h-11 rounded-[12px] flex items-center justify-center" style={{ background: "rgba(255,255,255,0.2)" }}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               </div>
-              <div>Mark today's attendance</div>
+              <div>{stats.hasAnyRecord ? "Edit today's attendance" : "Mark today's attendance"}</div>
             </button>
             {([
               { key: "present", color: MA.GREEN, value: stats.presentToday, label: "Present", onClick: () => navigate('/students'),
@@ -793,22 +869,28 @@ const Attendance = () => {
                     )}
                   </div>
                 </div>
-                <button type="button" onClick={() => navigate('/reports')}
-                  className="text-[13px] font-bold flex items-center gap-[2px] active:opacity-70 hover:bg-[#EEF4FF] py-1 px-2 rounded-[8px] transition-colors" style={{ color: MA.P }}>
+                <button type="button"
+                  onClick={() => selectedClassId && navigate(`/my-classes/${selectedClassId}`)}
+                  disabled={!selectedClassId}
+                  aria-label="Open this class's full attendance log"
+                  className="text-[13px] font-bold flex items-center gap-[2px] active:opacity-70 hover:bg-[#EEF4FF] py-1 px-2 rounded-[8px] transition-colors disabled:opacity-40 disabled:hover:bg-transparent" style={{ color: MA.P }}>
                   View all <span className="text-[18px] opacity-80 -mt-[3px]">›</span>
                 </button>
               </div>
 
-              <div className="flex gap-[10px] overflow-x-auto pb-1" style={{ scrollbarWidth: "none" as const }}>
+              {/* Fixed 5-col grid — full week view, no swipe needed. */}
+              <div className="grid grid-cols-5 gap-[10px]">
                 {weeklyDays.map((day, i) => {
                   const isPending = day.isToday && !day.hasData && !day.isWeekend;
                   const onClickCard = isPending ? () => { setMarkingClassId(selectedClassId); setMarking(true); } : undefined;
                   return (
                     <div key={i}
                       onClick={onClickCard}
+                      onKeyDown={onClickCard ? (e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClickCard(); } }) : undefined}
                       role={onClickCard ? "button" : undefined}
                       tabIndex={onClickCard ? 0 : undefined}
-                      className={`flex-shrink-0 w-[128px] rounded-[16px] p-[12px] relative overflow-hidden ${onClickCard ? "active:scale-[0.97]" : ""}`}
+                      aria-label={onClickCard ? "Mark today's attendance" : undefined}
+                      className={`min-w-0 rounded-[16px] p-[12px] relative overflow-hidden ${onClickCard ? "active:scale-[0.97]" : ""}`}
                       style={{
                         background: day.isToday ? "linear-gradient(145deg, #0055FF 0%, #2970FF 100%)" : MA.SURFACE,
                         boxShadow: day.isToday ? "0 1px 2px rgba(9,87,247,0.2), 0 6px 16px rgba(9,87,247,0.35)" : "none",
@@ -884,7 +966,7 @@ const Attendance = () => {
                   <div>
                     <div className="text-[16px] font-bold" style={{ color: MA.T1, letterSpacing: "-0.35px" }}>Attendance Concerns</div>
                     <div className="text-[12px] font-semibold mt-[2px]" style={{ color: MA.T3, letterSpacing: "-0.1px" }}>
-                      {concerns.length === 0 ? "No flagged students" : `${concerns.length} student${concerns.length === 1 ? "" : "s"} need follow up`}
+                      {concerns.length === 0 ? "No flagged students" : `${concerns.length} student${concerns.length === 1 ? "" : "s"} need follow up`}{activeClass ? ` · ${activeClass.name}` : ""}
                     </div>
                   </div>
                 </div>
@@ -934,11 +1016,11 @@ const Attendance = () => {
 
           </div>
 
-          {/* AI Intelligence */}
+          {/* Attendance Insights — see mobile note above. */}
           {(() => {
             const unmarkedCount = weeklyDays.filter(d => d.isForgotten).length;
             const roster = enrollments.filter(e => e.classId === selectedClassId).length;
-            const rateLabel = stats.rateNum > 0 ? `${stats.rateNum.toFixed(1)}%` : "—";
+            const rateLabel = stats.hasAnyRecord ? `${stats.rateNum.toFixed(1)}%` : "—";
             return (
               <div className="rounded-[26px] p-7 relative overflow-hidden"
                 style={{
@@ -948,36 +1030,35 @@ const Attendance = () => {
                 <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.09) 0%, transparent 45%)" }} />
                 <div className="relative z-[2]">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-[48px] h-[48px] rounded-[14px] flex items-center justify-center text-[22px]"
+                    <div className="w-[48px] h-[48px] rounded-[14px] flex items-center justify-center"
                       style={{
                         background: "rgba(255,255,255,0.14)",
                         backdropFilter: "blur(22px)",
                         WebkitBackdropFilter: "blur(22px)",
                         border: "0.5px solid rgba(255,255,255,0.22)",
-                        color: "#FFDD55",
-                      }}>⚡</div>
-                    <div className="text-[11px] font-bold uppercase" style={{ color: "rgba(255,255,255,0.95)", letterSpacing: "1.9px" }}>
-                      AI Attendance Intelligence
+                      }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
                     </div>
-                    <div className="ml-auto px-[11px] py-[5px] rounded-full text-[10px] font-bold"
-                      style={{ background: "rgba(123,63,244,0.3)", border: "0.5px solid rgba(155,95,255,0.5)", color: "#DCC8FF", letterSpacing: "0.5px" }}>
-                      Live
+                    <div className="text-[11px] font-bold uppercase" style={{ color: "rgba(255,255,255,0.95)", letterSpacing: "1.9px" }}>
+                      Attendance Insights
                     </div>
                   </div>
                   <div className="text-[14px] leading-[1.6] mb-5" style={{ color: "rgba(255,255,255,0.85)", letterSpacing: "-0.15px" }}>
-                    {stats.rateNum >= 85 ? (
-                      <>Turnout is <strong className="text-white font-bold">strong</strong> with an overall rate of <strong className="text-white font-bold">{rateLabel}</strong>.{unmarkedCount > 0 && <> <strong className="text-white font-bold">{unmarkedCount} day{unmarkedCount === 1 ? "" : "s"}</strong> {unmarkedCount === 1 ? "was" : "were"} unmarked — mark retroactively to improve accuracy.</>}</>
+                    {!stats.hasAnyRecord ? (
+                      <>No attendance has been recorded yet. <strong className="text-white font-bold">Click "Mark today"</strong> to begin tracking turnout for this class.</>
+                    ) : stats.rateNum >= 85 ? (
+                      <>Turnout is <strong className="text-white font-bold">strong</strong> at <strong className="text-white font-bold">{rateLabel}</strong>.{unmarkedCount > 0 && <> <strong className="text-white font-bold">{unmarkedCount} day{unmarkedCount === 1 ? "" : "s"}</strong> {unmarkedCount === 1 ? "was" : "were"} unmarked — mark retroactively to improve accuracy.</>}</>
                     ) : stats.rateNum >= 70 ? (
                       <>Turnout is <strong className="text-white font-bold">steady</strong> at <strong className="text-white font-bold">{rateLabel}</strong>. Keep an eye on repeat absences this week.</>
                     ) : stats.rateNum > 0 ? (
-                      <>Overall rate of <strong className="text-white font-bold">{rateLabel}</strong> is <strong className="text-white font-bold">below target</strong>. Review concerns and follow up with parents.</>
+                      <>Today's rate of <strong className="text-white font-bold">{rateLabel}</strong> is <strong className="text-white font-bold">below target</strong>. Review concerns and follow up with parents.</>
                     ) : (
-                      <>No attendance has been recorded yet. <strong className="text-white font-bold">Click "Mark today"</strong> to begin tracking turnout for this class.</>
+                      <>Today's rate is <strong className="text-white font-bold">0%</strong>. Every student is currently marked absent — confirm or correct.</>
                     )}
                   </div>
                   <div className="grid grid-cols-3 gap-[1px] rounded-[14px] overflow-hidden p-[1px]" style={{ background: "rgba(255,255,255,0.1)" }}>
                     <div className="py-4 px-3 text-center" style={{ background: "rgba(0,20,80,0.55)" }}>
-                      <div className="text-[22px] font-bold" style={{ color: stats.rateNum >= 85 ? "#6FFFAA" : "#fff", letterSpacing: "-0.6px" }}>{rateLabel}</div>
+                      <div className="text-[22px] font-bold" style={{ color: stats.hasAnyRecord && stats.rateNum >= 85 ? "#6FFFAA" : "#fff", letterSpacing: "-0.6px" }}>{rateLabel}</div>
                       <div className="text-[10px] font-bold uppercase mt-[4px]" style={{ color: "rgba(255,255,255,0.6)", letterSpacing: "1.1px" }}>Rate</div>
                     </div>
                     <div className="py-4 px-3 text-center" style={{ background: "rgba(0,20,80,0.55)" }}>

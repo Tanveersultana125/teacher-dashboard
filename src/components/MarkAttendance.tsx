@@ -3,7 +3,7 @@ import { Loader2 } from "lucide-react";
 import { db } from "../lib/firebase";
 import {
   collection, query, getDocs, where,
-  serverTimestamp, doc, onSnapshot, limit,
+  serverTimestamp, doc, onSnapshot,
   type QueryConstraint,
 } from "firebase/firestore";
 import { useAuth } from "../lib/AuthContext";
@@ -59,7 +59,12 @@ interface Student {
   status: "present" | "absent" | "late" | "none";
   note: string; initials: string; av: { bg: string; color: string };
 }
-interface Props { onBack: () => void; initialClassId?: string; }
+// onBack receives the classId that was last saved so the parent page can
+// sync its own selectedClassId — important because users CAN switch class
+// inside this screen, and without sync the Attendance page would still
+// show the original class as "not marked" after they actually marked a
+// different one.
+interface Props { onBack: (savedClassId?: string) => void; initialClassId?: string; }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 const MarkAttendance = ({ onBack, initialClassId }: Props) => {
@@ -88,20 +93,20 @@ const MarkAttendance = ({ onBack, initialClassId }: Props) => {
     );
   }, [teacherData?.id, teacherData?.schoolId, teacherData?.branchId]);
 
-  // Fetch roster + today's attendance
+  // Fetch roster + today's attendance — schoolId only (NO branchId on
+  // event streams, see Attendance.tsx note).
   useEffect(() => {
     if (!selectedClassId || !teacherData?.id || !teacherData?.schoolId) return;
     setLoading(true); setCurrentPage(1);
-    const SC: QueryConstraint[] = [where("schoolId", "==", teacherData.schoolId)];
-    if (teacherData.branchId) SC.push(where("branchId", "==", teacherData.branchId));
+    const schoolWhere = where("schoolId", "==", teacherData.schoolId);
 
     let ignore = false;
     const unsub = onSnapshot(
-      query(collection(db, "enrollments"), ...SC, where("classId", "==", selectedClassId)),
+      query(collection(db, "enrollments"), schoolWhere, where("classId", "==", selectedClassId)),
       async (snap) => {
         try {
           const logsSnap = await getDocs(
-            query(collection(db, "attendance"), ...SC, where("classId", "==", selectedClassId), where("date", "==", todayStr()))
+            query(collection(db, "attendance"), schoolWhere, where("classId", "==", selectedClassId), where("date", "==", todayStr()))
           );
           if (ignore) return;
           const logs = logsSnap.docs.map(d => d.data());
@@ -153,10 +158,18 @@ const MarkAttendance = ({ onBack, initialClassId }: Props) => {
     if (!teacherData.schoolId) return;
     setLoading(true);
     try {
-      const SC: QueryConstraint[] = [where("schoolId", "==", teacherData.schoolId)];
-      if (teacherData.branchId) SC.push(where("branchId", "==", teacherData.branchId));
+      // No branchId filter (event-stream rule). No limit either — the
+      // previous limit(200) silently failed for high-volume teachers
+      // because Firestore default order is doc-id, not date, so older
+      // dates could fall outside the window. Filter+sort client-side from
+      // the full class history scoped to this teacher.
       const snap = await getDocs(
-        query(collection(db, "attendance"), ...SC, where("classId", "==", selectedClassId), where("teacherId", "==", teacherData.id), limit(200))
+        query(
+          collection(db, "attendance"),
+          where("schoolId", "==", teacherData.schoolId),
+          where("classId", "==", selectedClassId),
+          where("teacherId", "==", teacherData.id),
+        )
       );
       const today = todayStr();
       type AttLog = { studentId?: string; date?: string; status?: Student["status"]; note?: string };
@@ -183,6 +196,8 @@ const MarkAttendance = ({ onBack, initialClassId }: Props) => {
     const selClass = classes.find(c => c.id === selectedClassId);
     try {
       if (!teacherData.schoolId) return;
+      // teaching_assignments IS a resolution entity — branchId filter is
+      // safe here. Keep it for tighter scope.
       const SC: QueryConstraint[] = [where("schoolId", "==", teacherData.schoolId)];
       if (teacherData.branchId) SC.push(where("branchId", "==", teacherData.branchId));
       let assignmentId = "legacy";
@@ -216,7 +231,7 @@ const MarkAttendance = ({ onBack, initialClassId }: Props) => {
         return;
       }
       toast.success(`Attendance saved! ${marked.length} students recorded.`);
-      onBack();
+      onBack(selectedClassId);
     } catch (e) { console.error("[MarkAttendance] save failed", e); toast.error("Failed to save attendance. Please try again."); }
     finally { setSaving(false); }
   };
