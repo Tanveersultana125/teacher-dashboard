@@ -351,15 +351,16 @@ export default function StudentProfile({ student, onBack, embedded = false }: Pr
     ));
 
     // Teacher's own enrollments for this student — drives the "Remove from
-    // class" picker. Filtered to the current teacher's email so we only
-    // expose enrollments the rule will actually let us delete.
-    const myEmailLower = (teacherData?.email || "").toLowerCase();
-    if (myEmailLower) {
+    // class" picker. Query by `teacherId` (always populated, both old and new
+    // enrollments) so the button shows up universally. Old enrollments without
+    // `teacherEmail` are still listed; the delete handler will lazy-backfill
+    // teacherEmail before the actual deleteDoc so the rule passes.
+    if (teacherData?.id) {
       unsubs.push(onSnapshot(
         query(collection(db, "enrollments"),
           where("schoolId", "==", schoolId),
           where("studentId", "==", sid),
-          where("teacherEmail", "==", myEmailLower),
+          where("teacherId", "==", teacherData.id),
         ),
         snap => {
           if (cancelled) return;
@@ -372,8 +373,6 @@ export default function StudentProfile({ student, onBack, embedded = false }: Pr
             };
           }));
         },
-        // Silent — pre-2026-05-21 enrollments lack teacherEmail; the picker
-        // will be empty for those students and the user can ask their admin.
         errH("enrollments-mine", { critical: false }),
       ));
     }
@@ -671,13 +670,34 @@ export default function StudentProfile({ student, onBack, embedded = false }: Pr
 
   // Remove this student from a specific class the teacher owns. Deletes ONLY
   // the enrollment doc — the student's master record (and other teachers'
-  // enrollments) stay intact. Cross-dashboard impact: parent-dashboard's
-  // class roster shrinks for that student; principal's roster aggregator
-  // recomputes on next load.
+  // enrollments) stay intact.
+  //
+  // For old enrollments (pre-2026-05-21) that lack `teacherEmail`, we do a
+  // lazy backfill BEFORE deleting — write the field, then delete. The Firestore
+  // rule requires teacherEmail-match, so this two-step keeps the UX one-click
+  // while letting old enrollments stay deletable by their owning teacher.
+  //
+  // Cross-dashboard impact: parent-dashboard class roster shrinks immediately;
+  // principal/owner aggregators recompute on next snapshot.
   const handleRemoveFromClass = async (enrollmentId: string, className: string) => {
     if (!enrollmentId) return;
     setRemovingId(enrollmentId);
     try {
+      // Lazy backfill teacherEmail so the delete rule's email match passes
+      const myEmailLower = (teacherData?.email || "").toLowerCase();
+      if (myEmailLower) {
+        try {
+          await auditedUpdate(doc(db, "enrollments", enrollmentId), {
+            teacherEmail: myEmailLower,
+          });
+        } catch (backfillErr: unknown) {
+          // Update may fail (e.g., schoolId immutability triggered by stale
+          // server side, or already-deleted doc). Ignore and let deleteDoc
+          // surface the real error.
+          console.warn("[StudentProfile] teacherEmail backfill failed:", backfillErr);
+        }
+      }
+
       await deleteDoc(doc(db, "enrollments", enrollmentId));
       toast.success(`${sName} removed from ${className || "class"}.`);
       // Optimistic local update so the picker shrinks immediately even
