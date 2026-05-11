@@ -39,7 +39,7 @@ function safeJsonParse(raw, label) {
     }
 }
 exports.getTeacherAIInsights = functions
-    .runWith({ secrets: [openaiApiKey], timeoutSeconds: 240, memory: "1GB" })
+    .runWith({ secrets: [openaiApiKey], timeoutSeconds: 240, memory: "2GB" })
     .https.onCall(async (data, context) => {
     // Auth + role gate (was auth-only, missing role check).
     requireRole(context, TEACHER_ROLES);

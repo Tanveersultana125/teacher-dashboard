@@ -47,7 +47,7 @@ function safeJsonParse<T = any>(raw: string, label: string): T {
 }
 
 export const getTeacherAIInsights = functions
-  .runWith({ secrets: [openaiApiKey], timeoutSeconds: 240, memory: "1GB" })
+  .runWith({ secrets: [openaiApiKey], timeoutSeconds: 240, memory: "2GB" })
   .https.onCall(async (data: any, context) => {
     // Auth + role gate (was auth-only, missing role check).
     requireRole(context, TEACHER_ROLES);

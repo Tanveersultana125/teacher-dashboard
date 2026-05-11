@@ -14,6 +14,27 @@ type AIResult =
 const errMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
+const errCode = (error: unknown): string => {
+  const code = (error as { code?: unknown })?.code;
+  return typeof code === "string" ? code : "";
+};
+
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+// Firebase Functions returns these when the container failed to start, was
+// OOM-killed mid-request, or the underlying Cloud Run instance is briefly
+// unreachable. They're transient — one retry with a small backoff resolves
+// the vast majority of cases without billing a second OpenAI call (the call
+// never reached OpenAI on the first attempt).
+const TRANSIENT_CODES = new Set([
+  "functions/unavailable",
+  "functions/internal",
+  "functions/deadline-exceeded",
+  "unavailable",
+  "internal",
+  "deadline-exceeded",
+]);
+
 // Shared caller for all AI insight types — consolidates error handling and
 // response shape checks so each public method is a one-liner.
 async function callAIInsights(
@@ -22,25 +43,55 @@ async function callAIInsights(
   options?: { timeoutMs?: number; logPrefix?: string },
 ): Promise<AIResult> {
   const { timeoutMs, logPrefix = type } = options ?? {};
-  try {
-    const call = httpsCallable(
-      functions,
-      "getTeacherAIInsights",
-      timeoutMs ? { timeout: timeoutMs } : undefined,
-    );
-    const result = await call({ type, payload }) as { data?: { status?: string; data?: unknown; message?: string } };
-    if (!result?.data) return { status: "error", message: "No response from AI service." };
-    if (result.data.status === "error") {
-      return { status: "error", message: result.data.message || ERROR_MSG };
+  const call = httpsCallable(
+    functions,
+    "getTeacherAIInsights",
+    timeoutMs ? { timeout: timeoutMs } : undefined,
+  );
+
+  let lastError: unknown = null;
+  // Try once, then retry once on transient infra errors (503 unavailable etc.)
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const result = await call({ type, payload }) as { data?: { status?: string; data?: unknown; message?: string } };
+      if (!result?.data) return { status: "error", message: "No response from AI service." };
+      if (result.data.status === "error") {
+        return { status: "error", message: result.data.message || ERROR_MSG };
+      }
+      if (!result.data.data) {
+        return { status: "error", message: "AI returned an empty response. Please try again." };
+      }
+      return { status: "success", data: result.data.data };
+    } catch (error: unknown) {
+      lastError = error;
+      const code = errCode(error);
+      console.error(`[AIController:${logPrefix}] attempt ${attempt + 1} failed`, code, error);
+      if (attempt === 0 && TRANSIENT_CODES.has(code)) {
+        await sleep(1500);
+        continue;
+      }
+      break;
     }
-    if (!result.data.data) {
-      return { status: "error", message: "AI returned an empty response. Please try again." };
-    }
-    return { status: "success", data: result.data.data };
-  } catch (error: unknown) {
-    console.error(`[AIController:${logPrefix}]`, error);
-    return { status: "error", message: `AI Error: ${errMessage(error)}` };
   }
+
+  const code = errCode(lastError);
+  // Friendlier message for the 503 / cold-start family — user-actionable.
+  if (TRANSIENT_CODES.has(code)) {
+    return {
+      status: "error",
+      message: "The AI service is warming up. Please try again in a few seconds.",
+    };
+  }
+  if (code === "functions/unauthenticated" || code === "unauthenticated") {
+    return { status: "error", message: "You are signed out. Please log in again." };
+  }
+  if (code === "functions/permission-denied" || code === "permission-denied") {
+    return { status: "error", message: "Your account does not have permission to use this feature." };
+  }
+  return {
+    status: "error",
+    message: `AI Error${code ? ` (${code})` : ""}: ${errMessage(lastError)}`,
+  };
 }
 
 const hasData = (data: unknown): data is AIPayload =>
