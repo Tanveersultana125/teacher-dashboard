@@ -57,6 +57,7 @@ import { useAuth } from "../lib/AuthContext";
 import { db } from "../lib/firebase";
 import { auditedAdd, auditedSet, auditedUpdate } from "../lib/auditedWrites";
 import PushToGradebookModal from "../components/PushToGradebookModal";
+import { tilt3D, tilt3DStyle, BLUE_SHADOW } from "../lib/use3DTilt";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -870,7 +871,7 @@ const PaperCorrection = () => {
   };
 
   return (
-    <div className="min-h-full bg-[#fbfbfd]">
+    <div className="min-h-full bg-[#EEF4FF]">
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-10">
         {/* Header */}
         <div className="mb-8 print-hide">
@@ -922,7 +923,7 @@ const PaperCorrection = () => {
          * editable per submission so any school's paper format works. The
          * choice also tags the saved correction (analytics) and nudges the AI
          * prompt for grading expectations. */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 mb-6 print-hide">
+        <div {...tilt3D} className="bg-white rounded-2xl p-5 sm:p-6 mb-6 print-hide" style={{ boxShadow: BLUE_SHADOW, ...tilt3DStyle }}>
           <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
             <div>
               <div className="text-[11.5px] font-medium uppercase tracking-wider text-slate-400 mb-1">
@@ -1015,7 +1016,7 @@ const PaperCorrection = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-6 print-hide">
           {/* ── Upload zone ────────────────────────────────────────────── */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6">
+          <div {...tilt3D} className="bg-white rounded-2xl p-5 sm:p-6" style={{ boxShadow: BLUE_SHADOW, ...tilt3DStyle }}>
             <div
               onDrop={onDrop}
               onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
@@ -1100,7 +1101,7 @@ const PaperCorrection = () => {
           </div>
 
           {/* ── Metadata side panel ────────────────────────────────────── */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 space-y-4">
+          <div {...tilt3D} className="bg-white rounded-2xl p-5 sm:p-6 space-y-4" style={{ boxShadow: BLUE_SHADOW, ...tilt3DStyle }}>
             <div>
               <div className="text-[11.5px] font-medium uppercase tracking-wider text-slate-400 mb-1">
                 Paper details (optional but recommended)
@@ -1390,7 +1391,7 @@ const SessionPanel: React.FC<{
           </div>
         </div>
       ) : (
-        <div className="bg-white border border-blue-200 rounded-2xl p-5 sm:p-6 mb-6 ring-1 ring-blue-100">
+        <div {...tilt3D} className="bg-white rounded-2xl p-5 sm:p-6 mb-6" style={{ boxShadow: BLUE_SHADOW, ...tilt3DStyle }}>
           <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
@@ -1701,7 +1702,7 @@ const OverallSummary = ({ result }: { result: CorrectionResult }) => {
   }, [result.questions]);
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-6">
+    <div {...tilt3D} className="bg-white rounded-2xl p-6" style={{ boxShadow: BLUE_SHADOW, ...tilt3DStyle }}>
       <div className="flex items-start gap-3">
         <div className="w-9 h-9 rounded-xl bg-[#1e3272]/10 flex items-center justify-center shrink-0">
           <Award className="w-4 h-4 text-[#1e3272]" />
@@ -1751,7 +1752,7 @@ const Stat = ({ label, value, tone }: { label: string; value: number; tone: stri
 };
 
 const QuestionBreakdown = ({ questions }: { questions: QuestionResult[] }) => (
-  <div className="bg-white border border-slate-200 rounded-2xl p-6">
+  <div {...tilt3D} className="bg-white rounded-2xl p-6" style={{ boxShadow: BLUE_SHADOW, ...tilt3DStyle }}>
     <div className="flex items-center gap-2 mb-4">
       <BookOpen className="w-4 h-4 text-[#1e3272]" />
       <div className="text-[15px] font-medium text-slate-900">Question-by-question breakdown</div>
@@ -1825,7 +1826,7 @@ const ObservationsCard = ({
   presentation?: string;
   effort?: string;
 }) => (
-  <div className="bg-white border border-slate-200 rounded-2xl p-6">
+  <div {...tilt3D} className="bg-white rounded-2xl p-6" style={{ boxShadow: BLUE_SHADOW, ...tilt3DStyle }}>
     <div className="flex items-center gap-2 mb-4">
       <Eye className="w-4 h-4 text-[#1e3272]" />
       <div className="text-[15px] font-medium text-slate-900">Teacher's observations</div>
@@ -1857,7 +1858,7 @@ const ObsTile = ({
 );
 
 const ConceptUnderstandingCard = ({ items }: { items: ConceptUnderstanding[] }) => (
-  <div className="bg-white border border-slate-200 rounded-2xl p-6">
+  <div {...tilt3D} className="bg-white rounded-2xl p-6" style={{ boxShadow: BLUE_SHADOW, ...tilt3DStyle }}>
     <div className="flex items-center gap-2 mb-4">
       <Brain className="w-4 h-4 text-[#1e3272]" />
       <div>
@@ -1942,7 +1943,7 @@ const ParentNoteCard = ({ text, studentName }: { text: string; studentName: stri
     else toast.error("Copy failed — your browser blocked clipboard access.");
   };
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-6">
+    <div {...tilt3D} className="bg-white rounded-2xl p-6" style={{ boxShadow: BLUE_SHADOW, ...tilt3DStyle }}>
       <div className="flex items-start gap-3">
         <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
           <Users className="w-5 h-5 text-blue-700" />
@@ -1974,7 +1975,7 @@ const ParentNoteCard = ({ text, studentName }: { text: string; studentName: stri
 };
 
 const StrengthsCard = ({ items }: { items: string[] }) => (
-  <div className="bg-white border border-slate-200 rounded-2xl p-6">
+  <div {...tilt3D} className="bg-white rounded-2xl p-6" style={{ boxShadow: BLUE_SHADOW, ...tilt3DStyle }}>
     <div className="flex items-center gap-2 mb-4">
       <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
         <TrendingUp className="w-4 h-4 text-emerald-700" />
@@ -1996,7 +1997,7 @@ const StrengthsCard = ({ items }: { items: string[] }) => (
 );
 
 const WeaknessesCard = ({ items }: { items: string[] }) => (
-  <div className="bg-white border border-slate-200 rounded-2xl p-6">
+  <div {...tilt3D} className="bg-white rounded-2xl p-6" style={{ boxShadow: BLUE_SHADOW, ...tilt3DStyle }}>
     <div className="flex items-center gap-2 mb-4">
       <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
         <TrendingDown className="w-4 h-4 text-amber-700" />
@@ -2018,7 +2019,7 @@ const WeaknessesCard = ({ items }: { items: string[] }) => (
 );
 
 const ImprovementPlan = ({ items }: { items: ImprovementItem[] }) => (
-  <div className="bg-white border border-slate-200 rounded-2xl p-6">
+  <div {...tilt3D} className="bg-white rounded-2xl p-6" style={{ boxShadow: BLUE_SHADOW, ...tilt3DStyle }}>
     <div className="flex items-center gap-2 mb-4">
       <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
         <Target className="w-4 h-4 text-blue-700" />
