@@ -77,21 +77,56 @@ const MarkAttendance = ({ onBack, initialClassId }: Props) => {
   const [saving, setSaving]                 = useState(false);
   const [currentPage, setCurrentPage]       = useState(1);
 
-  // Fetch classes
+  // Fetch classes — union of teaching_assignments + legacy classes.teacherId
+  // (same pattern as MyClasses / CreateTest fix). Single classes.teacherId
+  // query previously missed any class the teacher was assigned to ONLY via
+  // teaching_assignments — common for freshly-onboarded teachers.
   useEffect(() => {
     if (!teacherData?.id || !teacherData?.schoolId) return;
-    const SC: QueryConstraint[] = [where("schoolId", "==", teacherData.schoolId)];
-    if (teacherData.branchId) SC.push(where("branchId", "==", teacherData.branchId));
-    return onSnapshot(
-      query(collection(db, "classes"), ...SC, where("teacherId", "==", teacherData.id)),
+    const tId = teacherData.id as string;
+    const schoolId = teacherData.schoolId as string;
+
+    let assignedIds = new Set<string>();
+    let legacyOwnedIds = new Set<string>();
+    let allClassDocs: any[] = [];
+
+    const recompute = () => {
+      const allowed = new Set<string>([...assignedIds, ...legacyOwnedIds]);
+      const cls = allowed.size === 0 ? [] : allClassDocs.filter(c => allowed.has(c.id));
+      setClasses(cls);
+      setSelectedClassId(prev => prev || cls[0]?.id || "");
+    };
+
+    const u1 = onSnapshot(
+      query(collection(db, "teaching_assignments"), where("schoolId", "==", schoolId), where("teacherId", "==", tId)),
       (snap) => {
-        const cls = snap.docs.map(d => ({ ...d.data(), id: d.id }));
-        setClasses(cls);
-        // Functional setter reads latest state; avoids stale-closure bug.
-        setSelectedClassId(prev => prev || cls[0]?.id || "");
-      }
+        const active = snap.docs.filter(d => {
+          const s = (d.data() as any).status;
+          return !s || (typeof s === "string" && s.toLowerCase() === "active");
+        });
+        assignedIds = new Set(active.map(d => (d.data() as any).classId).filter((x: any): x is string => !!x));
+        recompute();
+      },
     );
-  }, [teacherData?.id, teacherData?.schoolId, teacherData?.branchId]);
+
+    const u2 = onSnapshot(
+      query(collection(db, "classes"), where("schoolId", "==", schoolId), where("teacherId", "==", tId)),
+      (snap) => {
+        legacyOwnedIds = new Set(snap.docs.map(d => d.id));
+        recompute();
+      },
+    );
+
+    const u3 = onSnapshot(
+      query(collection(db, "classes"), where("schoolId", "==", schoolId)),
+      (snap) => {
+        allClassDocs = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+        recompute();
+      },
+    );
+
+    return () => { u1(); u2(); u3(); };
+  }, [teacherData?.id, teacherData?.schoolId]);
 
   // Fetch roster + today's attendance — schoolId only (NO branchId on
   // event streams, see Attendance.tsx note).

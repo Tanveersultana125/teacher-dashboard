@@ -64,28 +64,69 @@ export default function CreateTest({ onCancel, onCreate }: { onCancel: () => voi
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Mirrors MyClasses.tsx union pattern: a teacher's class list is the union
+  // of (a) `teaching_assignments` where teacherId == tId (canonical — set by
+  // principal/owner when assigning) and (b) `classes` where teacherId == tId
+  // (legacy — older homeroom-style ownership). The single-source `classes`
+  // query previously here silently missed any class the teacher was assigned
+  // to via the teaching_assignments flow, so the dropdown was empty on freshly
+  // assigned teachers. Also dropped the branchId filter on classes — class
+  // docs aren't guaranteed to carry branchId, and branch isolation is enforced
+  // at the school-scoped query layer in practice.
   useEffect(() => {
     if (!teacherData?.id || !teacherData?.schoolId) return;
+    const tId = teacherData.id as string;
     const schoolId = teacherData.schoolId as string;
-    const branchId = teacherData.branchId as string | undefined;
-    const SC: QueryConstraint[] = [where("schoolId", "==", schoolId)];
-    if (branchId) SC.push(where("branchId", "==", branchId));
 
-    const q = query(collection(db, "classes"), ...SC, where("teacherId", "==", teacherData.id));
-    const unsub = onSnapshot(q, (snap) => {
-      const cls = snap.docs.map(d => ({ ...(d.data() as Record<string, unknown>), id: d.id })) as ClassRow[];
+    let assignedIds = new Set<string>();
+    let legacyOwnedIds = new Set<string>();
+    let allClassDocs: ClassRow[] = [];
+
+    const recompute = () => {
+      const allowed = new Set<string>([...assignedIds, ...legacyOwnedIds]);
+      const cls = allowed.size === 0 ? [] : allClassDocs.filter(c => allowed.has(c.id));
       setClasses(cls);
-      // Use the functional setter so we read the *latest* classId, not the
-      // one captured in this effect's closure. Prevents the auto-select from
-      // clobbering a user choice when the snapshot re-fires later.
       setFormData(prev =>
         prev.classId || cls.length === 0
           ? prev
           : { ...prev, classId: cls[0].id, className: cls[0].name || "" }
       );
-    });
-    return () => unsub();
-  }, [teacherData?.id, teacherData?.schoolId, teacherData?.branchId]);
+    };
+
+    // teaching_assignments — active filter client-side (legacy docs may lack status).
+    const u1 = onSnapshot(
+      query(collection(db, "teaching_assignments"), where("schoolId", "==", schoolId), where("teacherId", "==", tId)),
+      (snap) => {
+        const active = snap.docs.filter(d => {
+          const s = (d.data() as any).status;
+          return !s || (typeof s === "string" && s.toLowerCase() === "active");
+        });
+        assignedIds = new Set(active.map(d => (d.data() as any).classId).filter((x: any): x is string => !!x));
+        recompute();
+      },
+    );
+
+    // classes legacy — teacher owns via classes.teacherId field.
+    const u2 = onSnapshot(
+      query(collection(db, "classes"), where("schoolId", "==", schoolId), where("teacherId", "==", tId)),
+      (snap) => {
+        legacyOwnedIds = new Set(snap.docs.map(d => d.id));
+        recompute();
+      },
+    );
+
+    // classes school-wide — needed to resolve the metadata of classes the
+    // teacher is assigned to (but doesn't directly "own" via teacherId).
+    const u3 = onSnapshot(
+      query(collection(db, "classes"), where("schoolId", "==", schoolId)),
+      (snap) => {
+        allClassDocs = snap.docs.map(d => ({ ...(d.data() as Record<string, unknown>), id: d.id })) as ClassRow[];
+        recompute();
+      },
+    );
+
+    return () => { u1(); u2(); u3(); };
+  }, [teacherData?.id, teacherData?.schoolId]);
 
   // Subscribe to `exam_structure` (principal-configured exam types) so the
   // category dropdown reflects what the school has actually defined. This

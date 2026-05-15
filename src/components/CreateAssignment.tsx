@@ -44,24 +44,56 @@ const CreateAssignment = ({ onCancel, onCreate }: { onCancel: () => void, onCrea
      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   });
 
+  // Mirrors MyClasses.tsx union pattern (same fix as CreateTest.tsx): the
+  // class list is the union of teaching_assignments matches + classes.teacherId
+  // matches, then filtered against all school classes. Single `classes.teacherId`
+  // query missed freshly assigned classes.
   useEffect(() => {
     if (!teacherData?.id || !teacherData?.schoolId) return;
+    const tId = teacherData.id as string;
     const schoolId = teacherData.schoolId as string;
-    const branchId = teacherData.branchId as string | undefined;
-    const SC: QueryConstraint[] = [where("schoolId", "==", schoolId)];
-    if (branchId) SC.push(where("branchId", "==", branchId));
 
-    const q = query(collection(db, "classes"), ...SC, where("teacherId", "==", teacherData.id));
-    const unsub = onSnapshot(q, (snap) => {
-      const cls = snap.docs.map(d => ({ ...d.data(), id: d.id })) as ClassRow[];
+    let assignedIds = new Set<string>();
+    let legacyOwnedIds = new Set<string>();
+    let allClassDocs: ClassRow[] = [];
+
+    const recompute = () => {
+      const allowed = new Set<string>([...assignedIds, ...legacyOwnedIds]);
+      const cls = allowed.size === 0 ? [] : allClassDocs.filter(c => allowed.has(c.id));
       setClasses(cls);
-      // Auto-select the first class on initial load only. We use the functional
-      // setter so this effect can safely omit `selectedClassId` from deps —
-      // otherwise every auto-select would retrigger the snapshot subscription.
       setSelectedClassId(prev => prev || cls[0]?.id || "");
-    });
-    return () => unsub();
-  }, [teacherData?.id, teacherData?.schoolId, teacherData?.branchId]);
+    };
+
+    const u1 = onSnapshot(
+      query(collection(db, "teaching_assignments"), where("schoolId", "==", schoolId), where("teacherId", "==", tId)),
+      (snap) => {
+        const active = snap.docs.filter(d => {
+          const s = (d.data() as any).status;
+          return !s || (typeof s === "string" && s.toLowerCase() === "active");
+        });
+        assignedIds = new Set(active.map(d => (d.data() as any).classId).filter((x: any): x is string => !!x));
+        recompute();
+      },
+    );
+
+    const u2 = onSnapshot(
+      query(collection(db, "classes"), where("schoolId", "==", schoolId), where("teacherId", "==", tId)),
+      (snap) => {
+        legacyOwnedIds = new Set(snap.docs.map(d => d.id));
+        recompute();
+      },
+    );
+
+    const u3 = onSnapshot(
+      query(collection(db, "classes"), where("schoolId", "==", schoolId)),
+      (snap) => {
+        allClassDocs = snap.docs.map(d => ({ ...d.data(), id: d.id })) as ClassRow[];
+        recompute();
+      },
+    );
+
+    return () => { u1(); u2(); u3(); };
+  }, [teacherData?.id, teacherData?.schoolId]);
 
   const handleSave = async () => {
     const title = formData.title.trim();

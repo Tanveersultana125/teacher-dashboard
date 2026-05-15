@@ -85,28 +85,65 @@ const SaveAsTestModal: React.FC<Props> = ({ open, onClose, onSaved, paper, formS
     setSaving(false);
   }, [open, paper.title, formSnapshot.subject, formSnapshot.grade]);
 
-  // Load teacher's own classes for the picker — same pattern as CreateTest.tsx
+  // Load teacher's classes — union of teaching_assignments + legacy classes.teacherId
+  // (matches MyClasses / CreateTest fix). Single-source query missed freshly
+  // assigned classes where only teaching_assignments was written.
   useEffect(() => {
     if (!open || !teacherData?.id || !teacherData?.schoolId) return;
+    const tId = teacherData.id as string;
     const schoolId = teacherData.schoolId as string;
-    const SC: QueryConstraint[] = [where("schoolId", "==", schoolId)];
 
     setClassesLoading(true);
-    const unsub = onSnapshot(
-      query(collection(db, "classes"), ...SC, where("teacherId", "==", teacherData.id)),
+    let assignedIds = new Set<string>();
+    let legacyOwnedIds = new Set<string>();
+    let allClassDocs: ClassRow[] = [];
+
+    const recompute = () => {
+      const allowed = new Set<string>([...assignedIds, ...legacyOwnedIds]);
+      const cls = allowed.size === 0 ? [] : allClassDocs.filter(c => allowed.has(c.id));
+      setClasses(cls);
+      setClassesLoading(false);
+      setClassId(prev => prev || (cls[0]?.id ?? ""));
+      setClassName(prev => prev || (cls[0]?.name ?? ""));
+    };
+
+    const errH = (err: any) => {
+      console.error("[SaveAsTestModal] classes listener failed", err);
+      setClassesLoading(false);
+    };
+
+    const u1 = onSnapshot(
+      query(collection(db, "teaching_assignments"), where("schoolId", "==", schoolId), where("teacherId", "==", tId)),
       (snap) => {
-        const cls = snap.docs.map(d => ({ ...(d.data() as Record<string, unknown>), id: d.id })) as ClassRow[];
-        setClasses(cls);
-        setClassesLoading(false);
-        setClassId(prev => prev || (cls[0]?.id ?? ""));
-        setClassName(prev => prev || (cls[0]?.name ?? ""));
+        const active = snap.docs.filter(d => {
+          const s = (d.data() as any).status;
+          return !s || (typeof s === "string" && s.toLowerCase() === "active");
+        });
+        assignedIds = new Set(active.map(d => (d.data() as any).classId).filter((x: any): x is string => !!x));
+        recompute();
       },
-      (err) => {
-        console.error("[SaveAsTestModal] classes listener failed", err);
-        setClassesLoading(false);
-      },
+      errH,
     );
-    return () => unsub();
+
+    const u2 = onSnapshot(
+      query(collection(db, "classes"), where("schoolId", "==", schoolId), where("teacherId", "==", tId)),
+      (snap) => {
+        legacyOwnedIds = new Set(snap.docs.map(d => d.id));
+        recompute();
+      },
+      errH,
+    );
+
+    const u3 = onSnapshot(
+      query(collection(db, "classes"), where("schoolId", "==", schoolId)),
+      (snap) => {
+        allClassDocs = snap.docs.map(d => ({ ...(d.data() as Record<string, unknown>), id: d.id })) as ClassRow[];
+        recompute();
+      },
+      errH,
+    );
+
+    return () => { u1(); u2(); u3(); };
   }, [open, teacherData?.id, teacherData?.schoolId]);
 
   // Load principal-configured exam_structure categories — same pattern as CreateTest.tsx
