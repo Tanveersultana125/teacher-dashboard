@@ -227,12 +227,15 @@ export default function Gradebook() {
   // ── Effects ────────────────────────────────────────────────────────────────
 
   // 1. Fetch Classes (scoped by school — no full collection scan)
+  // branchScope DROPPED on classes + teaching_assignments — writers stamp
+  // branchId inconsistently and a fresh teacher inheriting a class with a
+  // missing branchId stamp would see NO classes here → cascading to 0 score
+  // counts on all the count chips because `targetClassId` could not resolve.
+  // School-scoped is sufficient: one teacher = one school.
   useEffect(() => {
     if (!teacherData?.id || !teacherData?.schoolId) return;
     const schoolId = teacherData.schoolId as string;
-    const branchId = teacherData.branchId as string | undefined;
     const SC: QueryConstraint[] = [where("schoolId", "==", schoolId)];
-    if (branchId) SC.push(where("branchId", "==", branchId));
 
     let unsub: (() => void) | null = null;
     let cancelled = false;
@@ -391,9 +394,10 @@ export default function Gradebook() {
     const sel = classes.find(c => c.id === selectedClassId);
     const targetClassId = sel?.classId || selectedClassId;
     const schoolId = teacherData.schoolId as string;
-    const branchId = teacherData.branchId as string | undefined;
+    // branchScope dropped from resolution entities (tests / assignments) too.
+    // The classId join is already a tight enough scope, and inconsistent
+    // branchId stamping was hiding fresh writes from new teachers' counts.
     const SC_RES: QueryConstraint[] = [where("schoolId", "==", schoolId)];
-    if (branchId) SC_RES.push(where("branchId", "==", branchId));
     const SC_EVT: QueryConstraint[] = [where("schoolId", "==", schoolId)];
 
     let cancelled = false;

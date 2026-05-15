@@ -646,7 +646,14 @@ Return ONLY this JSON. ALL text fields must be in clear professional English (no
     }
     const maxTokens = type === "lesson_plan_generation" ? 4096 :
         type === "lesson_summary" ? 3000 :
-            type === "exam_paper_generation" ? 4096 :
+            // Exam paper bumped from 4096 → 12000 because a typical 20-question
+            // paper (defaults: 20 Q × 50 marks) with full content + answers +
+            // solutions for each question regularly exceeds 4096 output tokens,
+            // and the model truncates → invalid JSON → safeJsonParse throws → the
+            // user sees a generic "AI returned invalid JSON" error. We're now on
+            // gpt-4.1-mini which supports up to 16k output, so 12k leaves headroom
+            // for the largest realistic paper (50 Q with long solutions).
+            type === "exam_paper_generation" ? 12000 :
                 type === "paper_correction" ? 4096 :
                     type === "class_action_plan" ? 1500 :
                         type === "student_action_plan" ? 1500 :
