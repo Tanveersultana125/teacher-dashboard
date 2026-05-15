@@ -32,6 +32,7 @@ import {
   Brain,
   MessageCircle,
   Mail,
+  Send,
   Zap,
   ScrollText,
   Save,
@@ -796,6 +797,55 @@ const PaperCorrection = () => {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  // Send-to-parent state — scoped per-correction so re-grading another paper
+  // resets the "Sent" pill. Only enabled when the correction has been saved
+  // (we need the doc id to flip the flag) AND we have a usable student
+  // identifier (studentId or studentEmail) — otherwise the parent dashboard
+  // can't match the doc back to a student via its dual-query reader.
+  const [sendingToParent, setSendingToParent] = useState(false);
+  const [sentToParent, setSentToParent] = useState(false);
+
+  const handleSendToParent = async () => {
+    if (!savedCorrectionId) {
+      toast.error("Result not saved to cloud yet. Try again in a moment.");
+      return;
+    }
+    if (sentToParent || sendingToParent) return;
+    // Student-identity preflight — parent ReportsPage filters via
+    // (studentId OR studentEmail). Without either, the publish would be
+    // unreachable on the parent side.
+    const sId = selectedStudent?.id || sessionStudentId || "";
+    const sEmail = (selectedStudent?.email || sessionStudentEmail || "").toLowerCase();
+    if (!sId && !sEmail) {
+      toast.error("Pick the student first (use 'Start Grading' to select class + student).");
+      return;
+    }
+    setSendingToParent(true);
+    try {
+      await updateDoc(doc(db, "paper_corrections", savedCorrectionId), {
+        publishedToParent: true,
+        publishedToParentAt: serverTimestamp(),
+        // Backfill identity fields in case the original write was made before
+        // the teacher had selected a student (free-text mode).
+        studentId: sId,
+        studentEmail: sEmail,
+        classId: sessionClassId || "",
+        className: selectedClass?.name || "",
+      });
+      setSentToParent(true);
+      toast.success(`Paper sent to ${selectedStudent?.name || studentName.trim() || "student"}'s parent.`);
+    } catch (err) {
+      console.error("[PaperCorrection] send-to-parent failed", err);
+      toast.error("Couldn't send to parent. Please try again.");
+    } finally {
+      setSendingToParent(false);
+    }
+  };
+
+  // Reset sent-to-parent flag whenever the saved correction id changes — a
+  // new correction starts fresh, an old one keeps its sent state.
+  useEffect(() => { setSentToParent(false); }, [savedCorrectionId]);
+
   // P0-2: persist the AI correction result to Firestore so it survives refresh
   // and is visible to parent/principal/owner readers. Best-effort: a failed
   // write does NOT block the user from viewing the result on screen — they
@@ -810,8 +860,15 @@ const PaperCorrection = () => {
         branchId: teacherData.branchId || "",
         teacherId: teacherData.id,
         teacherName: teacherData.name || teacherData.displayName || "",
-        // Student is free-text at this stage — Push to Gradebook will resolve it
-        studentName: studentName.trim() || "",
+        // Student identity — populated from the session picker when available
+        // (sessionActive ⇒ teacher picked class+student from the side panel),
+        // otherwise just the free-text name. studentId + studentEmail let the
+        // parent-dashboard ReportsPage filter via the dual-query pattern.
+        studentName: (selectedStudent?.name || studentName.trim() || "").toString(),
+        studentId: sessionActive ? (selectedStudent?.id || sessionStudentId || "") : "",
+        studentEmail: sessionActive ? (selectedStudent?.email || sessionStudentEmail || "").toLowerCase() : "",
+        classId: sessionActive ? (sessionClassId || "") : "",
+        className: sessionActive ? (selectedClass?.name || "") : "",
         // Paper meta (snapshot of form values at submit time)
         category,
         categoryLabel: preset?.label || "",
@@ -826,8 +883,9 @@ const PaperCorrection = () => {
         gradeBand: correction.grade_band || "C",
         // Full result blob (consumed by detail views / re-renders)
         result: correction,
-        // Status flow: saved → pushed_to_gradebook (when teacher clicks button)
+        // Status flow: saved → pushed_to_gradebook → published_to_parent (independent flag)
         status: "saved",
+        publishedToParent: false,
         source: "ai_paper_correction",
         createdAt: serverTimestamp(),
       });
@@ -1268,6 +1326,10 @@ const PaperCorrection = () => {
                 onNext: pendingStudents.length > 0 ? goToNextStudent : undefined,
               } : null}
               onPrint={() => window.print()}
+              onSendToParent={handleSendToParent}
+              sendingToParent={sendingToParent}
+              sentToParent={sentToParent}
+              canSendToParent={!!(selectedStudent?.id || sessionStudentId || selectedStudent?.email)}
             />
             {/* P2-1: drift between AI's claimed marksScored and the sum of
              * its own per-question marks_awarded. Surfacing this is what
@@ -1627,6 +1689,7 @@ const Field = ({
 const ResultsHeader = ({
   result, studentName, onReset, savedCorrectionId, onPush, pushLabel = "Push to Gradebook",
   pushDisabled = false, sessionContext = null, onPrint,
+  onSendToParent, sendingToParent = false, sentToParent = false, canSendToParent = false,
 }: {
   result: CorrectionResult;
   studentName: string;
@@ -1637,6 +1700,10 @@ const ResultsHeader = ({
   pushDisabled?: boolean;
   sessionContext?: { className: string; testName: string; isGraded: boolean; onNext?: () => void } | null;
   onPrint?: () => void;
+  onSendToParent?: () => void;
+  sendingToParent?: boolean;
+  sentToParent?: boolean;
+  canSendToParent?: boolean;
 }) => {
   const band = GRADE_BAND_STYLES[result.grade_band] ?? GRADE_BAND_STYLES.C;
   // P0-4 defensive: percentage may have been re-computed in submit() but
@@ -1685,6 +1752,36 @@ const ResultsHeader = ({
           >
             <BookmarkPlus className="w-3.5 h-3.5" /> {pushLabel}
           </button>
+          {/* Send to Parent — surfaces on the parent dashboard's Reports
+              page under a "Papers" section. Enabled only when (a) the
+              correction has been saved (we need its id), (b) we have a
+              student identity to address. Idempotent: once sent, the button
+              flips to a green "Sent" pill (still clickable for re-publish
+              with fresh timestamp). */}
+          {onSendToParent && (
+            <button
+              onClick={onSendToParent}
+              disabled={sendingToParent || !savedCorrectionId || !canSendToParent}
+              title={!canSendToParent
+                ? "Pick a student first (use 'Start Grading' to select class + student)"
+                : sentToParent
+                  ? "Re-send to parent"
+                  : "Send this corrected paper to the parent dashboard"}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[12.5px] font-medium transition shadow-sm disabled:cursor-not-allowed ${
+                sentToParent
+                  ? "bg-emerald-400/25 text-emerald-100 ring-1 ring-emerald-300/40 hover:bg-emerald-400/35"
+                  : "bg-blue-500 hover:bg-blue-600 text-white disabled:bg-slate-400"
+              }`}
+            >
+              {sendingToParent ? (
+                <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Sending…</>
+              ) : sentToParent ? (
+                <><CheckCircle2 className="w-3.5 h-3.5" /> Sent to parent</>
+              ) : (
+                <><Send className="w-3.5 h-3.5" /> Send to parent</>
+              )}
+            </button>
+          )}
           {sessionContext?.onNext && (
             <button
               onClick={sessionContext.onNext}

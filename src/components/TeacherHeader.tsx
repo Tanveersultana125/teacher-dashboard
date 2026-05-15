@@ -236,10 +236,15 @@ const TeacherHeader = ({ onMenuClick }: HeaderProps) => {
             )}
           </button>
 
-          {/* Unified notification popup */}
+          {/* Unified notification popup.
+              `right-0` on a small viewport could push the panel under or past
+              the page-content margin, making it look cramped. Use
+              `right-0 mr-2 sm:mr-0` so it always sits with breathing room
+              from the viewport edge, and bump the desktop width up so the
+              chip + title + timestamp don't collide. */}
           {panelOpen && (
             <div
-              className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-[380px] max-w-[420px] rounded-2xl overflow-hidden bg-white"
+              className="absolute right-0 mr-2 sm:mr-0 mt-2 w-[min(420px,calc(100vw-1.5rem))] rounded-2xl overflow-hidden bg-white"
               style={{
                 border: "0.5px solid rgba(0,85,255,0.12)",
                 boxShadow: "0 0 0 0.5px rgba(0,85,255,0.10), 0 4px 16px rgba(0,85,255,0.10), 0 18px 44px rgba(0,85,255,0.18)",
@@ -304,27 +309,27 @@ const TeacherHeader = ({ onMenuClick }: HeaderProps) => {
                         key={n.id}
                         type="button"
                         onClick={() => { setPanelOpen(false); navigate(n.navigateTo); }}
-                        className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-[#F4F7FE] transition-colors ${idx < notifications.length - 1 ? "border-b border-slate-100" : ""}`}
+                        className={`w-full flex items-start gap-[10px] px-4 py-[10px] text-left hover:bg-[#F4F7FE] transition-colors ${idx < notifications.length - 1 ? "border-b border-slate-100" : ""}`}
                       >
                         <div
-                          className="w-9 h-9 rounded-[11px] flex items-center justify-center flex-shrink-0"
+                          className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center flex-shrink-0 mt-[2px]"
                           style={{ background: iconBg, boxShadow: iconShadow }}
                         >
-                          <Icon size={15} color="#fff" strokeWidth={2.4} />
+                          <Icon size={14} color="#fff" strokeWidth={2.4} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <p className="text-[13px] font-bold text-[#001040] truncate">{n.title}</p>
+                          <div className="flex items-center gap-2 mb-[2px]">
+                            <p className="text-[13px] font-bold text-[#001040] truncate flex-1 min-w-0">{n.title}</p>
                             <span
-                              className="text-[9px] font-bold px-[6px] py-[1px] rounded-full flex-shrink-0"
+                              className="text-[9px] font-bold px-[7px] py-[2px] rounded-full flex-shrink-0"
                               style={{ background: chipBg, color: chipColor, letterSpacing: "0.3px" }}
                             >
                               {chipLabel}
                             </span>
                           </div>
-                          <p className="text-[11px] text-[#5070B0] truncate">{n.subtitle}</p>
+                          <p className="text-[12px] text-[#5070B0] truncate font-medium">{n.subtitle}</p>
                           {n.timestamp > 0 && (
-                            <p className="text-[10px] text-[#99AACC] mt-0.5">{timeAgo(n.timestamp)}</p>
+                            <p className="text-[10px] text-[#99AACC] mt-[3px] font-medium">{timeAgo(n.timestamp)}</p>
                           )}
                         </div>
                       </button>
