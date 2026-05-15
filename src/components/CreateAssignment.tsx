@@ -31,6 +31,19 @@ const sanitizeStorageName = (name: string): string =>
 const CreateAssignment = ({ onCancel, onCreate }: { onCancel: () => void, onCreate: () => void }) => {
   const { user, teacherData } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Date input refs + programmatic showPicker() — opacity:0 absolute inputs
+  // alone are unreliable on iOS Safari + some Android browsers. Calling
+  // showPicker() on a user click is the modern reliable API.
+  const dueMobileRef = useRef<HTMLInputElement>(null);
+  const dueDesktopRef = useRef<HTMLInputElement>(null);
+  const openDatePicker = (el: HTMLInputElement | null) => {
+    if (!el) return;
+    try {
+      const fn = (el as HTMLInputElement & { showPicker?: () => void }).showPicker;
+      if (typeof fn === "function") { fn.call(el); return; }
+    } catch { /* showPicker can throw if element isn't connected */ }
+    try { el.focus(); el.click(); } catch { /* noop */ }
+  };
   
   type ClassRow = { id: string; name?: string; grade?: string; teacherId?: string; schoolId?: string; branchId?: string };
   const [isSaving, setIsSaving] = useState(false);
@@ -355,7 +368,12 @@ const CreateAssignment = ({ onCancel, onCreate }: { onCancel: () => void, onCrea
           <label htmlFor="assignment-duedate-mobile" className="block text-[9px] font-bold uppercase mb-[10px] flex items-center gap-[6px]" style={{ color: MA.T3, letterSpacing: "1.5px" }}>
             Due Date <span className="text-[11px] font-bold" style={{ color: MA.RED }}>*</span>
           </label>
-          <div className="relative flex items-center gap-[12px] px-[14px] py-[12px] rounded-[12px] active:bg-[#EAF0FB] transition-colors"
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => openDatePicker(dueMobileRef.current)}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDatePicker(dueMobileRef.current); } }}
+            className="relative flex items-center gap-[12px] px-[14px] py-[12px] rounded-[12px] active:bg-[#EAF0FB] transition-colors"
             style={{ background: MA.SURFACE, border: "0.5px solid rgba(9,87,247,0.08)", cursor: "pointer" }}>
             <div className="w-8 h-8 rounded-[10px] flex items-center justify-center text-white flex-shrink-0" style={{ background: MA.ORANGE }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -371,14 +389,15 @@ const CreateAssignment = ({ onCancel, onCreate }: { onCancel: () => void, onCrea
               </div>
             )}
             <input id="assignment-duedate-mobile"
+              ref={dueMobileRef}
               type="date"
               value={formData.dueDate}
               onChange={e => setFormData({ ...formData, dueDate: e.target.value })}
-              min={new Date().toISOString().split('T')[0]}
+              min={(() => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split('T')[0]; })()}
               required
               aria-label="Due date"
-              className="absolute inset-0 opacity-0 cursor-pointer"
-              style={{ fontFamily: MA.FONT }} />
+              className="absolute opacity-0 pointer-events-none"
+              style={{ width: 1, height: 1, left: "50%", bottom: 0, fontFamily: MA.FONT }} />
           </div>
         </div>
 
@@ -776,7 +795,12 @@ const CreateAssignment = ({ onCancel, onCreate }: { onCancel: () => void, onCrea
                   <div className="text-[13px] font-bold mt-[2px]" style={{ color: MA.T1, letterSpacing: "-0.2px" }}>When should students submit by?</div>
                 </div>
               </div>
-              <div className="relative flex items-center gap-4 px-5 py-[14px] rounded-[14px] hover:bg-[#EAF0FB] transition-colors"
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => openDatePicker(dueDesktopRef.current)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDatePicker(dueDesktopRef.current); } }}
+                className="relative flex items-center gap-4 px-5 py-[14px] rounded-[14px] hover:bg-[#EAF0FB] transition-colors"
                 style={{ background: MA.SURFACE, border: "0.5px solid rgba(9,87,247,0.08)", cursor: "pointer" }}>
                 <div className="flex-1 min-w-0">
                   <div className="text-[16px] font-bold truncate" style={{ color: MA.T1, letterSpacing: "-0.3px" }}>{prettyDate}</div>
@@ -789,14 +813,15 @@ const CreateAssignment = ({ onCancel, onCreate }: { onCancel: () => void, onCrea
                   </div>
                 )}
                 <input id="ca-duedate-desktop"
+                  ref={dueDesktopRef}
                   type="date"
                   value={formData.dueDate}
                   onChange={e => setFormData({ ...formData, dueDate: e.target.value })}
-                  min={new Date().toISOString().split('T')[0]}
+                  min={(() => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split('T')[0]; })()}
                   required
                   aria-label="Due date"
-                  className="absolute inset-0 opacity-0 cursor-pointer"
-                  style={{ fontFamily: MA.FONT }} />
+                  className="absolute opacity-0 pointer-events-none"
+                  style={{ width: 1, height: 1, left: "50%", bottom: 0, fontFamily: MA.FONT }} />
               </div>
             </div>
 
