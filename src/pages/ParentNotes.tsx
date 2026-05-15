@@ -65,9 +65,16 @@ const T = {
   alBg:    "#FFF9DB",
   tea:     "#0C8599",
   tlBg:    "#E3FAFC",
-  chatBg:  "#EFEAE2",
-  chatOut: "#D9FDD3",
-  chatPattern: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='%23D4CFC4' fill-opacity='0.18'%3E%3Ccircle cx='10' cy='10' r='1.5'/%3E%3Ccircle cx='50' cy='30' r='1.5'/%3E%3Ccircle cx='30' cy='60' r='1.5'/%3E%3Ccircle cx='70' cy='70' r='1.5'/%3E%3C/g%3E%3C/svg%3E\")",
+  // Edullent Blue Apple chat tokens — replaces the prior WhatsApp beige/green
+  // palette so the chat surface matches the rest of the teacher dashboard.
+  chatBg:  "#EEF4FF",
+  chatOut: "linear-gradient(135deg, #0055FF, #2277FF)",  // teacher (outgoing) bubble
+  chatOutInk: "#FFFFFF",
+  chatIn:  "#FFFFFF",                                     // parent (incoming) bubble
+  chatInInk: "#08090C",
+  chatPattern: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='%230055FF' fill-opacity='0.08'%3E%3Ccircle cx='10' cy='10' r='1.5'/%3E%3Ccircle cx='50' cy='30' r='1.5'/%3E%3Ccircle cx='30' cy='60' r='1.5'/%3E%3Ccircle cx='70' cy='70' r='1.5'/%3E%3C/g%3E%3C/svg%3E\")",
+  chatHeaderGrad: "linear-gradient(135deg, #0055FF 0%, #1166FF 60%, #2277FF 100%)",
+  chatInputBg: "#E0ECFF",
 };
 
 // ── Avatar helpers ────────────────────────────────────────────────────────────
@@ -1298,8 +1305,8 @@ const ParentNotes = () => {
         className="-mx-4 sm:-mx-6 md:-mx-8 md:-mt-8 -mb-4 sm:-mb-6 md:-mb-8"
         style={{ display: "flex", flexDirection: "column", minHeight: "calc(100vh - 56px)", background: T.chatBg }}
       >
-        {/* ── Dark chat header ─────────────────────────────────────────────── */}
-        <div className="bg-[#001A66] md:bg-[#08090C]" style={{ padding: "12px 22px 18px", flexShrink: 0 }}>
+        {/* ── Edullent blue chat header ─────────────────────────────────────── */}
+        <div style={{ padding: "12px 22px 18px", flexShrink: 0, background: T.chatHeaderGrad, boxShadow: "0 4px 16px rgba(0,85,255,0.18)" }}>
           {/* Back link */}
           <button
             type="button"
@@ -1311,65 +1318,60 @@ const ParentNotes = () => {
               marginBottom: 10, padding: 0,
             }}
           >
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke={T.blue} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="8,2 3,6.5 8,11" />
             </svg>
-            <span style={{ fontSize: 12, color: T.blue }}>All messages</span>
+            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.85)" }}>All messages</span>
           </button>
 
           {/* Student row */}
           <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
             <div style={{
               width: 44, height: 44, borderRadius: 13,
-              background: av.bg, color: av.c,
+              background: "rgba(255,255,255,0.22)", color: "#fff",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 13, fontWeight: 500, flexShrink: 0,
-              border: "2px solid rgba(255,255,255,0.12)",
+              fontSize: 13, fontWeight: 600, flexShrink: 0,
+              border: "1.5px solid rgba(255,255,255,0.32)",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.10)",
             }}>
               {getInitials(selectedStudent.studentName || "S")}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 16, fontWeight: 500, color: "#fff", letterSpacing: "-0.2px", margin: 0 }}>
+              <p style={{ fontSize: 16, fontWeight: 600, color: "#fff", letterSpacing: "-0.2px", margin: 0 }}>
                 {selectedStudent.studentName}
               </p>
-              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>
+              <p style={{ fontSize: 11, color: "rgba(255,255,255,0.75)", marginTop: 2 }}>
                 {clsName ? `${clsName} · ` : ""}Parent of {selectedStudent.studentName}
               </p>
             </div>
 
-            {/* Action buttons */}
-            <div style={{ display: "flex", gap: 6, marginLeft: "auto" }}>
-              {/* Phone */}
-              <IconBtn>
-                <path d="M2,3 C2,3 3,2 5,2.5 L6,4.5 C6,4.5 5.5,5 5,5.5 C5.5,6.5 6.5,7.5 7.5,8 C8,7.5 8.5,7 8.5,7 L10.5,8 C11,10 10,10 10,10 C8,11 2,7 2,3Z" />
-              </IconBtn>
-              {/* Flag */}
-              <IconBtn>
-                <polyline points="2,3 11,3 9.5,5 11,7 2,7 4,5" />
-              </IconBtn>
-              {/* Clear chat */}
-              <div
-                onClick={handleClearChat}
-                style={{
-                  width: 32, height: 32, borderRadius: 10,
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  background: "rgba(255,255,255,0.07)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  cursor: "pointer",
-                }}
-              >
-                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="2,5 11,5" /><polyline points="9,3 11,5 9,7" />
-                  <line x1="5" y1="8" x2="5" y2="11.5" /><polyline points="3,9.5 5,11.5 7,9.5" />
-                </svg>
-              </div>
-            </div>
+            {/* Action buttons — kept ONE functional Clear Chat. The previous
+                Phone / Flag IconBtns were decorative placeholders with no
+                onClick handler and have been removed per UX feedback. */}
+            <button
+              type="button"
+              onClick={handleClearChat}
+              aria-label="Clear chat"
+              title="Clear chat"
+              style={{
+                width: 34, height: 34, borderRadius: 10,
+                border: "1px solid rgba(255,255,255,0.22)",
+                background: "rgba(255,255,255,0.12)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer", marginLeft: "auto",
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 13 13" fill="none" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="2,5 11,5" /><polyline points="9,3 11,5 9,7" />
+                <line x1="5" y1="8" x2="5" y2="11.5" /><polyline points="3,9.5 5,11.5 7,9.5" />
+              </svg>
+            </button>
           </div>
 
           {/* Online status */}
           <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 10 }}>
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: lastSeen ? "#4CC9A4" : T.ink3 }} />
-            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: lastSeen ? "#4CC9A4" : "rgba(255,255,255,0.45)" }} />
+            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.78)" }}>
               {lastSeen ? `Parent active · Last seen ${lastSeen}` : "No parent messages yet"}
             </span>
           </div>
@@ -1394,14 +1396,14 @@ const ParentNotes = () => {
           ) : (
             groupedMessages.map(group => (
               <div key={group.date}>
-                {/* Date chip — WhatsApp pill */}
+                {/* Date chip — Edullent pill */}
                 <div style={{ textAlign: "center", margin: "10px 0 12px" }}>
                   <span style={{
-                    fontSize: 11, fontWeight: 500, color: "#54656F",
-                    background: "#FFFFFFE6",
-                    padding: "5px 12px", borderRadius: 8,
-                    boxShadow: "0 1px 0.5px rgba(11,20,26,0.13)",
-                    letterSpacing: "0.2px", textTransform: "uppercase",
+                    fontSize: 11, fontWeight: 600, color: "#0044CC",
+                    background: "rgba(255,255,255,0.92)",
+                    padding: "5px 14px", borderRadius: 999,
+                    boxShadow: "0 1px 4px rgba(0,85,255,0.10), 0 0 0 0.5px rgba(0,85,255,0.12)",
+                    letterSpacing: "0.04em",
                   }}>
                     {group.date}
                   </span>
@@ -1418,38 +1420,40 @@ const ParentNotes = () => {
                         justifyContent: isTeacher ? "flex-end" : "flex-start",
                       }}
                     >
-                      {/* WhatsApp bubble */}
+                      {/* Edullent blue bubble — gradient outgoing, white incoming */}
                       <div style={{
-                        padding: "6px 10px 8px",
-                        background: isTeacher ? T.chatOut : "#FFFFFF",
-                        borderRadius: 8,
-                        borderTopLeftRadius: isTeacher ? 8 : 0,
-                        borderTopRightRadius: isTeacher ? 0 : 8,
-                        boxShadow: "0 1px 0.5px rgba(11,20,26,0.13)",
+                        padding: "7px 12px 9px",
+                        background: isTeacher ? T.chatOut : T.chatIn,
+                        borderRadius: 14,
+                        borderTopLeftRadius: isTeacher ? 14 : 4,
+                        borderTopRightRadius: isTeacher ? 4 : 14,
+                        boxShadow: isTeacher
+                          ? "0 2px 8px rgba(0,85,255,0.18), 0 1px 2px rgba(0,85,255,0.10)"
+                          : "0 1px 2px rgba(11,20,26,0.06), 0 0 0 0.5px rgba(0,85,255,0.06)",
                         maxWidth: "75%",
                         position: "relative",
                         minWidth: 70,
                       }}>
                         <p style={{
-                          fontSize: 14, lineHeight: 1.4,
-                          color: "#111B21",
+                          fontSize: 14, lineHeight: 1.45,
+                          color: isTeacher ? T.chatOutInk : T.chatInInk,
                           fontWeight: 400,
                           margin: 0,
                           whiteSpace: "pre-wrap",
                           wordBreak: "break-word",
-                          paddingRight: isTeacher ? 56 : 44,
+                          paddingRight: isTeacher ? 60 : 44,
                         }}>
                           {n.content}
                         </p>
                         <div style={{
                           display: "flex", alignItems: "center", gap: 3,
-                          position: "absolute", right: 8, bottom: 4,
+                          position: "absolute", right: 10, bottom: 5,
                         }}>
-                          <span style={{ fontSize: 11, fontWeight: 400, color: "#667781" }}>
+                          <span style={{ fontSize: 11, fontWeight: 500, color: isTeacher ? "rgba(255,255,255,0.85)" : "#5070B0" }}>
                             {fmtTime(n.createdAt)}
                           </span>
                           {isTeacher && (
-                            <svg width="16" height="11" viewBox="0 0 16 11" fill="none" stroke="#53BDEB" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <svg width="16" height="11" viewBox="0 0 16 11" fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                               <polyline points="1,6 4,9 8,3" /><polyline points="6,6 9,9 15,2" />
                             </svg>
                           )}
@@ -1464,63 +1468,55 @@ const ParentNotes = () => {
           <div ref={chatEndRef} />
         </div>
 
-        {/* ── Chat input — WhatsApp style ──────────────────────────────────── */}
+        {/* ── Chat input — Edullent blue style ─────────────────────────────── */}
         <div style={{
-          background: "#F0F2F5",
-          padding: "8px 12px", display: "flex", alignItems: "center", gap: 8,
+          background: T.chatInputBg,
+          padding: "10px 14px", display: "flex", alignItems: "center", gap: 8,
           flexShrink: 0, marginBottom: 0,
+          borderTop: "0.5px solid rgba(0,85,255,0.12)",
         }}
         >
-          {/* Emoji button */}
-          <button type="button" aria-label="Emoji" style={{
-            width: 36, height: 36, borderRadius: "50%",
-            background: "transparent",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            flexShrink: 0, cursor: "pointer", border: "none",
-          }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#54656F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>
-            </svg>
-          </button>
-
-          {/* Attach button */}
-          <button type="button" aria-label="Attach" style={{
-            width: 36, height: 36, borderRadius: "50%",
-            background: "transparent",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            flexShrink: 0, cursor: "pointer", border: "none",
-          }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#54656F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/>
-            </svg>
-          </button>
-
-          {/* Text input */}
+          {/* Text input — explicit height + padding to bypass global !important
+              rules; line-height set so caret sits cleanly. Previously the
+              input's typing was visually jittery on some browsers because the
+              global `* { font-family !important }` rule + minimal inline
+              padding combined to make the text-area feel unresponsive. */}
           <input
             value={messageContent}
             onChange={e => setMessageContent(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleSend(); } }}
+            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
             placeholder="Type a message"
+            autoComplete="off"
+            spellCheck
             style={{
-              flex: 1, padding: "10px 16px", borderRadius: 24,
-              border: "none", background: "#fff",
-              fontSize: 14, color: "#111B21", fontFamily: "inherit", outline: "none",
+              flex: 1, minWidth: 0,
+              height: 44,
+              padding: "0 18px",
+              lineHeight: "44px",
+              borderRadius: 22,
+              border: "0.5px solid rgba(0,85,255,0.18)",
+              background: "#FFFFFF",
+              boxShadow: "0 1px 2px rgba(0,85,255,0.06), inset 0 0 0 0.5px rgba(0,85,255,0.04)",
+              fontSize: 14, color: "#001040",
+              fontFamily: "inherit", outline: "none",
+              boxSizing: "border-box",
             }}
           />
 
-          {/* Send button — WhatsApp green */}
+          {/* Send button — Edullent blue gradient */}
           <button
             type="button"
             aria-label="Send message"
             onClick={handleSend}
             disabled={!messageContent.trim()}
             style={{
-              width: 42, height: 42, borderRadius: "50%",
-              background: messageContent.trim() ? "#25D366" : "#54656F",
+              width: 44, height: 44, borderRadius: "50%",
+              background: messageContent.trim() ? "linear-gradient(135deg, #0055FF, #1166FF)" : "rgba(0,85,255,0.25)",
               border: "none", display: "flex", alignItems: "center", justifyContent: "center",
               cursor: messageContent.trim() ? "pointer" : "default",
               flexShrink: 0,
-              boxShadow: messageContent.trim() ? "0 1px 3px rgba(37,211,102,0.4)" : "none",
+              boxShadow: messageContent.trim() ? "0 4px 14px rgba(0,85,255,0.36), 0 1px 3px rgba(0,85,255,0.18)" : "none",
+              transition: "background 160ms ease, box-shadow 160ms ease",
             }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff">
@@ -2464,20 +2460,6 @@ const StatCard = ({ label, value, color, icon, onClick }: { label: string; value
       <span style={{ fontSize: 9, color: T.ink3, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</span>
     </div>
     <div style={{ fontSize: 19, fontWeight: 500, color, letterSpacing: "-0.4px" }}>{value}</div>
-  </div>
-);
-
-const IconBtn = ({ children }: { children: React.ReactNode }) => (
-  <div style={{
-    width: 32, height: 32, borderRadius: 10,
-    border: "1px solid rgba(255,255,255,0.12)",
-    background: "rgba(255,255,255,0.07)",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    cursor: "pointer",
-  }}>
-    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      {children}
-    </svg>
   </div>
 );
 
