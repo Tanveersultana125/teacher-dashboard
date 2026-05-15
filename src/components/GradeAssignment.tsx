@@ -256,9 +256,26 @@ const GradeAssignment = ({ assignment, onBack }: GradeAssignmentProps) => {
 
     setIsSaving(true);
     try {
+        // Resolve the assignment's max marks once. Try the assignment doc's
+        // explicit fields, fall back to 100 (CreateAssignment doesn't yet
+        // capture a marks field, so 100 is the safe display default).
+        // Without maxScore stamped on the result, ConceptMastery's pctOfDoc
+        // can't compute a percentage when scores aren't already 0-100 →
+        // assignment row shows wrong / no value.
+        const aDoc = assignment as DocumentData;
+        const maxFromAssignment =
+          (typeof aDoc.maxMarks === "number" && aDoc.maxMarks > 0 ? aDoc.maxMarks : null) ??
+          (typeof aDoc.totalMarks === "number" && aDoc.totalMarks > 0 ? aDoc.totalMarks : null) ??
+          (typeof aDoc.marks === "number" && aDoc.marks > 0 ? aDoc.marks : null);
+        const resolvedMaxScore = maxFromAssignment ?? 100;
+
         const rowsToSave = parsedGrades.filter(p => p.entered);
         const results = await Promise.allSettled(rowsToSave.map(({ sub, num }) => {
             const resRef = doc(db, "results", `${sub.id}_${assignment.id}`);
+            const scoreNum = Number.isFinite(num) ? num : (typeof sub.grade === "number" ? sub.grade : null);
+            const pct = scoreNum != null && resolvedMaxScore > 0
+              ? Math.max(0, Math.min(100, (scoreNum / resolvedMaxScore) * 100))
+              : null;
             return auditedSet(resRef, {
                 studentId: sub.id,
                 studentName: sub.name,
@@ -269,6 +286,12 @@ const GradeAssignment = ({ assignment, onBack }: GradeAssignmentProps) => {
                 classId: assignment.classId,
                 className,
                 score: Number.isFinite(num) ? num : sub.grade,
+                // Stamp both fields so cross-dashboard readers (ConceptMastery,
+                // parent-dashboard PerformancePage etc.) can compute a true
+                // percentage instead of assuming the raw score is already %.
+                maxScore: resolvedMaxScore,
+                maxMarks: resolvedMaxScore,
+                percentage: pct,
                 feedback: sub.feedback,
                 isPlagiarized: sub.isPlagiarized || false,
                 teacherId: teacherData.id,

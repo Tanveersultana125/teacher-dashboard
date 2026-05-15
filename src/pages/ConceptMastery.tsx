@@ -434,19 +434,24 @@ const ConceptMastery = () => {
       (snap) => { if (cancelled) return; gbScores = snap.docs.map(d => d.data()); scheduleCompute(); },
       onListenerErr("gradebook scores"),
     );
-    // NEW: submissions — powers per-assignment scoring. Tally only graded
-    // submissions (where `score`/`marks`/`status:graded` is set). Handles
-    // both legacy `assignmentId` AND `homeworkId` field shapes.
+    // Assignment scores — read from `results` collection (NOT `submissions`).
+    // GradeAssignment writer puts every graded student × assignment as a
+    // `results` doc with classId + homeworkId + score stamped. Submissions
+    // status never updates to "graded" — so the prior listener showed zero
+    // assignment data here (test data worked correctly because EnterScores
+    // does write to test_scores). Same root cause as Gradebook count bug.
+    // Memory: bug_pattern_dual_id_writer_or_short_circuit.
     const unsubS = onSnapshot(
-      query(collection(db, "submissions"), ...SC_EVT, where("classId", "==", targetClassId)),
+      query(collection(db, "results"), ...SC_EVT, where("classId", "==", targetClassId)),
       (snap) => {
         if (cancelled) return;
         submissions = snap.docs
           .map(d => d.data())
-          .filter(d => d.score != null || d.marks != null || String((d as any).status || "").toLowerCase() === "graded");
+          // Require numeric score; skip partial / failed writes.
+          .filter(d => d.score != null);
         scheduleCompute();
       },
-      onListenerErr("submissions"),
+      onListenerErr("results"),
     );
 
     return () => {
