@@ -78,7 +78,11 @@ const ITEMS_PER_PAGE = 8;
 interface TestDoc {
   id: string;
   classId: string;
+  // `maxMarks` is the canonical numeric field (post-fix); `marks` is the
+  // legacy string. Read both — legacy tests created before the writer fix
+  // only carry `marks`.
   marks?: string | number;
+  maxMarks?: number;
   title?: string;
   testName?: string;
   subject?: string;
@@ -86,6 +90,27 @@ interface TestDoc {
   testDate?: string;
   [key: string]: unknown;
 }
+
+// Resolve the test's max-marks from canonical or legacy fields. Returns a
+// `{ value, source }` tuple so the UI can show a warning banner when we
+// had to fall back to a default (legacy un-marked tests created before the
+// writer validation).
+const resolveMaxScore = (test: { maxMarks?: number; marks?: string | number } | undefined | null) => {
+  // 1) Canonical numeric field — stamped by every post-fix writer.
+  if (typeof test?.maxMarks === "number" && Number.isFinite(test.maxMarks) && test.maxMarks > 0) {
+    return { value: test.maxMarks, source: "canonical" as const };
+  }
+  // 2) Legacy `marks` string — parseFloat with strict positivity check.
+  const parsed = typeof test?.marks === "number" ? test.marks : parseFloat(String(test?.marks ?? ""));
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return { value: parsed, source: "legacy" as const };
+  }
+  // 3) Fallback — match the CreateTest +/- UI's displayed default (100, not
+  // 50). The old 50 fallback was a silent killer: it disagreed with the
+  // writer's UI default, so a teacher who saw "100" on the create form saw
+  // "50" on the score-entry form.
+  return { value: 100, source: "fallback" as const };
+};
 
 interface StudentScoreRow {
   id: string;
@@ -113,8 +138,7 @@ export default function EnterScores({ test, onBack }: EnterScoresProps) {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = ITEMS_PER_PAGE;
-  const parsedMarks = parseFloat(test?.marks);
-  const maxScore = Number.isFinite(parsedMarks) && parsedMarks > 0 ? parsedMarks : 50;
+  const { value: maxScore, source: maxScoreSource } = resolveMaxScore(test);
 
   // ── Firebase: fetch roster + existing scores ────────────────────────────
   useEffect(() => {
@@ -370,6 +394,15 @@ export default function EnterScores({ test, onBack }: EnterScoresProps) {
             <span>{(test as { className?: string }).className || "Class"}</span>
             <span style={{ width: 3, height: 3, borderRadius: "50%", background: "rgba(255,255,255,0.4)" }} />
             <span>{maxScore} marks</span>
+            {maxScoreSource === "fallback" && (
+              <>
+                <span style={{ width: 3, height: 3, borderRadius: "50%", background: "rgba(255,255,255,0.4)" }} />
+                <span title="This test was created before the max-marks field was required. Re-save the test from Tests &amp; Exams to set the correct max marks."
+                  style={{ padding: "3px 8px", borderRadius: 999, background: "rgba(255,200,0,0.18)", border: "0.5px solid rgba(255,200,0,0.45)", color: "#FFE99A", fontSize: 10, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                  Default · Edit test to fix
+                </span>
+              </>
+            )}
           </p>
         </div>
 

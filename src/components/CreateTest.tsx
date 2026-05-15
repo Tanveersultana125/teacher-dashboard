@@ -180,6 +180,22 @@ export default function CreateTest({ onCancel, onCreate }: { onCancel: () => voi
   const handleSave = async (status: "Upcoming" | "Draft" = "Upcoming") => {
     const title = formData.title.trim();
     if (!title || !formData.classId) return toast.error("Test Name and Class are required.");
+    // testDate is required for Upcoming tests — parent dashboard's TestsPage
+    // filters by `testDate >= todayKey`, so a test saved with an empty
+    // testDate silently disappears for every parent. Drafts may skip the
+    // date (still being planned).
+    if (status === "Upcoming" && !formData.testDate) {
+      return toast.error("Test Date is required to publish. Pick a date or save as draft.");
+    }
+    // Marks must be a positive number — the +/- UI shows a fake default of 100
+    // when formData.marks is empty, but the writer would persist that empty
+    // string. EnterScores then falls back to 50 and the teacher sees the wrong
+    // out-of value when entering scores. Resolve at the writer to keep the
+    // displayed value === the persisted value.
+    const numericMarks = parseMarks(formData.marks);
+    if (status === "Upcoming" && (!Number.isFinite(numericMarks) || numericMarks <= 0)) {
+      return toast.error("Total marks must be a positive number.");
+    }
 
     if (pdfFile) {
       if (pdfFile.size > MAX_UPLOAD_BYTES) {
@@ -213,6 +229,13 @@ export default function CreateTest({ onCancel, onCreate }: { onCancel: () => voi
         ...formData,
         title,
         testName: title,
+        // Persist marks as the value the teacher actually saw on screen
+        // (parseMarks resolves "" → 100). Also stamp the canonical numeric
+        // `maxMarks` field so every cross-dashboard reader (EnterScores,
+        // parent TestsPage, ConceptMastery, AlertsPage, Leaderboard) gets a
+        // consistent typed source of truth without parseFloat juggling.
+        marks: String(numericMarks),
+        maxMarks: numericMarks,
         teacherId: teacherData.id,
         schoolId: teacherData.schoolId || "",
         branchId: teacherData.branchId || "",

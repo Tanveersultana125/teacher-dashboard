@@ -202,7 +202,11 @@ const SaveAsTestModal: React.FC<Props> = ({ open, onClose, onSaved, paper, formS
         subject: formSnapshot.subject,
         testDate,
         duration: formSnapshot.duration,
+        // Stamp both legacy `marks` (string) and canonical `maxMarks` (number)
+        // so EnterScores + every cross-dashboard reader gets a typed source of
+        // truth. Matches the CreateTest writer contract.
         marks: String(formSnapshot.totalMarks),
+        maxMarks: Number(formSnapshot.totalMarks),
         category,
         teacherId: teacherData.id,
         schoolId: teacherData.schoolId || "",
