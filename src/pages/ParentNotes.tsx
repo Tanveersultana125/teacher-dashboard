@@ -127,38 +127,88 @@ const ParentNotes = () => {
   useEffect(() => {
     if (!teacherData?.id || !teacherData?.schoolId) return;
     const schoolId = teacherData.schoolId;
+    const tId = teacherData.id;
     setListenerError(null);
 
-    const q1 = query(
-      collection(db, "enrollments"),
-      where("schoolId", "==", schoolId),
-      where("teacherId", "==", teacherData.id),
-    );
-    const unsub1 = onSnapshot(q1, snap => {
-      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      // Compound dedup key — single-key fallback could double-bucket students
-      // with partial fields (memory: bug_pattern_enrollment_row_dedup).
-      // Prefer canonical studentId, then email, then enrollment id.
-      const normKey = (s: string) => (s || "").trim().toLowerCase();
-      const map = new Map<string, any>();
-      docs.forEach((d: any) => {
-        const idPart = d.studentId
-          ? `id:${normKey(String(d.studentId))}`
-          : d.studentEmail
-            ? `em:${normKey(String(d.studentEmail))}`
-            : `enr:${normKey(String(d.id))}`;
-        if (!map.has(idPart)) map.set(idPart, d);
+    // Resolve the teacher's classes via the canonical union (teaching_assignments
+    // + classes.teacherId) then subscribe to enrollments by classId. The
+    // previous `enrollments where teacherId == X` was a single-source read of a
+    // denormalized field that's never written for many enrollments, and not
+    // refreshed when a class teacher changes — a newly-onboarded teacher
+    // inheriting an existing class saw an empty roster.
+    // Memory: bug_pattern_teacher_class_pickers_single_source.
+    let assignedIds = new Set<string>();
+    let legacyOwnedIds = new Set<string>();
+    let rosterSubs: Array<() => void> = [];
+    let lastClassKey = "";
+    const normKey = (s: string) => (s || "").trim().toLowerCase();
+
+    const subscribeRoster = () => {
+      const classIds = Array.from(new Set([...assignedIds, ...legacyOwnedIds]));
+      const key = classIds.slice().sort().join("|");
+      if (key === lastClassKey) return;
+      lastClassKey = key;
+
+      rosterSubs.forEach(u => { try { u(); } catch { /* noop */ } });
+      rosterSubs = [];
+
+      if (classIds.length === 0) { setRoster([]); return; }
+
+      const chunks: string[][] = [];
+      for (let i = 0; i < classIds.length; i += 10) chunks.push(classIds.slice(i, i + 10));
+
+      const chunkBuckets: any[][] = chunks.map(() => []);
+      chunks.forEach((chunk, idx) => {
+        const unsub = onSnapshot(
+          query(collection(db, "enrollments"), where("schoolId", "==", schoolId), where("classId", "in", chunk)),
+          snap => {
+            chunkBuckets[idx] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            // Dedup across chunks (memory: bug_pattern_enrollment_row_dedup).
+            const map = new Map<string, any>();
+            chunkBuckets.flat().forEach((d: any) => {
+              const idPart = d.studentId
+                ? `id:${normKey(String(d.studentId))}`
+                : d.studentEmail
+                  ? `em:${normKey(String(d.studentEmail))}`
+                  : `enr:${normKey(String(d.id))}`;
+              if (!map.has(idPart)) map.set(idPart, d);
+            });
+            setRoster(Array.from(map.values()));
+          },
+          err => {
+            console.error("[ParentNotes] roster subscription failed:", err);
+            setListenerError(err.message || "Live updates disrupted.");
+          },
+        );
+        rosterSubs.push(unsub);
       });
-      setRoster(Array.from(map.values()));
-    }, err => {
-      console.error("[ParentNotes] roster subscription failed:", err);
-      setListenerError(err.message || "Live updates disrupted.");
-    });
+    };
+
+    // 1. teaching_assignments — canonical assignment record (active filter applied client-side)
+    const uTa = onSnapshot(
+      query(collection(db, "teaching_assignments"), where("schoolId", "==", schoolId), where("teacherId", "==", tId)),
+      snap => {
+        const active = snap.docs.filter(d => {
+          const s = (d.data() as any).status;
+          return !s || (typeof s === "string" && s.toLowerCase() === "active");
+        });
+        assignedIds = new Set(active.map(d => (d.data() as any).classId).filter(Boolean));
+        subscribeRoster();
+      },
+      err => console.error("[ParentNotes] teaching_assignments error:", err),
+    );
+
+    // 2. classes.teacherId — legacy denormalized primary-teacher field
+    const uCls = onSnapshot(
+      query(collection(db, "classes"), where("schoolId", "==", schoolId), where("teacherId", "==", tId)),
+      snap => { legacyOwnedIds = new Set(snap.docs.map(d => d.id)); subscribeRoster(); },
+      err => console.error("[ParentNotes] classes error:", err),
+    );
 
     const q2 = query(
       collection(db, "parent_notes"),
       where("schoolId", "==", schoolId),
-      where("teacherId", "==", teacherData.id),
+      where("teacherId", "==", tId),
     );
     const unsub2 = onSnapshot(q2, snap => {
       const data = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
@@ -171,7 +221,13 @@ const ParentNotes = () => {
       setLoading(false);
     });
 
-    return () => { unsub1(); unsub2(); };
+    return () => {
+      uTa();
+      uCls();
+      rosterSubs.forEach(u => { try { u(); } catch { /* noop */ } });
+      rosterSubs = [];
+      unsub2();
+    };
   }, [teacherData?.id, teacherData?.schoolId, refreshKey]);
 
   // Auto-open recipient when navigated here from ConceptMasteryDetail or

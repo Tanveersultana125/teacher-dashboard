@@ -123,12 +123,41 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
              map.set(classId, candidate);
            }
          });
-         setClasses(Array.from(map.values()));
+         const teacherClasses = Array.from(map.values());
+         setClasses(teacherClasses);
 
-         const qEnrol = query(collection(db, "enrollments"), where("schoolId", "==", schoolId), where("teacherId", "==", teacherData.id));
-         const enrolSnap = await getDocs(qEnrol);
-         if (cancelled) return;
-         setRoster(enrolSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+         // Read enrollments by CLASS, not by teacherId. The previous
+         // `where("teacherId", "==", teacherData.id)` filter relied on a
+         // denormalized field that's either (a) never written by the
+         // principal/owner enrollment writer, or (b) written ONCE at first
+         // enrollment and never updated when the class teacher changes.
+         // Result: a newly-onboarded teacher inheriting an existing class saw
+         // 0 students even though `classes` + `teaching_assignments` correctly
+         // listed the class. Canonical join is enrollment.classId → class.id.
+         // Memory: bug_pattern_teacher_class_pickers_single_source.
+         const classIds = Array.from(new Set(teacherClasses.map(c => c.classId).filter(Boolean))) as string[];
+         if (classIds.length === 0) {
+           setRoster([]);
+         } else {
+           const chunks: string[][] = [];
+           for (let i = 0; i < classIds.length; i += 10) chunks.push(classIds.slice(i, i + 10));
+           const enrolSnaps = await Promise.all(
+             chunks.map(chunk =>
+               getDocs(query(collection(db, "enrollments"), where("schoolId", "==", schoolId), where("classId", "in", chunk)))
+             )
+           );
+           if (cancelled) return;
+           const seen = new Set<string>();
+           const merged: any[] = [];
+           enrolSnaps.forEach(snap => {
+             snap.docs.forEach(d => {
+               if (seen.has(d.id)) return;
+               seen.add(d.id);
+               merged.push({ id: d.id, ...d.data() });
+             });
+           });
+           setRoster(merged);
+         }
        } catch (error) {
          if (cancelled) return;
          console.error("[GenerateReport] classes/roster fetch failed:", error);

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { db, storage } from "../lib/firebase";
 import {
@@ -63,6 +63,24 @@ export default function CreateTest({ onCancel, onCreate }: { onCancel: () => voi
 
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  // Date input refs — used to open the native picker programmatically.
+  // The opacity:0-absolute-over-wrapper trick alone is fragile on iOS Safari
+  // and some Android browsers (the wrapped <div> can swallow the click before
+  // the input's default behavior triggers the picker). Calling showPicker()
+  // explicitly + focus() fallback makes this reliable cross-browser.
+  const dateMobileRef = useRef<HTMLInputElement>(null);
+  const dateDesktopRef = useRef<HTMLInputElement>(null);
+  const openDatePicker = (el: HTMLInputElement | null) => {
+    if (!el) return;
+    // showPicker is the modern, user-gesture-required API; widely supported
+    // in Chrome 99+, Edge 99+, Firefox 101+, Safari 16.4+. Fall back to
+    // focus() for older browsers (which at least opens the keyboard / cursor).
+    try {
+      const fn = (el as HTMLInputElement & { showPicker?: () => void }).showPicker;
+      if (typeof fn === "function") { fn.call(el); return; }
+    } catch { /* showPicker can throw if element isn't connected or not focused */ }
+    try { el.focus(); el.click(); } catch { /* noop */ }
+  };
 
   // Mirrors MyClasses.tsx union pattern: a teacher's class list is the union
   // of (a) `teaching_assignments` where teacherId == tId (canonical — set by
