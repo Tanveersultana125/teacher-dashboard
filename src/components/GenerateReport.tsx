@@ -1034,7 +1034,7 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
                           key={c.id}
                           value={c.classId}
                           className="hover:bg-[#EEF4FF] data-[highlighted]:bg-[#EEF4FF] data-[highlighted]:text-[#001040] focus:bg-[#EEF4FF] focus:text-[#001040]"
-                          style={{ borderRadius: 10, padding: "10px 12px", marginBottom: 2, fontSize: 13, fontWeight: 600, color: "#001040" }}
+                          style={{ borderRadius: 10, padding: "10px 12px 10px 32px", marginBottom: 2, fontSize: 13, fontWeight: 600, color: "#001040" }}
                         >
                           {fullLabel}
                         </SelectItem>
@@ -1153,7 +1153,7 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
                             <SelectItem
                               value="all"
                               className="hover:bg-[#EEF4FF] data-[highlighted]:bg-[#EEF4FF] data-[highlighted]:text-[#0055FF] focus:bg-[#EEF4FF] focus:text-[#0055FF]"
-                              style={{ borderRadius: 10, padding: "10px 12px", marginBottom: 2, fontSize: 13, fontWeight: 700, color: "#0055FF" }}
+                              style={{ borderRadius: 10, padding: "10px 12px 10px 32px", marginBottom: 2, fontSize: 13, fontWeight: 700, color: "#0055FF" }}
                             >
                               All students in class
                             </SelectItem>
@@ -1162,7 +1162,7 @@ const GenerateReport = ({ isOpen, onOpenChange, report }: GenerateReportProps) =
                                 key={s.id}
                                 value={s.studentId}
                                 className="hover:bg-[#EEF4FF] data-[highlighted]:bg-[#EEF4FF] data-[highlighted]:text-[#001040] focus:bg-[#EEF4FF] focus:text-[#001040]"
-                                style={{ borderRadius: 10, padding: "10px 12px", marginBottom: 2, fontSize: 13, fontWeight: 600, color: "#001040" }}
+                                style={{ borderRadius: 10, padding: "10px 12px 10px 32px", marginBottom: 2, fontSize: 13, fontWeight: 600, color: "#001040" }}
                               >
                                 {s.studentName || "Unnamed student"}
                               </SelectItem>
