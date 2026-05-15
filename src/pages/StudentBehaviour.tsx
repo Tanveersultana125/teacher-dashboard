@@ -110,58 +110,124 @@ export default function StudentBehaviour() {
   const [savingRating, setSavingRating] = useState(false);
 
   // ── Load enrolled students ──
-  // Two-pass dedup: first pass keeps studentId-keyed entries (canonical),
-  // second pass fills in email-only entries that aren't already covered by an
-  // id-keyed entry. The old `studentId || studentEmail` single-key dedup
-  // could keep email-only docs as separate students even when the same
-  // student also had an id-keyed enrollment elsewhere.
+  // Read enrollments by CLASS (the canonical join), not by teacherId. The
+  // previous `where teacherId == X` was a single-source read on a denormalized
+  // field that's either never written by the enrollment writer, or stale when
+  // a class teacher changes. A freshly-onboarded teacher saw 0 enrolled
+  // students on Behaviour even though the class roster was populated.
+  // Memory: bug_pattern_teacher_class_pickers_single_source.
+  //
+  // Step 1: resolve teacher's classIds via union (teaching_assignments +
+  // classes.teacherId). Step 2: subscribe to enrollments where classId in
+  // those classes (chunked by 10 to bypass Firestore's `in` cap).
+  // Step 3: two-pass dedup (studentId-keyed first, then email-only fill-ins).
   useEffect(() => {
     if (!teacherData?.id || !teacherData?.schoolId) return;
+    const schoolId = teacherData.schoolId;
+    const tId = teacherData.id;
     setLoadingStudents(true);
-    const qEnroll = query(
-      collection(db, "enrollments"),
-      where("schoolId", "==", teacherData.schoolId),
-      where("teacherId", "==", teacherData.id),
+
+    let assignedIds = new Set<string>();
+    let legacyOwnedIds = new Set<string>();
+    let enrollSubs: Array<() => void> = [];
+    let lastClassKey = "";
+
+    const subscribeEnrollments = () => {
+      const classIds = Array.from(new Set([...assignedIds, ...legacyOwnedIds]));
+      const key = classIds.slice().sort().join("|");
+      if (key === lastClassKey) return;
+      lastClassKey = key;
+
+      enrollSubs.forEach(u => { try { u(); } catch { /* noop */ } });
+      enrollSubs = [];
+
+      if (classIds.length === 0) {
+        setStudents([]);
+        setLoadingStudents(false);
+        return;
+      }
+
+      const chunks: string[][] = [];
+      for (let i = 0; i < classIds.length; i += 10) chunks.push(classIds.slice(i, i + 10));
+
+      const chunkBuckets: Array<Array<Enrollment & { id: string }>> = chunks.map(() => []);
+      const flush = () => {
+        const allDocs = chunkBuckets.flat();
+        const byId = new Map<string, Student>();
+        const seenEmails = new Set<string>();
+        // Pass 1: id-keyed entries
+        allDocs.filter(e => !!e.studentId).forEach(e => {
+          const sid = e.studentId!;
+          if (byId.has(sid)) return;
+          const email = (e.studentEmail || "").toLowerCase();
+          byId.set(sid, {
+            id: sid,
+            name: e.studentName || e.studentEmail || "Student",
+            email,
+            classId: e.classId,
+            className: e.className,
+            rollNo: e.rollNo,
+          });
+          if (email) seenEmails.add(email);
+        });
+        // Pass 2: email-only entries
+        allDocs.filter(e => !e.studentId && e.studentEmail).forEach(e => {
+          const email = e.studentEmail!.toLowerCase();
+          if (seenEmails.has(email)) return;
+          seenEmails.add(email);
+          byId.set(email, {
+            id: email,
+            name: e.studentName || e.studentEmail || "Student",
+            email,
+            classId: e.classId,
+            className: e.className,
+            rollNo: e.rollNo,
+          });
+        });
+        const arr = Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name));
+        setStudents(arr);
+        setSelectedId(prev => prev || arr[0]?.id || "");
+        setLoadingStudents(false);
+      };
+
+      chunks.forEach((chunk, idx) => {
+        const unsub = onSnapshot(
+          query(collection(db, "enrollments"), where("schoolId", "==", schoolId), where("classId", "in", chunk)),
+          snap => {
+            chunkBuckets[idx] = snap.docs.map(d => ({ ...(d.data() as Enrollment), id: d.id }));
+            flush();
+          },
+          err => console.warn("[StudentBehaviour/enrollments]", err.code),
+        );
+        enrollSubs.push(unsub);
+      });
+    };
+
+    const uTa = onSnapshot(
+      query(collection(db, "teaching_assignments"), where("schoolId", "==", schoolId), where("teacherId", "==", tId)),
+      snap => {
+        const active = snap.docs.filter(d => {
+          const s = (d.data() as { status?: unknown }).status;
+          return !s || (typeof s === "string" && s.toLowerCase() === "active");
+        });
+        assignedIds = new Set(active.map(d => (d.data() as { classId?: string }).classId).filter((x): x is string => !!x));
+        subscribeEnrollments();
+      },
+      err => console.warn("[StudentBehaviour/teaching_assignments]", err.code),
     );
-    const unsub = onSnapshot(qEnroll, snap => {
-      const docs = snap.docs.map(d => ({ ...(d.data() as Enrollment), id: d.id }));
-      const byId = new Map<string, Student>();
-      const seenEmails = new Set<string>();
-      // Pass 1: id-keyed entries
-      docs.filter(e => !!e.studentId).forEach(e => {
-        const sid = e.studentId!;
-        if (byId.has(sid)) return;
-        const email = (e.studentEmail || "").toLowerCase();
-        byId.set(sid, {
-          id: sid,
-          name: e.studentName || e.studentEmail || "Student",
-          email,
-          classId: e.classId,
-          className: e.className,
-          rollNo: e.rollNo,
-        });
-        if (email) seenEmails.add(email);
-      });
-      // Pass 2: email-only entries (skip if already covered above)
-      docs.filter(e => !e.studentId && e.studentEmail).forEach(e => {
-        const email = e.studentEmail!.toLowerCase();
-        if (seenEmails.has(email)) return;
-        seenEmails.add(email);
-        byId.set(email, {
-          id: email,
-          name: e.studentName || e.studentEmail || "Student",
-          email,
-          classId: e.classId,
-          className: e.className,
-          rollNo: e.rollNo,
-        });
-      });
-      const arr = Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name));
-      setStudents(arr);
-      setSelectedId(prev => prev || arr[0]?.id || "");
-      setLoadingStudents(false);
-    });
-    return () => unsub();
+
+    const uCls = onSnapshot(
+      query(collection(db, "classes"), where("schoolId", "==", schoolId), where("teacherId", "==", tId)),
+      snap => { legacyOwnedIds = new Set(snap.docs.map(d => d.id)); subscribeEnrollments(); },
+      err => console.warn("[StudentBehaviour/classes-legacy]", err.code),
+    );
+
+    return () => {
+      uTa();
+      uCls();
+      enrollSubs.forEach(u => { try { u(); } catch { /* noop */ } });
+      enrollSubs = [];
+    };
   }, [teacherData?.id, teacherData?.schoolId]);
 
   // ── Incidents — school-wide listener subscribed ONCE per school ──

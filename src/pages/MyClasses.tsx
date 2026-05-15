@@ -250,36 +250,75 @@ const MyClasses = () => {
       errH,
     ));
 
-    // ── Event streams — schoolId + teacherId only (NO branchId per
-    // `bug_pattern_branch_filter_on_event_streams`).
-    // NOTE: enrollments has its own dedicated listener below (chunked by
-    // classId in [...]). It used to live here filtered by teacherId, but
-    // many enrollment writers don't stamp teacherId on the doc → silent
-    // 0-student count. classId match is the reliable join key.
-    unsubs.push(onSnapshot(
-      query(collection(db, "attendance"), where("schoolId", "==", schoolId), where("teacherId", "==", tId)),
-      (snap) => { if (!cancelled) setAttendanceRecords(snap.docs.map(d => ({ ...d.data(), id: d.id }))); },
-      errH,
-    ));
-    // Score sources — 3-source merge (test_scores + gradebook_scores + results).
-    unsubs.push(onSnapshot(
-      query(collection(db, "test_scores"), where("schoolId", "==", schoolId), where("teacherId", "==", tId)),
-      (snap) => { if (!cancelled) setTestScoreDocs(snap.docs.map(d => ({ ...d.data(), id: d.id }))); },
-      errH,
-    ));
-    unsubs.push(onSnapshot(
-      query(collection(db, "gradebook_scores"), where("schoolId", "==", schoolId), where("teacherId", "==", tId)),
-      (snap) => { if (!cancelled) setGradebookScoreDocs(snap.docs.map(d => ({ ...d.data(), id: d.id }))); },
-      errH,
-    ));
-    unsubs.push(onSnapshot(
-      query(collection(db, "results"), where("schoolId", "==", schoolId), where("teacherId", "==", tId)),
-      (snap) => { if (!cancelled) setResultDocs(snap.docs.map(d => ({ ...d.data(), id: d.id }))); },
-      errH,
-    ));
+    // Event streams (attendance + score sources) are subscribed in a separate
+    // effect below — keyed off the RESOLVED classIds, not teacherId. The
+    // previous `where teacherId == tId` join was a silent killer: a freshly
+    // onboarded teacher inheriting an existing class saw 0 attendance / 0
+    // scores even though the class roster was populated, because those event
+    // docs carry the WRITER's teacherId (the prior teacher), not the current
+    // one. Memory: bug_pattern_branch_filter_on_event_streams +
+    // bug_pattern_teacher_class_pickers_single_source.
 
     return () => { cancelled = true; unsubs.forEach(u => u()); };
   }, [teacherData?.id, teacherData?.schoolId, refreshKey]);
+
+  // ── Event streams: subscribe by classId (canonical join), chunked by 10. ──
+  useEffect(() => {
+    if (!teacherData?.schoolId) return;
+    const schoolId = teacherData.schoolId;
+    const classIds = Array.from(new Set([...assignedClassIds, ...legacyOwnedClassIds].filter(Boolean)));
+    if (classIds.length === 0) {
+      setAttendanceRecords([]);
+      setTestScoreDocs([]);
+      setGradebookScoreDocs([]);
+      setResultDocs([]);
+      return;
+    }
+
+    const chunks: string[][] = [];
+    for (let i = 0; i < classIds.length; i += 10) chunks.push(classIds.slice(i, i + 10));
+
+    // Each source gets its own chunked-listener cluster with a shared bucket
+    // accumulator. Dedup keeps the first snapshot's doc when the same id
+    // appears across chunks (shouldn't happen since classIds are unique, but
+    // defensive against chunk-overlap edge cases).
+    const subscribeChunked = <T extends { id: string }>(
+      coll: string,
+      setter: (rows: T[]) => void,
+    ): Array<() => void> => {
+      const buckets: T[][] = chunks.map(() => []);
+      const flush = () => {
+        const seen = new Set<string>();
+        const merged: T[] = [];
+        buckets.flat().forEach(r => {
+          if (seen.has(r.id)) return;
+          seen.add(r.id);
+          merged.push(r);
+        });
+        setter(merged);
+      };
+      return chunks.map((chunk, idx) =>
+        onSnapshot(
+          query(collection(db, coll), where("schoolId", "==", schoolId), where("classId", "in", chunk)),
+          (snap) => {
+            buckets[idx] = snap.docs.map(d => ({ ...(d.data() as object), id: d.id } as T));
+            flush();
+          },
+          (err) => console.warn(`[MyClasses/${coll}]`, err.code),
+        )
+      );
+    };
+
+    const allUnsubs: Array<() => void> = [
+      ...subscribeChunked<AttendanceDoc>("attendance", setAttendanceRecords),
+      ...subscribeChunked<ScoreDoc>("test_scores", setTestScoreDocs),
+      ...subscribeChunked<ScoreDoc>("gradebook_scores", setGradebookScoreDocs),
+      ...subscribeChunked<ScoreDoc>("results", setResultDocs),
+    ];
+
+    return () => allUnsubs.forEach(u => { try { u(); } catch { /* noop */ } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teacherData?.schoolId, assignedClassIds, legacyOwnedClassIds, refreshKey]);
 
   // Resolved class list — union of assigned (from teaching_assignments) +
   // legacy-owned (from classes by teacherId), filtered against the school's

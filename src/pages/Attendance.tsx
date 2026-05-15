@@ -134,45 +134,75 @@ const Attendance = () => {
     } catch { /* localStorage may be disabled — silent fail is fine */ }
   }, [selectedClassId, teacherData?.id]);
 
-  // 1. Classes — branchId IS valid here (resolution entity, eligible for
-  // strict branch isolation). See bug_pattern_branch_filter_on_event_streams
-  // memory: branchId belongs ONLY on resolution entities (classes/teachers/
-  // assignments), NEVER on event streams (attendance/scores/notes).
+  // 1. Classes — UNION pattern matching MyClasses / CreateTest fix.
+  // Read teacher's classes from BOTH:
+  //   (a) teaching_assignments where teacherId == tId  → modern canonical
+  //   (b) classes.teacherId == tId                     → legacy homeroom field
+  // Single-source `classes.teacherId` previously missed any class the teacher
+  // was assigned to via teaching_assignments only → a freshly onboarded
+  // teacher saw zero classes in Attendance even though MyClasses showed the
+  // class correctly. Memory: bug_pattern_teacher_class_pickers_single_source.
+  // Drops the branchId filter on classes (not all class docs carry branchId).
   useEffect(() => {
     if (!teacherData?.id || !teacherData?.schoolId) return;
     const schoolId = teacherData.schoolId;
-    const branchId = teacherData.branchId as string | undefined;
     const teacherId = teacherData.id;
-    const tenant: QueryConstraint[] = branchId
-      ? [where("schoolId", "==", schoolId), where("branchId", "==", branchId)]
-      : [where("schoolId", "==", schoolId)];
-    return onSnapshot(
-      query(
-        collection(db, "classes"),
-        ...tenant,
-        where("teacherId", "==", teacherId),
-      ),
+
+    let assignedIds = new Set<string>();
+    let legacyOwnedIds = new Set<string>();
+    let allClassDocs: ClassDoc[] = [];
+
+    const recompute = () => {
+      const allowed = new Set<string>([...assignedIds, ...legacyOwnedIds]);
+      const cls = allowed.size === 0 ? [] : allClassDocs.filter(c => allowed.has(c.id));
+      setClasses(cls);
+      setSelectedClassId(prev => {
+        let pref = prev;
+        if (!pref) {
+          try {
+            pref = localStorage.getItem(SELECTED_CLASS_KEY(teacherId)) ||
+                   localStorage.getItem("teacher_attendance_selected_class") || "";
+          } catch { /* noop */ }
+        }
+        if (pref && cls.some(c => c.id === pref)) return pref;
+        return cls[0]?.id || "";
+      });
+      setClassesLoading(false);
+    };
+
+    // (a) teaching_assignments — active-only filter applied client-side
+    const uTa = onSnapshot(
+      query(collection(db, "teaching_assignments"), where("schoolId", "==", schoolId), where("teacherId", "==", teacherId)),
       (snap) => {
-        const cls: ClassDoc[] = snap.docs.map(d => ({ ...d.data(), id: d.id }));
-        setClasses(cls);
-        // Prefer per-teacher persisted choice; fall back to generic key, then
-        // first available class. If the persisted class no longer exists in
-        // this teacher's roster (e.g., reassigned), drop back to first.
-        setSelectedClassId(prev => {
-          let pref = prev;
-          if (!pref) {
-            try {
-              pref = localStorage.getItem(SELECTED_CLASS_KEY(teacherId)) ||
-                     localStorage.getItem("teacher_attendance_selected_class") || "";
-            } catch { /* noop */ }
-          }
-          if (pref && cls.some(c => c.id === pref)) return pref;
-          return cls[0]?.id || "";
+        const active = snap.docs.filter(d => {
+          const s = (d.data() as { status?: unknown }).status;
+          return !s || (typeof s === "string" && s.toLowerCase() === "active");
         });
-        setClassesLoading(false);
-      }
+        assignedIds = new Set(active.map(d => (d.data() as { classId?: string }).classId).filter((x): x is string => !!x));
+        recompute();
+      },
+      (err) => console.warn("[Attendance/teaching_assignments]", err.code),
     );
-  }, [teacherData?.id, teacherData?.schoolId, teacherData?.branchId]);
+
+    // (b) classes.teacherId — legacy denormalized primary teacher
+    const uLegacy = onSnapshot(
+      query(collection(db, "classes"), where("schoolId", "==", schoolId), where("teacherId", "==", teacherId)),
+      (snap) => { legacyOwnedIds = new Set(snap.docs.map(d => d.id)); recompute(); },
+      (err) => console.warn("[Attendance/classes-legacy]", err.code),
+    );
+
+    // (c) all school classes — resolves metadata for assigned-but-not-owned classes
+    const uAll = onSnapshot(
+      query(collection(db, "classes"), where("schoolId", "==", schoolId)),
+      (snap) => {
+        allClassDocs = snap.docs.map(d => ({ ...d.data(), id: d.id } as ClassDoc));
+        recompute();
+      },
+      (err) => console.warn("[Attendance/classes-all]", err.code),
+    );
+
+    return () => { uTa(); uLegacy(); uAll(); };
+  }, [teacherData?.id, teacherData?.schoolId]);
 
   // 2. Enrollments — live listener (was one-shot getDocs, which missed
   // mid-session enrollment changes). Per-class onSnapshot with a Map-based
@@ -202,26 +232,55 @@ const Attendance = () => {
     return () => unsubs.forEach(u => u());
   }, [classes, teacherData?.schoolId]);
 
-  // 3. Attendance records — schoolId + teacherId only. NEVER branchId on
-  // event streams (silent killer pattern: fresh writes hidden during
-  // inference-lag window). teacherId already enforces branch boundary
-  // because each teacher belongs to exactly one branch. Loading flag NOT
-  // re-set on subsequent runs — first snapshot drops the page-loader and
-  // any later re-fires (classes.length change) just stream new data into
-  // place without flicker.
+  // 3. Attendance records — read by classId (NOT teacherId). The previous
+  // `where teacherId == X` was a single-source read on a denormalized field
+  // that's set by the WRITER (whoever marked attendance), not refreshed when
+  // class teachers change. A fresh teacher inheriting an existing class saw
+  // historical attendance disappear, and their own marks sometimes never
+  // populated the cards if the auditedSet wrote with a different teacher ref.
+  // Canonical join: attendance.classId → class.id. Memory:
+  // bug_pattern_branch_filter_on_event_streams + bug_pattern_teacher_class_pickers_single_source.
+  // NEVER branchId on event streams (silent killer during inference-lag).
+  // Chunked `in` queries because Firestore caps `in` to 10 values per query.
   useEffect(() => {
-    if (!teacherData?.id || !teacherData?.schoolId || !classes.length) { setRecords([]); return; }
-    return onSnapshot(
-      query(
-        collection(db, "attendance"),
-        where("schoolId", "==", teacherData.schoolId),
-        where("teacherId", "==", teacherData.id),
-      ),
-      (snap) => {
-        setRecords(snap.docs.map(d => ({ ...d.data(), id: d.id } as AttendanceRecord)));
-      }
+    if (!teacherData?.schoolId || !classes.length) { setRecords([]); return; }
+    const schoolId = teacherData.schoolId;
+    const classIds = Array.from(new Set(classes.map(c => c.id).filter(Boolean)));
+    if (!classIds.length) { setRecords([]); return; }
+
+    const chunks: string[][] = [];
+    for (let i = 0; i < classIds.length; i += 10) chunks.push(classIds.slice(i, i + 10));
+
+    const chunkBuckets: AttendanceRecord[][] = chunks.map(() => []);
+    const flush = () => {
+      const seen = new Set<string>();
+      const merged: AttendanceRecord[] = [];
+      chunkBuckets.flat().forEach(r => {
+        if (seen.has(r.id)) return;
+        seen.add(r.id);
+        merged.push(r);
+      });
+      setRecords(merged);
+    };
+
+    const unsubs = chunks.map((chunk, idx) =>
+      onSnapshot(
+        query(
+          collection(db, "attendance"),
+          where("schoolId", "==", schoolId),
+          where("classId", "in", chunk),
+        ),
+        (snap) => {
+          chunkBuckets[idx] = snap.docs.map(d => ({ ...d.data(), id: d.id } as AttendanceRecord));
+          flush();
+        },
+        (err) => console.warn("[Attendance/records]", err.code),
+      )
     );
-  }, [teacherData?.id, teacherData?.schoolId, classes.length, refreshKey]);
+
+    return () => unsubs.forEach(u => u());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teacherData?.schoolId, classes, refreshKey]);
 
   const loading = classesLoading;
 
