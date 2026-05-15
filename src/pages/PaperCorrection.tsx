@@ -810,6 +810,10 @@ const PaperCorrection = () => {
       toast.error("Result not saved to cloud yet. Try again in a moment.");
       return;
     }
+    if (!result) {
+      toast.error("No correction result to send.");
+      return;
+    }
     if (sentToParent || sendingToParent) return;
     // Student-identity preflight — parent ReportsPage filters via
     // (studentId OR studentEmail). Without either, the publish would be
@@ -820,6 +824,28 @@ const PaperCorrection = () => {
       toast.error("Pick the student first (use 'Start Grading' to select class + student).");
       return;
     }
+
+    // Resolve marks from EVERY possible source — the AI sometimes returns
+    // marksScored: 0 at the top level even when per-question marks_awarded
+    // sum to a real positive total. Prefer the most-truthful source so the
+    // parent's card never shows "0/20" when real marks exist in the result.
+    const num = (v: unknown): number | null => {
+      if (v === null || v === undefined) return null;
+      const n = typeof v === "number" ? v : Number(v);
+      return Number.isFinite(n) ? n : null;
+    };
+    const qSum = Array.isArray(result.questions)
+      ? result.questions.reduce((s, q: any) => s + (num(q?.marks_awarded) ?? 0), 0)
+      : 0;
+    const finalMarksScored =
+      (num(result.marksScored) ?? 0) > 0 ? Number(result.marksScored)
+      : qSum > 0 ? qSum
+      : (num(result.marksScored) ?? 0);
+    const finalTotalMarks = num(result.totalMarks) ?? Number(totalMarks) ?? 0;
+    const finalPercentage = finalTotalMarks > 0
+      ? Math.round((finalMarksScored / finalTotalMarks) * 1000) / 10
+      : (num(result.percentage) ?? 0);
+
     setSendingToParent(true);
     try {
       await updateDoc(doc(db, "paper_corrections", savedCorrectionId), {
@@ -831,6 +857,17 @@ const PaperCorrection = () => {
         studentEmail: sEmail,
         classId: sessionClassId || "",
         className: selectedClass?.name || "",
+        // RE-STAMP marks on every send so the parent always gets the freshest
+        // numbers. If the initial save captured marksScored:0 (AI omitted the
+        // top-level field) but per-question marks sum to a real total, this
+        // overwrite ensures the parent sees the truth.
+        marksScored: finalMarksScored,
+        totalMarks: finalTotalMarks,
+        percentage: finalPercentage,
+        gradeBand: result.grade_band || "C",
+        // Also refresh the result blob in case the teacher manually edited
+        // any question scores in the in-memory result (future-proofing).
+        result,
       });
       setSentToParent(true);
       toast.success(`Paper sent to ${selectedStudent?.name || studentName.trim() || "student"}'s parent.`);
@@ -854,6 +891,23 @@ const PaperCorrection = () => {
     if (!teacherData?.id || !teacherData?.schoolId) return null;
     try {
       const preset = CATEGORY_PRESETS.find(p => p.key === category);
+      // Resolve marks defensively — AI sometimes emits marksScored: 0 at the
+      // top level while per-question marks_awarded sum to a real total.
+      // Prefer the truthful number so the denormalized field never lies.
+      const safeNum = (v: unknown): number => {
+        const n = typeof v === "number" ? v : Number(v);
+        return Number.isFinite(n) ? n : 0;
+      };
+      const qSum = Array.isArray(correction.questions)
+        ? correction.questions.reduce((s, q: any) => s + safeNum(q?.marks_awarded), 0)
+        : 0;
+      const topMarks = safeNum(correction.marksScored);
+      const resolvedMarks = topMarks > 0 ? topMarks : (qSum > 0 ? qSum : topMarks);
+      const resolvedTotal = safeNum(correction.totalMarks) || safeNum(totalMarks);
+      const resolvedPct = resolvedTotal > 0
+        ? Math.round((resolvedMarks / resolvedTotal) * 1000) / 10
+        : (typeof correction.percentage === "number" ? correction.percentage : 0);
+
       const docRef = await auditedAdd(collection(db, "paper_corrections"), {
         // Identity
         schoolId: teacherData.schoolId,
@@ -875,11 +929,11 @@ const PaperCorrection = () => {
         gradingStyle,
         subject: subject.trim() || correction.subject || "",
         grade: grade.trim() || correction.grade || "",
-        totalMarks: correction.totalMarks ?? Number(totalMarks) ?? 0,
+        totalMarks: resolvedTotal,
         totalPages: pageImages.length,
         // Headline result (denormalized for cheap list views)
-        marksScored: correction.marksScored ?? 0,
-        percentage: typeof correction.percentage === "number" ? correction.percentage : 0,
+        marksScored: resolvedMarks,
+        percentage: resolvedPct,
         gradeBand: correction.grade_band || "C",
         // Full result blob (consumed by detail views / re-renders)
         result: correction,
