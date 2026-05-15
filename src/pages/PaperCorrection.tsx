@@ -326,18 +326,60 @@ const PaperCorrection = () => {
   }, []);
 
   // ── Session listeners — load classes assigned to this teacher ──────────
+  // Union pattern: a teacher's class list = (teaching_assignments by teacherId)
+  // ∪ (classes.teacherId by teacherId), filtered against the school's class
+  // docs. The previous single-source `classes.teacherId` query silently missed
+  // every class a teacher was assigned to ONLY via teaching_assignments → a
+  // freshly-onboarded teacher saw an empty class dropdown here. Memory:
+  // bug_pattern_teacher_class_pickers_single_source.
   useEffect(() => {
     if (!teacherData?.id || !teacherData?.schoolId) return;
-    const SC: QueryConstraint[] = [where("schoolId", "==", teacherData.schoolId)];
-    const unsub = onSnapshot(
-      query(collection(db, "classes"), ...SC, where("teacherId", "==", teacherData.id)),
+    const schoolId = teacherData.schoolId;
+    const tId = teacherData.id;
+
+    let assignedIds = new Set<string>();
+    let legacyOwnedIds = new Set<string>();
+    let allClassDocs: ClassRow[] = [];
+
+    const recompute = () => {
+      const allowed = new Set<string>([...assignedIds, ...legacyOwnedIds]);
+      const cls = allowed.size === 0 ? [] : allClassDocs.filter(c => allowed.has(c.id));
+      setSessionClasses(cls);
+    };
+
+    // teaching_assignments — active filter is client-side (legacy docs may
+    // not carry a status field; server-side `status == "active"` would drop them).
+    const uTa = onSnapshot(
+      query(collection(db, "teaching_assignments"), where("schoolId", "==", schoolId), where("teacherId", "==", tId)),
       (snap) => {
-        const cls = snap.docs.map(d => ({ ...(d.data() as Record<string, unknown>), id: d.id })) as ClassRow[];
-        setSessionClasses(cls);
+        const active = snap.docs.filter(d => {
+          const s = (d.data() as { status?: unknown }).status;
+          return !s || (typeof s === "string" && s.toLowerCase() === "active");
+        });
+        assignedIds = new Set(active.map(d => (d.data() as { classId?: string }).classId).filter((x): x is string => !!x));
+        recompute();
       },
-      (err) => console.error("[PaperCorrection] classes listener failed", err),
+      (err) => console.error("[PaperCorrection] teaching_assignments listener failed", err),
     );
-    return () => unsub();
+
+    // classes.teacherId — legacy denormalized primary teacher
+    const uLegacy = onSnapshot(
+      query(collection(db, "classes"), where("schoolId", "==", schoolId), where("teacherId", "==", tId)),
+      (snap) => { legacyOwnedIds = new Set(snap.docs.map(d => d.id)); recompute(); },
+      (err) => console.error("[PaperCorrection] classes-legacy listener failed", err),
+    );
+
+    // All school classes — resolves metadata for assigned-but-not-owned classes
+    const uAll = onSnapshot(
+      query(collection(db, "classes"), where("schoolId", "==", schoolId)),
+      (snap) => {
+        allClassDocs = snap.docs.map(d => ({ ...(d.data() as Record<string, unknown>), id: d.id })) as ClassRow[];
+        recompute();
+      },
+      (err) => console.error("[PaperCorrection] classes-all listener failed", err),
+    );
+
+    return () => { uTa(); uLegacy(); uAll(); };
   }, [teacherData?.id, teacherData?.schoolId]);
 
   // Load tests for the selected class
