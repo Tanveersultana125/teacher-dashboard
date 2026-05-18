@@ -487,14 +487,24 @@ export default function Gradebook() {
     );
     const ua = () => { ua1(); ua2(); };
 
-    // test_scores by class — count per testId. Powers the "X of Y graded" chip
-    // on each test row + the activities-section progress.
+    // test_scores by teacher — count per testId. Powers the "X of Y graded"
+    // chip on each test row + the activities-section progress.
+    // SCOPE CHANGE 2026-05-19: was `where("classId", "==", targetClassId)`,
+    // mirror reason as the `results` listener below — the activities list is
+    // teacher-scoped (every test the teacher created, across all classes),
+    // but strict class filter on scores broke the count for any test whose
+    // `test.classId` doesn't match the currently-selected class. Now scoped
+    // by teacherId so the listener captures every score this teacher has
+    // saved; the testId key is what matters for the counter map.
     const usc = onSnapshot(
-      query(collection(db, "test_scores"), ...SC_EVT, where("classId", "==", targetClassId)),
+      query(collection(db, "test_scores"), ...SC_EVT, where("teacherId", "==", teacherId)),
       (snap) => {
         if (cancelled) return;
         const m = new Map<string, number>();
+        const seenDocIds = new Set<string>();
         snap.docs.forEach(d => {
+          if (seenDocIds.has(d.id)) return;
+          seenDocIds.add(d.id);
           const data = d.data() as { testId?: unknown; score?: unknown };
           if (typeof data.testId === "string" && data.score != null) {
             m.set(data.testId, (m.get(data.testId) || 0) + 1);
