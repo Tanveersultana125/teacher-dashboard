@@ -15,6 +15,7 @@ import { doc, collection, query, where, onSnapshot, getDocs, deleteDoc, serverTi
 import { auditedAdd, auditedUpdate } from "../lib/auditedWrites";
 import { useAuth } from "../lib/AuthContext";
 import { dedupAttendanceByDay } from "../lib/attendanceDedup";
+import { subscribeSchoolHolidays, buildHolidayMap, type SchoolHoliday } from "../lib/schoolHolidays";
 import { SubjectMasteryRadar } from "./SubjectMasteryRadar";
 import { toast } from "sonner";
 
@@ -187,6 +188,7 @@ export default function StudentProfile({ student, onBack, embedded = false }: Pr
   const navigate = useNavigate();
   const [masterProfile, setMasterProfile] = useState<any>(null);
   const [attendance, setAttendance] = useState<any[]>([]);
+  const [schoolHolidays, setSchoolHolidays] = useState<SchoolHoliday[]>([]);
   const [testScores, setTestScores] = useState<any[]>([]);
   const [gradebookScores, setGradebookScores] = useState<any[]>([]);
   const [assignments, setAssignments] = useState<any[]>([]);
@@ -385,6 +387,18 @@ export default function StudentProfile({ student, onBack, embedded = false }: Pr
     return () => { cancelled = true; unsubs.forEach(u => u()); };
   }, [sid, email, teacherData?.schoolId, teacherData?.email, refreshKey]);
 
+  // School-wide holidays (principal-declared) — excluded from % + paint
+  // calendar cells purple.
+  useEffect(() => {
+    if (!teacherData?.schoolId) return;
+    const unsub = subscribeSchoolHolidays(
+      teacherData.schoolId,
+      (rows) => setSchoolHolidays(rows),
+      (err) => console.error("[StudentProfile] school_holidays:", err),
+    );
+    return () => unsub();
+  }, [teacherData?.schoolId]);
+
   useEffect(() => {
     if (!classId || !teacherData?.schoolId) return;
     let cancelled = false;
@@ -403,10 +417,12 @@ export default function StudentProfile({ student, onBack, embedded = false }: Pr
     return allScoreDocs.filter(d => writerTimeMs(d) >= cutoff);
   }, [allScoreDocs]);
 
+  const holidayMap = useMemo(() => buildHolidayMap(schoolHolidays), [schoolHolidays]);
+
   const m = useMemo(() => {
-    // Holiday days (whole-class declared off-days) excluded from % across all
-    // dashboards — they don't count for or against the student.
-    const attCountable = attendance.filter(r => r.status !== "holiday");
+    // Exclude (a) per-student "holiday" status (class teacher declared) AND
+    // (b) school-wide holidays (principal declared) from % across all dashboards.
+    const attCountable = attendance.filter(r => r.status !== "holiday" && !holidayMap.has(String(r.date || "")));
     const tot = attCountable.length;
     const pres = attCountable.filter(r => r.status === "present").length;
     const late = attCountable.filter(r => r.status === "late").length;
@@ -445,6 +461,7 @@ export default function StudentProfile({ student, onBack, embedded = false }: Pr
       const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
       const mAtt = attendance.filter((r: any) => {
         if (r.status === "holiday") return false; // exclude class-wide off-days
+        if (holidayMap.has(String(r.date || ""))) return false; // exclude school-wide holidays
         const ms = writerTimeMs(r) || (r.date ? new Date(r.date).getTime() : 0);
         if (!ms) return false;
         const dt = new Date(ms);
@@ -476,7 +493,7 @@ export default function StudentProfile({ student, onBack, embedded = false }: Pr
     const days = new Set(attendance.map((a: any) => toDate(a.date)?.toDateString())).size;
 
     return { tot, pres, late, abs, attRate, avg, subScores, trend, monthly, completion, days, subCount: classSubmissions.length, asgCount: assignments.length };
-  }, [attendance, allScoreDocs, recentScoreDocs, submissions, assignments]);
+  }, [attendance, allScoreDocs, recentScoreDocs, submissions, assignments, holidayMap]);
 
   const overallRisk = useMemo<number | null>(() => {
     const parts: number[] = [];
