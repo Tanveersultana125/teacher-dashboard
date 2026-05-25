@@ -77,6 +77,9 @@ const SettingsPage = () => {
     defaultView: "Grid", gradeScale: "Percentage", dateFormat: "DD/MM/YYYY", language: "English",
   });
 
+  const [twoFactor, setTwoFactor] = useState(false);
+  const [loginNotifs, setLoginNotifs] = useState(true);
+
   useEffect(() => {
     if (teacherData) {
       setFormData({
@@ -474,8 +477,8 @@ const SettingsPage = () => {
               <p style={{ fontSize: 10, color: T.ink3, marginTop: 2, lineHeight: 1.4 }}>Account credentials are managed by your school administrator. Contact admin to change password.</p>
             </div>
           </div>
-          <ToggleRow title="Two-factor auth" sub="Extra login protection" active={false} onClick={() => {}} />
-          <ToggleRow title="Login notifications" sub="Alert on new device login" active={true} onClick={() => {}} last />
+          <ToggleRow title="Two-factor auth" sub="Extra login protection" active={twoFactor} onClick={() => setTwoFactor(v => !v)} />
+          <ToggleRow title="Login notifications" sub="Alert on new device login" active={loginNotifs} onClick={() => setLoginNotifs(v => !v)} last />
         </SectionCard>
 
         {/* ── DANGER ZONE ──────────────────────────────────────────────── */}

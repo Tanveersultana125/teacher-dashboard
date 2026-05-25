@@ -16,6 +16,7 @@ import {
   Settings,
   LifeBuoy,
   LogOut,
+  X,
   Sparkles,
   ScrollText,
   Library,
@@ -99,7 +100,7 @@ interface TeacherSidebarProps {
 // Floating card sidebar — slides in on mobile (toggled by header hamburger),
 // sticky always-visible on desktop. Card sits with 10px gap from edges.
 const TeacherSidebar = ({ onClose }: TeacherSidebarProps) => {
-  const { logout } = useAuth();
+  const { logout, teacherData } = useAuth();
   const location = useLocation();
 
   const isItemActive = (path: string) =>
@@ -109,6 +110,35 @@ const TeacherSidebar = ({ onClose }: TeacherSidebarProps) => {
 
   return (
     <aside className="w-[calc(100%-10px)] h-[calc(100%-20px)] mt-[10px] mb-[10px] ml-[10px] bg-white flex flex-col shrink-0 overflow-y-auto rounded-2xl shadow-[0_8px_28px_rgba(15,23,42,0.18)] md:shadow-[0_8px_28px_rgba(15,23,42,0.08)]">
+
+      {/* Mobile-only header — school brand + close button. Desktop sidebar is
+          always-visible and has the brand in TeacherHeader, so this hides on md+. */}
+      {onClose && (
+        <div className="md:hidden flex items-center gap-2.5 px-3 pt-3 pb-2 border-b border-slate-100">
+          <img
+            src="/edullent-icon.png"
+            alt="Edullent"
+            className="w-9 h-9 rounded-lg object-contain shrink-0"
+            draggable={false}
+          />
+          <div className="flex flex-col min-w-0 flex-1">
+            <span className="text-[13px] font-bold text-[#1e3272] uppercase leading-tight truncate">
+              {teacherData?.schoolName || "EDULLENT"}
+            </span>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none mt-[3px]">
+              {teacherData?.subject || "Teacher"}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close menu"
+            className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700 active:scale-95 transition-all shrink-0"
+          >
+            <X className="w-[18px] h-[18px]" strokeWidth={2.4} />
+          </button>
+        </div>
+      )}
 
       <nav className="flex-1 px-3 py-4 overflow-y-auto">
         {navSections.map((section, sIdx) => (

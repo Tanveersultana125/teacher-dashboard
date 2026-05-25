@@ -31,19 +31,25 @@ const sanitizeStorageName = (name: string): string =>
 const CreateAssignment = ({ onCancel, onCreate }: { onCancel: () => void, onCreate: () => void }) => {
   const { user, teacherData } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // Date input refs + programmatic showPicker() — opacity:0 absolute inputs
-  // alone are unreliable on iOS Safari + some Android browsers. Calling
-  // showPicker() on a user click is the modern reliable API.
-  const dueMobileRef = useRef<HTMLInputElement>(null);
-  const dueDesktopRef = useRef<HTMLInputElement>(null);
-  const openDatePicker = (el: HTMLInputElement | null) => {
-    if (!el) return;
-    try {
-      const fn = (el as HTMLInputElement & { showPicker?: () => void }).showPicker;
-      if (typeof fn === "function") { fn.call(el); return; }
-    } catch { /* showPicker can throw if element isn't connected */ }
-    try { el.focus(); el.click(); } catch { /* noop */ }
-  };
+  // Custom date picker — popover constrained to the trigger card so it never
+  // overflows the dashboard like the browser-native popup did on mobile.
+  const [datePickerOpen, setDatePickerOpen] = useState<null | "mobile" | "desktop">(null);
+  const [pickerMonth, setPickerMonth] = useState<Date>(() => new Date());
+  const datePickerRefMobile = useRef<HTMLDivElement>(null);
+  const datePickerRefDesktop = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!datePickerOpen) return;
+    const handler = (e: MouseEvent) => {
+      const t = e.target as Node;
+      const inside =
+        (datePickerOpen === "mobile" && datePickerRefMobile.current?.contains(t)) ||
+        (datePickerOpen === "desktop" && datePickerRefDesktop.current?.contains(t));
+      if (!inside) setDatePickerOpen(null);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [datePickerOpen]);
   
   type ClassRow = { id: string; name?: string; grade?: string; teacherId?: string; schoolId?: string; branchId?: string };
   const [isSaving, setIsSaving] = useState(false);
