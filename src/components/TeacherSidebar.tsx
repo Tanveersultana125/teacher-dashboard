@@ -143,7 +143,7 @@ const TeacherSidebar = ({ onClose }: TeacherSidebarProps) => {
       <nav className="flex-1 px-3 py-4 overflow-y-auto">
         {navSections.map((section, sIdx) => (
           <div key={section.title} className={sIdx === 0 ? "" : "mt-5"}>
-            <div className="px-3 mb-2 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
+            <div className="px-3 mb-2 text-[11px] font-extrabold text-slate-700 uppercase tracking-[0.2em]">
               {section.title}
             </div>
             <div className="space-y-1">
@@ -155,13 +155,13 @@ const TeacherSidebar = ({ onClose }: TeacherSidebarProps) => {
                     to={item.path}
                     end={item.path === "/"}
                     onClick={onClose}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[14px] font-extrabold transition-all duration-300 ${
                       isActive
                         ? "bg-[#1e3272] text-white shadow-lg shadow-blue-900/10 scale-[1.02]"
-                        : "text-slate-500 hover:bg-slate-50 hover:text-[#1e3272]"
+                        : "text-slate-900 hover:bg-slate-50 hover:text-[#1e3272]"
                     }`}
                   >
-                    <item.icon className={`w-[18px] h-[18px] shrink-0 ${isActive ? "text-white" : "text-slate-400"}`} aria-hidden="true" />
+                    <item.icon className={`w-[18px] h-[18px] shrink-0 ${isActive ? "text-white" : "text-slate-800"}`} aria-hidden="true" strokeWidth={2.5} />
                     <span className="flex-1">{item.title}</span>
                   </NavLink>
                 );
